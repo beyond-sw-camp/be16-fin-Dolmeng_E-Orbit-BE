@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: member-depl
+  name: user-depl
   namespace: test
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: member
+      app: user
   template:
     metadata:
       labels:
-        app: member
+        app: user
     spec: 
       containers:
-      - name: member-container
-        image: 346903264902.dkr.ecr.ap-northeast-2.amazonaws.com/test/member:latest
+      - name: user-container
+        image: 346903264902.dkr.ecr.ap-northeast-2.amazonaws.com/test/user:latest
         ports: 
         - containerPort: 8080
         resources:
@@ -54,7 +54,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: member-service
+  name: user-service
   namespace: youngkwan
 spec:
   type: ClusterIP
@@ -62,4 +62,4 @@ spec:
   - port: 80
     targetPort: 8080
   selector:
-    app: member
+    app: user

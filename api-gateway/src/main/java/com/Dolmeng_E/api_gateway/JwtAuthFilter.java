@@ -20,14 +20,14 @@ public class JwtAuthFilter implements GlobalFilter {
     private String secretKeyAt;
 
     private static final List<String> ALLOWED_PATH = List.of(
-            "/member/create",
-            "/member/doLogin",
-            "/member/refresh-at",
+            "/user/create",
+            "/user/doLogin",
+            "/user/refresh-at",
             "/health"
     );
 
     private static final List<String> ADMIN_ONLY_PATH = List.of(
-            "/member/list"
+            "/user/list"
     );
 
     @Override

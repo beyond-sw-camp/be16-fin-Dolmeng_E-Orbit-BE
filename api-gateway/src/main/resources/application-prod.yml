@@ -22,12 +22,12 @@ spring:
             allowedHeaders: '*'
             allowedCredentials: true
       routes:
-        - id: member-service
+        - id: user-service
           predicates:
-            - Path=/member-service/**
+            - Path=/user-service/**
           filters:
             - StripPrefix=1
-          uri: http://member-service
+          uri: http://user-service
         - id: chat-service
           predicates:
             - Path=/chat-service/**
