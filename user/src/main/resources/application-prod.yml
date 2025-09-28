@@ -35,6 +35,17 @@ spring:
       hibernate:
         format-sql: true
 
+# aws s3 접근하기 위한 계정 세팅
+cloud:
+  aws:
+    credentials:
+      access-key: xxxx
+      secret-key: xxxx
+    region:
+      static: ap-northeast-2
+    s3:
+      bucket: xxxx
+
 jwt:
   expirationAt: 10000
   secretKeyAt: xx
