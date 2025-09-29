@@ -54,7 +54,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: member-service
+  name: user-service
   namespace: youngkwan
 spec:
   type: ClusterIP
@@ -62,4 +62,4 @@ spec:
   - port: 80
     targetPort: 8080
   selector:
-    app: member
+    app: user

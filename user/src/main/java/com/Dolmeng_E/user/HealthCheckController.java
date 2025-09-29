@@ -1,4 +1,4 @@
-package com.Dolmeng_E.member;
+package com.Dolmeng_E.user;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthCheckController {
     @GetMapping("/health")
     public String healthCheck() {
-        return "OK";
+        return "UserService-OK";
     }
 }
