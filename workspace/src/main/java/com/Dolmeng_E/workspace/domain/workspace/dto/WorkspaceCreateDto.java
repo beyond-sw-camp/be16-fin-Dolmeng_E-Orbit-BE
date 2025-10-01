@@ -21,11 +21,11 @@ public class WorkspaceCreateDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public Workspace toEntity() {
+    public Workspace toEntity(UUID userId) {
         return Workspace.builder()
                 .workspaceTemplates(this.workspaceTemplates)
                 .workspaceName(this.workspaceName)
-
+                .userId(userId)
                 .build();
     }
 }

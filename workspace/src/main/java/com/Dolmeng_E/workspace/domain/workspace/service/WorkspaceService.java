@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.workspace.service;
 
+import com.Dolmeng_E.workspace.domain.workspace.dto.UserInfoResDto;
 import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceCreateDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
@@ -15,11 +16,13 @@ import java.util.UUID;
 public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
+    private final UserFeign userFeign;
 
 //    워크스페이스 생성
     public Long createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userEmail) {
 
-        Workspace workspace = workspaceCreateDto.toEntity(userEmail);
+        UserInfoResDto userInfoResDto = userFeign.returnInfo(userEmail);
+        Workspace workspace = workspaceCreateDto.toEntity(userInfoResDto.getUserId());
         workspace.settingMaxStorage(workspaceCreateDto.getWorkspaceTemplates());
         workspaceRepository.save(workspace);
 
