@@ -27,13 +27,24 @@ public class Workspace extends BaseTimeEntity {
     @Column(length = 20)
     private String workspaceName;
 
+//    결제 구현 완료 시 구독개월 활용 예정
     private Integer subscribe;
 
-    @NotNull
-    private Long storage;
+    @Builder.Default
+    private Long currentStorage = 0L;
+
+    private Long maxStorage;
 
 //    워크스페이스 생성자 ID
     @NotNull
     private UUID userId;
+
+    public void settingMaxStorage(WorkspaceTemplates workspaceTemplates) {
+        switch (workspaceTemplates) {
+            case PERSONAL -> this.maxStorage = 10L * 1024 * 1024 * 1024;       // 10GB
+            case PRO -> this.maxStorage = 50L * 1024 * 1024 * 1024;            // 50GB
+            case ENTERPRISE -> this.maxStorage = 100L * 1024 * 1024 * 1024;    // 100GB
+        }
+    }
 
 }

@@ -1,6 +1,7 @@
 package com.Dolmeng_E.workspace.domain.workspace.entity;
 
 import com.Dolmeng_E.workspace.common.domain.BaseTimeEntity;
+import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -24,12 +25,12 @@ public class WorkspaceParticipant extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id")
     @NotNull
-    private String workspaceId;
+    private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "access_group_id")
     @NotNull
-    private String accessGroupId;
+    private AccessGroup accessGroup;
 
     @NotNull
     private UUID userID;

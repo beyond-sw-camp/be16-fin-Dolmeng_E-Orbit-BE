@@ -1,6 +1,7 @@
 package com.Dolmeng_E.workspace.domain.access_group.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,12 +19,14 @@ public class AccessDetail {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @NotNull
     @JoinColumn(name = "access_group_id")
-    private Long accessGroupId;
+    private AccessGroup accessGroup;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @NotNull
     @JoinColumn(name = "access_list_id")
-    private Long accessListId;
+    private AccessList accessList;
 
     @Builder.Default
     private Boolean isAccess = false;

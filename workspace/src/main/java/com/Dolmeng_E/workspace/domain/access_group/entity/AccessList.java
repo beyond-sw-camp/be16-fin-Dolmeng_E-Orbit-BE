@@ -26,5 +26,7 @@ public class AccessList extends BaseTimeEntity {
     @NotNull
     private String description;
 
+    @NotNull
+    private AccessType accessType;
 
 }

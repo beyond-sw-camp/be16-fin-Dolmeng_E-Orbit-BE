@@ -1,6 +1,7 @@
 package com.Dolmeng_E.workspace.domain.user_group.entity;
 
 import com.Dolmeng_E.workspace.common.domain.BaseTimeEntity;
+import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -22,7 +23,7 @@ public class UserGroup extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @NotNull
     @JoinColumn(name = "workspace_id")
-    private Long workspaceId;
+    private Workspace workspace;
 
     @NotNull
     @Column(length = 30)
