@@ -35,7 +35,13 @@ public class AccessGroupController {
     @PostMapping("/common-user")
     public ResponseEntity<?> createDefaultUserGroup(@RequestBody DefaultAccessGroupCreateDto defaultAccessGroupCreateDto) {
         accessGroupService.createDefaultUserGroup(defaultAccessGroupCreateDto.getWorkspaceId());
-        return null;
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("사용자 그룹 생성 완료")
+                .result(HttpStatus.CREATED)
+                .statusCode(HttpStatus.CREATED.value())
+                .build()
+                ,HttpStatus.CREATED);
+//        워크스페이스 생성자가 자동으로 사용자권한에 들어가게 포함
     }
 
 //    커스터마이징 권한그룹 생성
