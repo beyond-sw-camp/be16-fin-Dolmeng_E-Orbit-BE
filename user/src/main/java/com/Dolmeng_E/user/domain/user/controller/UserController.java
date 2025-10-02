@@ -37,8 +37,8 @@ public class UserController {
     }
     // 유저 ID, 이름 반환 API
     @GetMapping("/return")
-    public UserInfoResDto returnInfo(@RequestHeader("X-User-Email")String userEmail) {
-        UserInfoResDto userInfoResDto = userService.returnInfo(userEmail);
+    public UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail) {
+        UserInfoResDto userInfoResDto = userService.fetchUserInfo(userEmail);
         return userInfoResDto;
     }
 

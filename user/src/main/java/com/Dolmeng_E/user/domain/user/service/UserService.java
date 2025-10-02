@@ -38,7 +38,7 @@ public class UserService {
     }
 
     // 유저 ID, 이름 반환 API
-    public UserInfoResDto returnInfo(String userEmail) {
+    public UserInfoResDto fetchUserInfo(String userEmail) {
         User user = userRepository.findByEmail(userEmail).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
         return UserInfoResDto.builder()
                 .userId(user.getId())

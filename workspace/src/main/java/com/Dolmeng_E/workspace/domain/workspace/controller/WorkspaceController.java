@@ -16,10 +16,15 @@ public class WorkspaceController {
     private final WorkspaceService workspaceService;
 
 //    새 워크스페이스 생성
-    @PostMapping
+    @PostMapping("")
     public ResponseEntity<?> createWorkspace(@RequestBody WorkspaceCreateDto workspaceCreateDto, @RequestHeader("X-User-Email") String userEmail) {
         Long workspaceId = workspaceService.createWorkspace(workspaceCreateDto, userEmail);
-        return new ResponseEntity<>(new CommonSuccessDto(workspaceId, HttpStatus.CREATED.value(),"워크스페이스 생성 성공"),HttpStatus.CREATED);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(workspaceId)
+                .statusCode(HttpStatus.CREATED.value())
+                .statusMessage("워크스페이스 생성 성공")
+                .build(),
+                HttpStatus.CREATED);
     }
 
 //    회원가입 시 워크스페이스 생성

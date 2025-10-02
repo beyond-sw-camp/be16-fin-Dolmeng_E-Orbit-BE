@@ -8,7 +8,6 @@ import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,7 +20,7 @@ public class WorkspaceService {
 //    워크스페이스 생성
     public Long createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userEmail) {
 
-        UserInfoResDto userInfoResDto = userFeign.returnInfo(userEmail);
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
         Workspace workspace = workspaceCreateDto.toEntity(userInfoResDto.getUserId());
         workspace.settingMaxStorage(workspaceCreateDto.getWorkspaceTemplates());
         workspaceRepository.save(workspace);

@@ -33,7 +33,7 @@ public class WorkspaceParticipant extends BaseTimeEntity {
     private AccessGroup accessGroup;
 
     @NotNull
-    private UUID userID;
+    private UUID userId;
 
     @NotNull
     private String userName;

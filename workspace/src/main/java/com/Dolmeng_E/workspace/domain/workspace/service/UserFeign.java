@@ -9,5 +9,5 @@ import org.springframework.web.bind.annotation.RequestHeader;
 public interface UserFeign {
 
     @GetMapping("/user/return")
-    UserInfoResDto returnInfo(@RequestHeader("X-User-Email")String userEmail);
+    UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail);
 }
