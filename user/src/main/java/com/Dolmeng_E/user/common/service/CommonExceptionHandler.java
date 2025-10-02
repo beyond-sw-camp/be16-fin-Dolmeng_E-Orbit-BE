@@ -1,6 +1,6 @@
 package com.Dolmeng_E.user.common.service;
 
-import com.Dolmeng_E.user.common.dto.CommonErrorDto;
+import com.example.modulecommon.dto.CommonErrorDto;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

@@ -51,7 +51,7 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3:2.17.58'
 
     // 공통 모듈 의존성
-    implementation "com.example:module-common:1.0.6"
+    implementation "com.example:module-common:1.0.7"
 }
 
 repositories {
