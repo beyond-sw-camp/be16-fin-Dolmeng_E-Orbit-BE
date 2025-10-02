@@ -18,7 +18,7 @@ public class WorkspaceController {
 //    새 워크스페이스 생성
     @PostMapping("")
     public ResponseEntity<?> createWorkspace(@RequestBody WorkspaceCreateDto workspaceCreateDto, @RequestHeader("X-User-Email") String userEmail) {
-        Long workspaceId = workspaceService.createWorkspace(workspaceCreateDto, userEmail);
+        String workspaceId = workspaceService.createWorkspace(workspaceCreateDto, userEmail);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(workspaceId)
                 .statusCode(HttpStatus.CREATED.value())
