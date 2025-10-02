@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.domain.user.service;
 
+import com.Dolmeng_E.user.domain.user.dto.UserInfoResDto;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.dto.UserCreateReqDto;
 import com.Dolmeng_E.user.domain.user.dto.UserLoginReqDto;
@@ -34,6 +35,16 @@ public class UserService {
         User user = userRepository.findByEmail(dto.getEmail()).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
         if(!passwordEncoder.matches(dto.getPassword(), user.getPassword())) throw new IllegalArgumentException("비밀번호가 틀렸습니다.");
         return user;
+    }
+
+    // 유저 ID, 이름 반환 API
+    public UserInfoResDto fetchUserInfo(String userEmail) {
+        User user = userRepository.findByEmail(userEmail).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
+        return UserInfoResDto.builder()
+                .userId(user.getId())
+                .userName(user.getEmail())
+                .build();
+
     }
 
 }

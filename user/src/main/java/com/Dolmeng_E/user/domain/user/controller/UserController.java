@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.domain.user.controller;
 
+import com.Dolmeng_E.user.domain.user.dto.UserInfoResDto;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.dto.UserCreateReqDto;
 import com.Dolmeng_E.user.domain.user.dto.UserLoginReqDto;
@@ -34,4 +35,12 @@ public class UserController {
         String refreshToken = jwtTokenProvider.createRtToken(user);
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "로그인 성공"), HttpStatus.OK);
     }
+    // 유저 ID, 이름 반환 API
+    @GetMapping("/return")
+    public UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail) {
+        UserInfoResDto userInfoResDto = userService.fetchUserInfo(userEmail);
+        return userInfoResDto;
+    }
+
+
 }
