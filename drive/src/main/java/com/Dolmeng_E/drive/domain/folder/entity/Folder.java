@@ -48,4 +48,8 @@ public class Folder extends BaseTimeEntity {
     private String createdBy;
 
     private String updatedBy;
+
+    public void updateName(String updatedName) {
+        this.name = updatedName;
+    }
 }

@@ -2,15 +2,12 @@ package com.Dolmeng_E.drive.domain.folder.controller;
 
 import com.Dolmeng_E.drive.common.dto.CommonSuccessDto;
 import com.Dolmeng_E.drive.domain.folder.dto.CreateFolderDto;
-import com.Dolmeng_E.drive.domain.folder.entity.Folder;
+import com.Dolmeng_E.drive.domain.folder.dto.UpdateFolderNameDto;
 import com.Dolmeng_E.drive.domain.folder.service.FolderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/folder")
@@ -27,5 +24,15 @@ public class FolderController {
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("폴더 생성 성공")
                 .build(), HttpStatus.CREATED);
+    }
+
+    // 폴더명 수정
+    @PutMapping("/{folder_id}")
+    public ResponseEntity<?> updateFolder(@RequestBody UpdateFolderNameDto updateFolderNameDto, @PathVariable String folder_id) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(folderService.updateFolderName(updateFolderNameDto, folder_id))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더명 수정 성공")
+                .build(), HttpStatus.OK);
     }
 }
