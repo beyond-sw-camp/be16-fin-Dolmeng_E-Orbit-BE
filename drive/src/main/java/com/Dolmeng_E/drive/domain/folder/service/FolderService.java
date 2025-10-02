@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -32,5 +34,23 @@ public class FolderService {
         }
         folder.updateName(updateFolderNameDto.getName());
         return folder.getName();
+    }
+
+    // 폴더 삭제
+    public String deleteFolder(String id){
+        Folder folder = folderRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        // 폴더 하위 폴더 및 하위 모두 isDelete 수정 -> 재귀 함수 호출
+        performRecursiveSoftDelete(folder);
+        return folder.getName();
+    }
+    
+    // 폴더 삭제(소프트) 재귀 함수
+    // 파일 삭제 로직 추가 필요
+    private void performRecursiveSoftDelete(Folder folder){
+        folder.updateIsDelete();
+        List<Folder> childFolders = folderRepository.findByParentIdAndIsDeleteIsFalse(folder.getId());
+        for(Folder childFolder : childFolders){
+            performRecursiveSoftDelete(childFolder);
+        }
     }
 }

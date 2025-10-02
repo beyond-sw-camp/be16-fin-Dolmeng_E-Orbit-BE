@@ -8,12 +8,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Where(clause = "is_delete = 'false'")
 public class Folder extends BaseTimeEntity {
 
     @Id
@@ -49,7 +51,12 @@ public class Folder extends BaseTimeEntity {
 
     private String updatedBy;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isDelete = false;
+
     public void updateName(String updatedName) {
         this.name = updatedName;
     }
+    public void updateIsDelete() {this.isDelete = true;}
 }
