@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UpdateFolderNameDto {
+public class FolderUpdateNameDto {
     private String name;
 }
