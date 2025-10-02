@@ -1,6 +1,6 @@
 package com.Dolmeng_E.user.domain.user.entity;
 
-import com.Dolmeng_E.user.common.domain.BaseTimeEntity;
+import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
