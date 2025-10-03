@@ -21,13 +21,15 @@ public class UserController {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    @PostMapping("/create")
+    // 회원가입 API
+    @PostMapping
     public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
         userService.create(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
     }
 
-    @PostMapping("/login")
+    // 로그인 API
+    @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody @Valid UserLoginReqDto dto) {
         User user = userService.login(dto);
 
@@ -35,6 +37,7 @@ public class UserController {
         String refreshToken = jwtTokenProvider.createRtToken(user);
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "로그인 성공"), HttpStatus.OK);
     }
+
     // 유저 ID, 이름 반환 API
     @GetMapping("/return")
     public UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail) {
