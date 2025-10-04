@@ -20,13 +20,6 @@ public class UserController {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    // 회원가입 API
-    @PostMapping
-    public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
-        userService.create(dto);
-        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
-    }
-
     // 로그인 API
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody @Valid UserLoginReqDto dto) {
@@ -77,5 +70,12 @@ public class UserController {
     public ResponseEntity<?> verifyAuthCode(@RequestBody @Valid UserEmailAuthCodeReqDto dto) {
         userService.verifyAuthCode(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "인증코드 검증 성공"), HttpStatus.OK);
+    }
+
+    // 회원가입 API 구현3 - 회원가입 완료(프로필 사진, 이름, 전화번호, 비밀번호)
+    @PostMapping
+    public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
+        userService.create(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
     }
 }
