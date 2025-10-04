@@ -110,10 +110,7 @@ public class UserService {
 
         // 토큰 생성해서 반환
         String accessToken = jwtTokenProvider.createAtToken(user);
-        String refreshToken = jwtTokenProvider.createRtToken(user);
-
-        // todo - 자동로그인 기능 적용 시 사용
-//        String refreshToken = jwtTokenProvider.createRtToken(user, dto.isRememberMe());
+        String refreshToken = jwtTokenProvider.createRtToken(user, dto.isRememberMe());
 
         return new UserLoginResDto(accessToken, refreshToken);
     }
@@ -152,5 +149,10 @@ public class UserService {
         jwtTokenProvider.removeRt(userEmail);
     }
 
+    // 회원 탈퇴 API
+    public void delete(String userEmail) {
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+        user.updateDeleted(true);
+    }
 
 }

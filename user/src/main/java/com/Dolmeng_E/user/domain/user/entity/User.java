@@ -38,4 +38,8 @@ public class User extends BaseTimeEntity {
     private SocialType socialType;
 
     private String socialId;
+
+    public void updateDeleted(boolean isDelete) {
+        this.isDelete = isDelete;
+    }
 }

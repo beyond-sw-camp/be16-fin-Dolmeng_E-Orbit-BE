@@ -94,4 +94,11 @@ public class UserController {
         userService.logout(userEmail);
         return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "로그아웃 성공"),  HttpStatus.OK);
     }
+
+    // 회원 탈퇴 API
+    @DeleteMapping("/auth")
+    public ResponseEntity<?> delete(@RequestHeader("X-User-Email")String userEmail) {
+        userService.delete(userEmail);
+        return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "회원탈퇴 성공"),  HttpStatus.OK);
+    }
 }
