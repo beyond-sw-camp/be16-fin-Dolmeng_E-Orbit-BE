@@ -7,7 +7,7 @@ import com.Dolmeng_E.user.domain.user.dto.UserLoginReqDto;
 import com.Dolmeng_E.user.domain.user.dto.UserLoginResDto;
 import com.Dolmeng_E.user.domain.user.service.UserService;
 import com.Dolmeng_E.user.common.auth.JwtTokenProvider;
-import com.Dolmeng_E.user.common.dto.CommonSuccessDto;
+import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

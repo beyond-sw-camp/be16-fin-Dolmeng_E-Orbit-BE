@@ -5,7 +5,7 @@ import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.dto.UserCreateReqDto;
 import com.Dolmeng_E.user.domain.user.dto.UserLoginReqDto;
 import com.Dolmeng_E.user.domain.user.repository.UserRepository;
-import com.Dolmeng_E.user.common.service.S3Uploader;
+import com.example.modulecommon.service.S3Uploader;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
