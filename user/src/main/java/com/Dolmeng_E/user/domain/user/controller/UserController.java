@@ -37,7 +37,6 @@ public class UserController {
         return userInfoResDto;
     }
 
-
     // 카카오 로그인 API (정보 없으면 회원가입까지)
     @PostMapping("/kakao/login")
     public ResponseEntity<?> kakaoLogin(@RequestBody RedirectDto dto) {
@@ -45,7 +44,7 @@ public class UserController {
 
         String accessToken = userLoginResDto.getAccessToken();
         String refreshToken = userLoginResDto.getRefreshToken();
-      
+
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "kakao 로그인 성공"), HttpStatus.OK);
     }
 
@@ -79,6 +78,7 @@ public class UserController {
     public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
         userService.create(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
+
     }
 
 }
