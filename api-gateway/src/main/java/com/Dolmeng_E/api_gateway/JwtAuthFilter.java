@@ -28,6 +28,7 @@ public class JwtAuthFilter implements GlobalFilter {
             "/auth/email",
             "/user/email",
             "/user/authcode",
+            "/user/auth/token",
             "/health"
     );
 

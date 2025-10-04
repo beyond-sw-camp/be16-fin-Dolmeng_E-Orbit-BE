@@ -143,4 +143,10 @@ public class UserService {
         }
     }
 
+    // access/refresh token 갱신 API
+    public User tokenRefresh(UserRefreshTokenReqDto dto) {
+        User user = jwtTokenProvider.validateRt(dto.getRefreshToken());
+        return user;
+    }
+
 }

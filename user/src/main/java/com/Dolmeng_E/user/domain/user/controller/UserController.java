@@ -79,5 +79,13 @@ public class UserController {
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
     }
 
+    // access/refresh token 갱신 API
+    @PostMapping("/auth/token")
+    public ResponseEntity<?> tokenRefresh(@RequestBody @Valid UserRefreshTokenReqDto dto) {
+        User user = userService.tokenRefresh(dto);
+        String accessToken = jwtTokenProvider.createAtToken(user);
+        String refreshToken = jwtTokenProvider.createRtToken(user);
+        return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "access/refresh token 재발급 성공"), HttpStatus.OK);
+    }
 
 }
