@@ -44,14 +44,25 @@ public class UserController {
         return userInfoResDto;
     }
 
-    // 카카오 로그인 (정보 없으면 회원가입까지)
+    // 카카오 로그인 API (정보 없으면 회원가입까지)
     @PostMapping("/kakao/login")
     public ResponseEntity<?> kakaoLogin(@RequestBody RedirectDto dto) {
         UserLoginResDto userLoginResDto = userService.kakaoLogin(dto);
 
         String accessToken = userLoginResDto.getAccessToken();
         String refreshToken = userLoginResDto.getRefreshToken();
-        return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "kakao 연동 성공"), HttpStatus.OK);
+        return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "kakao 로그인 성공"), HttpStatus.OK);
+    }
+
+    // 구글 로그인 (정보 없으면 회원가입까지)
+    @PostMapping("/google/login")
+    public ResponseEntity<?> googleLogin(@RequestBody RedirectDto dto) {
+        UserLoginResDto userLoginResDto = userService.googleLogin(dto);
+
+        String accessToken = userLoginResDto.getAccessToken();
+        String refreshToken = userLoginResDto.getRefreshToken();
+
+        return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "google 로그인 성공"), HttpStatus.OK);
     }
 
 }

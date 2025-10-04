@@ -21,6 +21,7 @@ public class UserService {
     private final S3Uploader s3Uploader;
     private final JwtTokenProvider jwtTokenProvider;
     private final KakaoService kakaoService;
+    private final GoogleService googleService;
 
     // 회원가입 API
     public void create(UserCreateReqDto dto) {
@@ -75,6 +76,31 @@ public class UserService {
         return new UserLoginResDto(accessToken, refreshToken);
     }
 
+    // 구글 로그인 API (정보 없으면 회원가입까지)
+    public UserLoginResDto googleLogin(RedirectDto dto) {
+
+        // accessToken 발급
+        AccessTokenDto accessTokenDto = googleService.getAccessToken(dto.getCode());
+        // 사용자 정보 얻기
+        GoogleProfileDto googleProfileDto = googleService.getGoogleProfile(accessTokenDto.getAccess_token());
+
+        // 회원가입이 되어있지 않다면 회원가입
+        User user = userRepository.findBySocialId(googleProfileDto.getSub()).orElse(null);
+        if(user == null) {
+            user = googleService.createOauth(googleProfileDto);
+            userRepository.save(user);
+        }
+        if(user.isDelete()) throw new IllegalArgumentException("탈퇴한 회원입니다.");
+
+        // 토큰 생성해서 반환
+        String accessToken = jwtTokenProvider.createAtToken(user);
+        String refreshToken = jwtTokenProvider.createRtToken(user);
+
+        // todo - 자동로그인 기능 적용 시 사용
+//        String refreshToken = jwtTokenProvider.createRtToken(user, dto.isRememberMe());
+
+        return new UserLoginResDto(accessToken, refreshToken);
+    }
 
 
 }
