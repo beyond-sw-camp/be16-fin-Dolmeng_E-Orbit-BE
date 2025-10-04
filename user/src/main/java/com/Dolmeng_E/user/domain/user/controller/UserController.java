@@ -88,4 +88,10 @@ public class UserController {
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "access/refresh token 재발급 성공"), HttpStatus.OK);
     }
 
+    // 로그아웃 API
+    @PostMapping("/auth/logout")
+    public ResponseEntity<?> logout(@RequestHeader("X-User-Email")String userEmail) {
+        userService.logout(userEmail);
+        return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "로그아웃 성공"),  HttpStatus.OK);
+    }
 }

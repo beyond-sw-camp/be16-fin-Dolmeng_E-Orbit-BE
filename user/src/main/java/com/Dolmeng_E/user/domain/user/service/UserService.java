@@ -149,4 +149,11 @@ public class UserService {
         return user;
     }
 
+    // 로그아웃 API
+    public void logout(String userEmail) {
+        userRepository.findByEmail(userEmail).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+        jwtTokenProvider.removeRt(userEmail);
+    }
+
+
 }

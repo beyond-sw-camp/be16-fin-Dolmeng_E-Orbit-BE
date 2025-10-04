@@ -110,4 +110,8 @@ public class JwtTokenProvider {
 
         return user;
     }
+
+    public void removeRt(String userEmail) {
+        redisTemplate.delete("RefreshToken:"+userEmail);
+    }
 }
