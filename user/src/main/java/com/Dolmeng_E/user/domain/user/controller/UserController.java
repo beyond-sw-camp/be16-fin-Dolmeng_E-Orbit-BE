@@ -1,16 +1,15 @@
 package com.Dolmeng_E.user.domain.user.controller;
 
-import com.Dolmeng_E.user.domain.user.dto.UserInfoResDto;
+import com.Dolmeng_E.user.domain.user.dto.*;
 import com.Dolmeng_E.user.domain.user.entity.User;
-import com.Dolmeng_E.user.domain.user.dto.UserCreateReqDto;
-import com.Dolmeng_E.user.domain.user.dto.UserLoginReqDto;
-import com.Dolmeng_E.user.domain.user.dto.UserLoginResDto;
 import com.Dolmeng_E.user.domain.user.service.UserService;
 import com.Dolmeng_E.user.common.auth.JwtTokenProvider;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,5 +44,14 @@ public class UserController {
         return userInfoResDto;
     }
 
+    // 카카오 로그인 (정보 없으면 회원가입까지)
+    @PostMapping("/kakao/login")
+    public ResponseEntity<?> kakaoLogin(@RequestBody RedirectDto dto) {
+        UserLoginResDto userLoginResDto = userService.kakaoLogin(dto);
+
+        String accessToken = userLoginResDto.getAccessToken();
+        String refreshToken = userLoginResDto.getRefreshToken();
+        return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "kakao 연동 성공"), HttpStatus.OK);
+    }
 
 }

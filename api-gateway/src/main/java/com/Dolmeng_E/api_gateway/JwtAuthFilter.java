@@ -23,6 +23,7 @@ public class JwtAuthFilter implements GlobalFilter {
             "/user",
             "/user/auth/login",
             "/user/auth/refresh",
+            "/user/kakao/login",
             "/health"
     );
 

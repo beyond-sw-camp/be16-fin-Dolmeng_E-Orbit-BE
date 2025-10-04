@@ -22,7 +22,7 @@ public class User extends BaseTimeEntity {
     @Column(unique = true, nullable = false, length=100)
     private String email;
 
-    @Column(nullable = false, length=100)
+    @Column(length=100)
     private String password;
 
     @Column(length=30)
@@ -33,4 +33,9 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean isDelete = false;
+
+    @Enumerated(value = EnumType.STRING)
+    private SocialType socialType;
+
+    private String socialId;
 }
