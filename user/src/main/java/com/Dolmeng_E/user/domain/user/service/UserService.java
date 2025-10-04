@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -155,4 +156,9 @@ public class UserService {
         user.updateDeleted(true);
     }
 
+    // 회원정보 조회 API
+    public UserDetailResDto getUserDetail(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+        return UserDetailResDto.fromEntity(user);
+    }
 }

@@ -13,6 +13,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/user")
@@ -100,5 +102,12 @@ public class UserController {
     public ResponseEntity<?> delete(@RequestHeader("X-User-Email")String userEmail) {
         userService.delete(userEmail);
         return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "회원탈퇴 성공"),  HttpStatus.OK);
+    }
+
+    // 회원정보 조회 API
+    @GetMapping("/{userId}")
+    public ResponseEntity<?> getUserDetail(@PathVariable("userId") UUID userId) {
+        UserDetailResDto userDetailResDto = userService.getUserDetail(userId);
+        return new ResponseEntity<>(new CommonSuccessDto(userDetailResDto, HttpStatus.OK.value(), "회원상세 조회 성공"),  HttpStatus.OK);
     }
 }
