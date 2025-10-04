@@ -20,13 +20,6 @@ public class UserController {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    // 회원가입 API
-    @PostMapping
-    public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
-        userService.create(dto);
-        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
-    }
-
     // 로그인 API
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody @Valid UserLoginReqDto dto) {
@@ -51,6 +44,7 @@ public class UserController {
 
         String accessToken = userLoginResDto.getAccessToken();
         String refreshToken = userLoginResDto.getRefreshToken();
+
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "kakao 로그인 성공"), HttpStatus.OK);
     }
 
@@ -63,6 +57,28 @@ public class UserController {
         String refreshToken = userLoginResDto.getRefreshToken();
 
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "google 로그인 성공"), HttpStatus.OK);
+    }
+
+    // 회원가입 API 구현1 - 이메일 입력 단계 - 중복 검증 및 이메일 인증코드 전송
+    @PostMapping("/email")
+    public ResponseEntity<?> sendSignupVerificationCode(@RequestBody @Valid UserEmailReqDto dto) {
+        userService.sendSignupVerificationCode(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "이메일 중복 검증 및 인증코드 전송 성공"), HttpStatus.OK);
+    }
+
+    // 회원가입 API 구현2 - 인증코드 검증 단계
+    @PostMapping("/authcode")
+    public ResponseEntity<?> verifyAuthCode(@RequestBody @Valid UserEmailAuthCodeReqDto dto) {
+        userService.verifyAuthCode(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "인증코드 검증 성공"), HttpStatus.OK);
+    }
+
+    // 회원가입 API 구현3 - 회원가입 완료(프로필 사진, 이름, 전화번호, 비밀번호)
+    @PostMapping
+    public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
+        userService.create(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
+
     }
 
 }

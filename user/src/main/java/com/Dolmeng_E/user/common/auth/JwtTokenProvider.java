@@ -87,7 +87,7 @@ public class JwtTokenProvider {
                 .signWith(secret_rt_key)
                 .compact();
 
-        redisTemplate.opsForValue().set(user.getEmail(), refreshToken, 200, TimeUnit.DAYS); // 200일 ttl
+        redisTemplate.opsForValue().set("RefreshToken:"+user.getEmail(), refreshToken, 200, TimeUnit.DAYS); // 200일 ttl
 
 
         return refreshToken;
@@ -103,7 +103,7 @@ public class JwtTokenProvider {
         String email = claims.getSubject();
         User user = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("없는 사용자"));
 
-        String redisRt = redisTemplate.opsForValue().get(user.getEmail());
+        String redisRt = redisTemplate.opsForValue().get("RefreshToken:"+user.getEmail());
         if(!redisRt.equals(refreshToken)) {
             throw new IllegalArgumentException("잘못된 토큰입니다.");
         }
