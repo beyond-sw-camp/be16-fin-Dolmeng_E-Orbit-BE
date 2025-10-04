@@ -15,7 +15,6 @@ import org.hibernate.annotations.Where;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Where(clause = "is_delete = 'false'")
 public class Folder extends BaseTimeEntity {
 
     @Id

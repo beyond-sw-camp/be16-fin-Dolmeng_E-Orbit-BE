@@ -9,6 +9,6 @@ import java.util.Optional;
 
 @Repository
 public interface FolderRepository extends JpaRepository<Folder, String> {
-    Optional<Folder> findByParentIdAndName(String parentId, String name);
-    List<Folder> findByParentIdAndIsDeleteIsFalse(String parentId);
+    Optional<Folder> findByParentIdAndNameAndIsDeleteIsFalse(String parentId, String name);
+    List<Folder> findAllByParentIdAndIsDeleteIsFalse(String parentId);
 }

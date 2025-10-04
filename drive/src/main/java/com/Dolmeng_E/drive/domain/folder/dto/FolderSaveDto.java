@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateFolderDto {
+public class FolderSaveDto {
     private String name;
     private String workspaceId;
     private String rootId;

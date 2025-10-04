@@ -1,8 +1,8 @@
 package com.Dolmeng_E.drive.domain.folder.controller;
 
 import com.Dolmeng_E.drive.common.dto.CommonSuccessDto;
-import com.Dolmeng_E.drive.domain.folder.dto.CreateFolderDto;
-import com.Dolmeng_E.drive.domain.folder.dto.UpdateFolderNameDto;
+import com.Dolmeng_E.drive.domain.folder.dto.FolderSaveDto;
+import com.Dolmeng_E.drive.domain.folder.dto.FolderUpdateNameDto;
 import com.Dolmeng_E.drive.domain.folder.service.FolderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,9 +18,9 @@ public class FolderController {
 
     // 폴더 생성
     @PostMapping("")
-    public ResponseEntity<?> createFolder(@RequestBody CreateFolderDto createFolderDto) {
+    public ResponseEntity<?> saveFolder(@RequestBody FolderSaveDto folderSaveDto) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(folderService.createFolder(createFolderDto))
+                .result(folderService.createFolder(folderSaveDto))
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("폴더 생성 성공")
                 .build(), HttpStatus.CREATED);
@@ -28,9 +28,9 @@ public class FolderController {
 
     // 폴더명 수정
     @PutMapping("/{folder_id}")
-    public ResponseEntity<?> updateFolder(@RequestBody UpdateFolderNameDto updateFolderNameDto, @PathVariable String folder_id) {
+    public ResponseEntity<?> updateFolder(@RequestBody FolderUpdateNameDto folderUpdateNameDto, @PathVariable String folder_id) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(folderService.updateFolderName(updateFolderNameDto, folder_id))
+                .result(folderService.updateFolderName(folderUpdateNameDto, folder_id))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("폴더명 수정 성공")
                 .build(), HttpStatus.OK);
@@ -43,6 +43,16 @@ public class FolderController {
                 .result(folderService.deleteFolder(folder_id))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("폴더 삭제 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 폴더 하위 요소들 조회
+    @GetMapping("/{folder_id}/contents")
+    public ResponseEntity<?> getFolderContents(@PathVariable String folder_id) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(folderService.getFolderContents(folder_id))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 하위 요소들 조회 성공")
                 .build(), HttpStatus.OK);
     }
 }

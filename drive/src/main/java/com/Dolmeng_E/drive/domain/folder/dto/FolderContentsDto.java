@@ -9,6 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UpdateFolderNameDto {
+public class FolderContentsDto {
     private String name;
+    private String createBy;
+    private String updateAt;
+    private String size;
+    private String type;
 }
