@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.TimeUnit;
+
 @Service
 @Transactional
 public class UserService {
@@ -118,7 +120,7 @@ public class UserService {
 
         return new UserLoginResDto(accessToken, refreshToken);
     }
-    
+
     // 회원가입 API 구현1 - 이메일 입력 단계 - 중복 검증 및 이메일 인증코드 전송
     public void sendSignupVerificationCode(UserEmailReqDto dto) {
         if(userRepository.findByEmail(dto.getEmail()).isPresent()) throw new EntityExistsException("중복되는 이메일입니다.");
@@ -127,7 +129,18 @@ public class UserService {
         String authCode = mailService.sendMimeMessage(dto.getEmail());
 
         // auth code -> redis에 저장
-        redisTemplate.opsForValue().set("EmailAuthCode:" + dto.getEmail(), authCode);
+        redisTemplate.opsForValue().set("EmailAuthCode:" + dto.getEmail(), authCode, 3, TimeUnit.MINUTES);
+    }
+
+    // 회원가입 API 구현2 - 인증코드 검증 단계
+    public void verifyAuthCode(UserEmailAuthCodeReqDto dto) {
+        String authCode = redisTemplate.opsForValue().get("EmailAuthCode:" + dto.getEmail());
+        if(authCode == null) { throw new RuntimeException("인증코드가 누락되었습니다."); }
+
+        // 인증코드 불일치 시, 예외 발생
+        if(!authCode.equals(dto.getAuthCode())) {
+            throw new IllegalArgumentException("인증코드가 다릅니다.");
+        }
     }
 
 }

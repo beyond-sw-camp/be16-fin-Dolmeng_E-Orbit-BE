@@ -71,4 +71,11 @@ public class UserController {
         userService.sendSignupVerificationCode(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "이메일 중복 검증 성공"), HttpStatus.OK);
     }
+
+    // 회원가입 API 구현2 - 인증코드 검증 단계
+    @PostMapping("/authcode")
+    public ResponseEntity<?> verifyAuthCode(@RequestBody @Valid UserEmailAuthCodeReqDto dto) {
+        userService.verifyAuthCode(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "인증코드 검증 성공"), HttpStatus.OK);
+    }
 }
