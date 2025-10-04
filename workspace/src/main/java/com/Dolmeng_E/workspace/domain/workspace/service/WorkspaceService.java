@@ -18,7 +18,7 @@ public class WorkspaceService {
     private final UserFeign userFeign;
 
 //    워크스페이스 생성
-    public Long createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userEmail) {
+    public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userEmail) {
 
         UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
         Workspace workspace = workspaceCreateDto.toEntity(userInfoResDto.getUserId());
