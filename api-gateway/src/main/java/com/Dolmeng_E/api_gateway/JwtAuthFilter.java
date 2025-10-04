@@ -25,6 +25,7 @@ public class JwtAuthFilter implements GlobalFilter {
             "/user/auth/refresh",
             "/user/kakao/login",
             "/user/google/login",
+            "/auth/email",
             "/health"
     );
 
