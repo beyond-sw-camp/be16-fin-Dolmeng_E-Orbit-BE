@@ -46,6 +46,7 @@ public class UserController {
 
         String accessToken = userLoginResDto.getAccessToken();
         String refreshToken = userLoginResDto.getRefreshToken();
+
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "kakao 로그인 성공"), HttpStatus.OK);
     }
 
@@ -80,7 +81,7 @@ public class UserController {
         userService.create(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
     }
-
+  
     // access/refresh token 갱신 API
     @PostMapping("/auth/token")
     public ResponseEntity<?> tokenRefresh(@RequestBody @Valid UserRefreshTokenReqDto dto) {
