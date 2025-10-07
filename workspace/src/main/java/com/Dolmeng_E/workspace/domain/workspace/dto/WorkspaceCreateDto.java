@@ -15,8 +15,8 @@ import java.util.UUID;
 @Data
 public class WorkspaceCreateDto {
 
-    private WorkspaceTemplates workspaceTemplates;
-    private String workspaceName;
+    private WorkspaceTemplates workspaceTemplates; // PERSONAL,PRO,ENTERPRISE 중 선택
+    private String workspaceName; // 워크스페이스 명
     private UUID userId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
