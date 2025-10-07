@@ -13,6 +13,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/user")
@@ -101,5 +103,40 @@ public class UserController {
     public ResponseEntity<?> delete(@RequestHeader("X-User-Email")String userEmail) {
         userService.delete(userEmail);
         return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "회원탈퇴 성공"),  HttpStatus.OK);
+    }
+
+    // 회원정보 조회 API
+    @GetMapping("/{userId}")
+    public ResponseEntity<?> getUserDetail(@PathVariable("userId") UUID userId) {
+        UserDetailResDto userDetailResDto = userService.getUserDetail(userId);
+        return new ResponseEntity<>(new CommonSuccessDto(userDetailResDto, HttpStatus.OK.value(), "회원상세 조회 성공"),  HttpStatus.OK);
+    }
+
+    // 회원 정보 수정
+    @PutMapping("/auth")
+    public ResponseEntity<?> update(@ModelAttribute @Valid UserUpdateReqDto dto, @RequestHeader("X-User-Email")String userEmail) {
+        userService.update(dto, userEmail);
+        return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "회원정보 수정 성공"), HttpStatus.OK);
+    }
+
+    // 비밀번호 리셋 API 구현1 - 이메일 검증
+    @PostMapping("/password/email")
+    public ResponseEntity<?> verifyEmailForPasswordReset(@RequestBody @Valid UserEmailReqDto dto) {
+        userService.verifyEmailForPasswordReset(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "이메일 존재여부 검증 및 인증코드 전송 성공"), HttpStatus.OK);
+    }
+
+    // 비밀번호 리셋 API 구현2 - 인증코드 검증
+    @PostMapping("/password/authcode")
+    public ResponseEntity<?> verifyAuthCodeForPassword(@RequestBody @Valid UserEmailAuthCodeReqDto dto) {
+        userService.verifyAuthCodeForPassword(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "인증코드 검증 성공"), HttpStatus.OK);
+    }
+
+    // 비밀번호 리셋 API 구현3 - 비밀번호 리셋
+    @PutMapping("/password")
+    public ResponseEntity<?> updatePassword(@RequestBody @Valid UserUpdatePasswordReqDto dto) {
+        userService.updatePassword(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "비밀번호 수정 성공"), HttpStatus.OK);
     }
 }

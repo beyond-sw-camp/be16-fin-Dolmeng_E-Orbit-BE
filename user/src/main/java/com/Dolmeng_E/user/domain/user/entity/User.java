@@ -42,4 +42,16 @@ public class User extends BaseTimeEntity {
     public void updateDeleted(boolean isDelete) {
         this.isDelete = isDelete;
     }
+    public void updateName(String name) {
+        this.name = name;
+    }
+    public void updatePhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+    public void updatePassword(String password) {
+        this.password = password;
+    }
 }

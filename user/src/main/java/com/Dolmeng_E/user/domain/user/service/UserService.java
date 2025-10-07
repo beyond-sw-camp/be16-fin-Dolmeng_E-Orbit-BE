@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -42,7 +43,7 @@ public class UserService {
         this.redisTemplate = redisTemplate;
     }
 
-    // 회원가입 API
+    // 회원가입 API 구현3 - 계정 생성
     public void create(UserCreateReqDto dto) {
         if(userRepository.findByEmail(dto.getEmail()).isPresent()) throw new EntityExistsException("중복되는 이메일입니다.");
 
@@ -155,4 +156,48 @@ public class UserService {
         user.updateDeleted(true);
     }
 
+    // 회원정보 조회 API
+    public UserDetailResDto getUserDetail(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+        return UserDetailResDto.fromEntity(user);
+    }
+
+    // 회원 정보 수정
+    public void update(UserUpdateReqDto dto, String userEmail) {
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+        if(dto.getName() != null && !dto.getName().isEmpty()) { user.updateName(dto.getName()); }
+        if(dto.getPhoneNumber() != null) { user.updatePhoneNumber(dto.getPhoneNumber()); }
+        if(dto.getProfileImage() != null) {
+            s3Uploader.delete(user.getProfileImageUrl());
+            String profileImgaeUrl = s3Uploader.upload(dto.getProfileImage(), "user");
+            user.updateProfileImageUrl(profileImgaeUrl);
+        }
+    }
+
+    // 비밀번호 리셋 API 구현1 - 이메일 검증
+    public void verifyEmailForPasswordReset(UserEmailReqDto dto) {
+        userRepository.findByEmail(dto.getEmail()).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+
+        String authCode = mailService.sendMimeMessage(dto.getEmail());
+
+        redisTemplate.opsForValue().set("PasswordAuthCode:" + dto.getEmail(), authCode, 3, TimeUnit.MINUTES);
+    }
+
+    // 비밀번호 리셋 API 구현2 - 인증코드 검증
+    public void verifyAuthCodeForPassword(UserEmailAuthCodeReqDto dto) {
+        String authCode = redisTemplate.opsForValue().get("PasswordAuthCode:" + dto.getEmail());
+        if(authCode == null) { throw new RuntimeException("인증코드가 누락되었습니다."); }
+
+        // 인증코드 불일치 시, 예외 발생
+        if(!authCode.equals(dto.getAuthCode())) {
+            throw new IllegalArgumentException("인증코드가 다릅니다.");
+        }
+    }
+
+    // 비밀번호 리셋 API 구현3 - 비밀번호 리셋
+    public void updatePassword(UserUpdatePasswordReqDto dto) {
+        User user = userRepository.findByEmail(dto.getEmail()).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
+        String encodedPassword = passwordEncoder.encode(dto.getNewPassword());
+        user.updatePassword(encodedPassword);
+    }
 }
