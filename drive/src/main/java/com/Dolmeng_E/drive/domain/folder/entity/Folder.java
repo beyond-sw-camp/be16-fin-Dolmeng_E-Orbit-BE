@@ -1,6 +1,6 @@
 package com.Dolmeng_E.drive.domain.folder.entity;
 
-import com.Dolmeng_E.drive.common.domain.BaseTimeEntity;
+import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
-import org.hibernate.annotations.Where;
 
 @Entity
 @Data
