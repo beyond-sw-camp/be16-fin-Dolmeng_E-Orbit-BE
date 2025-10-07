@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.access_group.service;
 
+import com.Dolmeng_E.workspace.domain.access_group.dto.CustomAccessGroupDto;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessDetail;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessList;
@@ -53,7 +54,7 @@ public class AccessGroupService {
 
 
     //    일반유저 권한그룹 생성(워크스페이스 생성시 자동생성)
-    public void createDefaultUserGroup(String workspaceId) {
+    public void createDefaultUserAccessGroup(String workspaceId) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + workspaceId));
 
@@ -85,6 +86,10 @@ public class AccessGroupService {
     }
 
     //    커스터마이징 권한그룹 생성
+
+    public void createCustomAccessGroup(CustomAccessGroupDto customAccessGroupDto) {
+
+    }
 
     //    권한그룹 수정
 

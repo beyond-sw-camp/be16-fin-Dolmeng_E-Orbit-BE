@@ -54,18 +54,18 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3:2.17.58'
 
     // 공통 모듈 의존성
-    implementation "com.example:module-common:1.0.10"
+    implementation "com.example:module-common:1.1.2"
 }
 
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/EunDuk2/module-common")
-        credentials {
-            username = findProperty("GITHUB_USER") ?: System.getenv("GITHUB_USER")
-            password = findProperty("GITHUB_TOKEN") ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
-    mavenCentral()
+	maven {
+		url = uri("https://maven.pkg.github.com/EunDuk2/module-common")
+		credentials {
+			username = findProperty("GITHUB_USER") ?: System.getenv("GITHUB_USER")
+			password = findProperty("GITHUB_TOKEN") ?: System.getenv("GITHUB_TOKEN")
+		}
+	}
+	mavenCentral()
 }
 
 dependencyManagement{

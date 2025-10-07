@@ -1,7 +1,7 @@
 package com.Dolmeng_E.workspace.domain.access_group.entity;
 
-import com.Dolmeng_E.workspace.common.domain.BaseTimeEntity;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
+import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

@@ -1,13 +1,12 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
-import com.Dolmeng_E.workspace.common.domain.CommonSuccessDto;
 import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceCreateDto;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
+import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/workspace")
