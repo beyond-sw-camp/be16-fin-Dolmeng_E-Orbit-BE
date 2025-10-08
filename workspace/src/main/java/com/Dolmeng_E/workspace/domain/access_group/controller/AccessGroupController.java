@@ -20,10 +20,10 @@ public class AccessGroupController {
     @PostMapping("/admin")
     public ResponseEntity<?> createAdminAccessGroup(@RequestBody DefaultAccessGroupCreateDto defaultAccessGroupCreateDto) {
 //        워크스페이스 id string으로 변경시 dto에도 id string으로 변경요망
-        accessGroupService.createAdminGroupForWorkspace(defaultAccessGroupCreateDto.getWorkspaceId());
+        String id = accessGroupService.createAdminGroupForWorkspace(defaultAccessGroupCreateDto.getWorkspaceId());
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("관리자 그룹 생성 완료")
-                .result(HttpStatus.CREATED)
+                .result(id)
                 .statusCode(HttpStatus.CREATED.value())
                 .build()
                 ,HttpStatus.CREATED);
@@ -35,10 +35,10 @@ public class AccessGroupController {
 //    일반유저 권한그룹 생성(워크스페이스 생성시 자동생성)
     @PostMapping("/common-user")
     public ResponseEntity<?> createDefaultUserAccessGroup(@RequestBody DefaultAccessGroupCreateDto defaultAccessGroupCreateDto) {
-        accessGroupService.createDefaultUserAccessGroup(defaultAccessGroupCreateDto.getWorkspaceId());
+        String id = accessGroupService.createDefaultUserAccessGroup(defaultAccessGroupCreateDto.getWorkspaceId());
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("기본 사용자 그룹 생성 완료")
-                .result(HttpStatus.CREATED)
+                .result(id)
                 .statusCode(HttpStatus.CREATED.value())
                 .build()
                 ,HttpStatus.CREATED);
@@ -58,7 +58,11 @@ public class AccessGroupController {
     }
 
 //    권한그룹 수정
-
+    @PatchMapping("")
+    public ResponseEntity<?> modifyAccessGroup(@RequestBody CustomAccessGroupDto customAccessGroupDto, @RequestHeader("X-User-Email") String userEmail) {
+        accessGroupService.modifyAccessGroup(customAccessGroupDto, userEmail);
+        return null;
+    }
 //    권한그룹 리스트 조회
 
 //    권한그룹 상세 조회

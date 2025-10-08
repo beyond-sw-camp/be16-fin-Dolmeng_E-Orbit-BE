@@ -1,4 +1,4 @@
-package com.Dolmeng_E.workspace.domain.workspace.dto;
+package com.Dolmeng_E.workspace.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
