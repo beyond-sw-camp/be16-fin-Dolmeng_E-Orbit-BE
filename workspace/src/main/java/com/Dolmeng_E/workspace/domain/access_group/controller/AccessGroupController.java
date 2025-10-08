@@ -1,10 +1,13 @@
 package com.Dolmeng_E.workspace.domain.access_group.controller;
 
+import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupModifyDto;
 import com.Dolmeng_E.workspace.domain.access_group.dto.CustomAccessGroupDto;
 import com.Dolmeng_E.workspace.domain.access_group.dto.DefaultAccessGroupCreateDto;
 import com.Dolmeng_E.workspace.domain.access_group.service.AccessGroupService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -59,11 +62,21 @@ public class AccessGroupController {
 
 //    권한그룹 수정
     @PatchMapping("")
-    public ResponseEntity<?> modifyAccessGroup(@RequestBody CustomAccessGroupDto customAccessGroupDto, @RequestHeader("X-User-Email") String userEmail) {
-        accessGroupService.modifyAccessGroup(customAccessGroupDto, userEmail);
-        return null;
+    public ResponseEntity<?> modifyAccessGroup(@RequestBody AccessGroupModifyDto accessGroupModifyDto, @RequestHeader("X-User-Email") String userEmail) {
+        accessGroupService.modifyAccessGroup(accessGroupModifyDto, userEmail);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("권한 그룹 수정 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
     }
 //    권한그룹 리스트 조회
+    @GetMapping("/group-list")
+    public ResponseEntity<?> accessGroupList(@PageableDefault(page = 0,size = 10)Pageable pageable) {
+        accessGroupService.accessGroupList(pageable);
+        return null;
+    }
 
 //    권한그룹 상세 조회
 

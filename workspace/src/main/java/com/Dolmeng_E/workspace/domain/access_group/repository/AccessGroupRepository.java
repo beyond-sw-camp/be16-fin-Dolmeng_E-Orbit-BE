@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface AccessGroupRepository extends JpaRepository<AccessGroup,String> {
     Optional<AccessGroup> findByWorkspaceIdAndAccessGroupName(String workspaceId, String accessGroupName);
+    Boolean existsByWorkspaceIdAndAccessGroupName(String workspaceId, String accessGroupName);
 }

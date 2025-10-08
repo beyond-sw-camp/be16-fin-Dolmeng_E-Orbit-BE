@@ -37,6 +37,12 @@ public class AccessGroup extends BaseTimeEntity {
     private Workspace workspace;
 
     @NotNull
-    @Column(length = 10)
+    @Column(length = 10, unique = true)
     private String accessGroupName;
+
+    public void setAccessGroupName(String accessGroupName) {
+        if(!accessGroupName.equals(this.accessGroupName)) {
+            this.accessGroupName = accessGroupName;
+        }
+    }
 }

@@ -51,6 +51,7 @@ public class WorkspaceService {
                 .accessGroup(adminAccessGroup)
                 .userId(userInfoResDto.getUserId())
                 .isDelete(false)
+                .workspace(workspace)
                 .userName(userInfoResDto.getUserName())
                 .build()
         );

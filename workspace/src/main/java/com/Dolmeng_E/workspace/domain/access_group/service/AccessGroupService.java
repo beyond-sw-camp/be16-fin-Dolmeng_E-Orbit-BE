@@ -2,6 +2,7 @@ package com.Dolmeng_E.workspace.domain.access_group.service;
 
 import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
 import com.Dolmeng_E.workspace.common.service.UserFeign;
+import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupModifyDto;
 import com.Dolmeng_E.workspace.domain.access_group.dto.CustomAccessGroupDto;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessDetail;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
@@ -140,7 +141,7 @@ public class AccessGroupService {
 
     //    권한그룹 수정
 
-    public void modifyAccessGroup(CustomAccessGroupDto dto, String userEmail) {
+    public void modifyAccessGroup(AccessGroupModifyDto dto, String userEmail) {
         // 1. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + dto.getWorkspaceId()));
@@ -162,7 +163,18 @@ public class AccessGroupService {
             // 3. 기존 AccessDetail 목록 조회
             List<AccessDetail> existingDetails = accessDetailRepository.findByAccessGroup(targetGroup);
 
-            // 4. 순회하면서 권한 여부 업데이트
+            // 4. 권한그룹 이름 변경 (새 이름이 있을 때만)
+            if (dto.getNewAccessGroupName() != null && !dto.getNewAccessGroupName().isBlank()) {
+                // 동일 워크스페이스 내 중복 이름 방지
+                boolean exists = accessGroupRepository.existsByWorkspaceIdAndAccessGroupName(workspace.getId(), dto.getNewAccessGroupName());
+                if (exists) {
+                    throw new IllegalArgumentException("이미 동일한 이름의 권한 그룹이 존재합니다: " + dto.getNewAccessGroupName());
+                }
+                targetGroup.setAccessGroupName(dto.getNewAccessGroupName());
+                accessGroupRepository.save(targetGroup);
+            }
+
+            // 5. 순회하면서 권한 여부 업데이트
             for (int i = 0; i < types.length; i++) {
                 AccessType type = types[i];
                 boolean newAccess = i < accessValues.size() && Boolean.TRUE.equals(accessValues.get(i));
