@@ -1,7 +1,10 @@
 package com.Dolmeng_E.workspace.domain.access_group.service;
 
+import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
+import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
 import com.Dolmeng_E.workspace.common.service.UserFeign;
+import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupListResDto;
 import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupModifyDto;
 import com.Dolmeng_E.workspace.domain.access_group.dto.CustomAccessGroupDto;
@@ -26,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -105,40 +109,52 @@ public class AccessGroupService {
 
     //    커스터마이징 권한그룹 생성
 
-    public void createCustomAccessGroup(CustomAccessGroupDto dto) {
+    public void createCustomAccessGroup(CustomAccessGroupDto dto, String userEmail) {
+
 
         // 1. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + dto.getWorkspaceId()));
+        // 2. 유저 권한 체크
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
+        WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),userInfoResDto.getUserId())
+                .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
+        if (workspaceParticipant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
 
-        // 2. AccessGroup 생성
-        AccessGroup newGroup = AccessGroup.builder()
-                .workspace(workspace)
-                .accessGroupName(dto.getAccessGroupName())
-                .build();
 
-        accessGroupRepository.save(newGroup);
-
-        // 3️. AccessType 순서대로 accessList 값 매핑
-        AccessType[] types = AccessType.values();
-        List<Boolean> accessValues = dto.getAccessList();
-
-        for (int i = 0; i < types.length; i++) {
-            AccessType type = types[i];
-            boolean isAccess = i < accessValues.size() && Boolean.TRUE.equals(accessValues.get(i));
-
-            // AccessList (권한 정의 테이블) 조회
-            AccessList accessList = accessListRepository.findByAccessType(type)
-                    .orElseThrow(() -> new IllegalStateException("AccessList 정의 없음: " + type));
-
-            // AccessDetail 생성 및 저장
-            AccessDetail detail = AccessDetail.builder()
-                    .accessGroup(newGroup)
-                    .accessList(accessList)
-                    .isAccess(isAccess)
+            // 2. AccessGroup 생성
+            AccessGroup newGroup = AccessGroup.builder()
+                    .workspace(workspace)
+                    .accessGroupName(dto.getAccessGroupName())
                     .build();
 
-            accessDetailRepository.save(detail);
+            accessGroupRepository.save(newGroup);
+
+            // 3️. AccessType 순서대로 accessList 값 매핑
+            AccessType[] types = AccessType.values();
+            List<Boolean> accessValues = dto.getAccessList();
+
+            for (int i = 0; i < types.length; i++) {
+                AccessType type = types[i];
+                boolean isAccess = i < accessValues.size() && Boolean.TRUE.equals(accessValues.get(i));
+
+                // AccessList (권한 정의 테이블) 조회
+                AccessList accessList = accessListRepository.findByAccessType(type)
+                        .orElseThrow(() -> new IllegalStateException("AccessList 정의 없음: " + type));
+
+                // AccessDetail 생성 및 저장
+                AccessDetail detail = AccessDetail.builder()
+                        .accessGroup(newGroup)
+                        .accessList(accessList)
+                        .isAccess(isAccess)
+                        .build();
+
+                accessDetailRepository.save(detail);
+
+            }
+        } else {
+            //            공통모듈에서 에러코드 써야하는데 추후에 수정하겠습니다
+            throw new IllegalArgumentException("관리자만 권한 그룹을 수정할 수 있습니다.");
         }
     }
 
@@ -213,6 +229,85 @@ public class AccessGroupService {
     //    권한그룹 상세 조회
 
     //    권한그룹 사용자 추가
+
+    public void addUserToAccessGroup(String userEmail, String groupId, AccessGroupAddUserDto accessGroupAddUserDto) {
+        // 1. 워크스페이스 조회
+        AccessGroup accessGroup = accessGroupRepository.findById(groupId).orElseThrow(()->new EntityNotFoundException("해당 권한그룹 없습니다."));
+        Workspace workspace = workspaceRepository.findById(accessGroup.getWorkspace().getId())
+                .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + accessGroup.getWorkspace().getId()));
+        // 2. 유저 워크스페이스 참여자 체크
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
+        WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),userInfoResDto.getUserId())
+                .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
+
+        // 3. 유저 리스트
+        UserIdListDto userIdListDto = new UserIdListDto(accessGroupAddUserDto.getUserIdList());
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+
+        if (workspaceParticipant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            for (UserInfoResDto userInfo : userInfoListResDto.getUserInfoList()) {
+                workspaceParticipantRepository.save(
+                        WorkspaceParticipant.builder()
+                                .workspaceRole(WorkspaceRole.COMMON)
+                                .accessGroup(accessGroup)
+                                .userId(userInfo.getUserId())
+                                .isDelete(false)
+                                .workspace(workspace)
+                                .userName(userInfo.getUserName())
+                                .build()
+                );
+            }
+
+        } else {
+            //            공통모듈에서 에러코드 써야하는데 추후에 수정하겠습니다
+            throw new IllegalArgumentException("관리자만 권한 그룹을 수정할 수 있습니다.");
+        }
+
+
+    }
+
+    //    권한그룹 사용자 변경 (워크스페이스 내 기존 사용자 그룹 변경)
+    @Transactional
+    public void updateUserAccessGroup(String adminEmail, String groupId, AccessGroupAddUserDto dto) {
+        // 1. 권한그룹 조회
+        AccessGroup accessGroup = accessGroupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 권한그룹이 존재하지 않습니다."));
+
+        Workspace workspace = accessGroup.getWorkspace();
+
+        // 2. 요청자(관리자) 확인
+        UserInfoResDto adminInfo = userFeign.fetchUserInfo(adminEmail);
+        WorkspaceParticipant admin = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
+
+        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자만 권한그룹을 수정할 수 있습니다.");
+        }
+
+        // 3. 대상 유저 리스트 조회 (User 서비스에서)
+        UserIdListDto userIdListDto = new UserIdListDto(dto.getUserIdList());
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+
+        // 4. 기존 워크스페이스 참여자들의 권한그룹 업데이트
+        for (UserInfoResDto userInfo : userInfoListResDto.getUserInfoList()) {
+            WorkspaceParticipant participant = workspaceParticipantRepository
+                    .findByWorkspaceIdAndUserId(workspace.getId(), userInfo.getUserId())
+                    .orElseThrow(() -> new EntityNotFoundException("해당 사용자는 워크스페이스에 존재하지 않습니다."));
+
+            // ✅ 관리자면 건너뛰기 (ADMIN은 항상 유지)
+            if (participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+                continue; // 또는 log.warn("관리자는 권한그룹을 변경할 수 없습니다.");
+            }
+
+            participant.setAccessGroup(accessGroup);
+            workspaceParticipantRepository.save(participant);
+        }
+    }
+
+
+
+
 
     //    권한그룹 사용자 수정
 

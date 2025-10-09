@@ -49,6 +49,9 @@ dependencies {
 	// 공통 모듈 의존성
 	implementation "com.example:module-common:1.1.2"
 
+	// 메일 기능 사용을 위한 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
 }
 
 dependencyManagement{

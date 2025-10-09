@@ -1,6 +1,9 @@
 package com.Dolmeng_E.user.domain.user.service;
 
 import com.Dolmeng_E.user.common.auth.JwtTokenProvider;
+import com.Dolmeng_E.user.common.dto.UserIdListDto;
+import com.Dolmeng_E.user.common.dto.UserInfoListResDto;
+import com.Dolmeng_E.user.common.dto.UserInfoResDto;
 import com.Dolmeng_E.user.domain.user.dto.*;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.repository.UserRepository;
@@ -16,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -61,14 +66,36 @@ public class UserService {
         return user;
     }
 
-    // 유저 ID, 이름 반환 API
+    // 유저 ID, 이름, email 반환 API
     public UserInfoResDto fetchUserInfo(String userEmail) {
         User user = userRepository.findByEmail(userEmail).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
         return UserInfoResDto.builder()
                 .userId(user.getId())
                 .userName(user.getEmail())
+                .userEmail(user.getEmail())
                 .build();
 
+    }
+
+    // 유저 정보 list 반환 API
+    public UserInfoListResDto fetchUserListInfo(UserIdListDto userIdListDto) {
+
+        List<UserInfoResDto> userInfoList = new ArrayList<>();
+        for (UUID userId : userIdListDto.getUserIdList()) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+
+            // 유저 정보 DTO 생성
+            UserInfoResDto userInfo = UserInfoResDto.builder()
+                    .userId(user.getId())
+                    .userName(user.getName())
+                    .userEmail(user.getEmail())
+                    .build();
+            userInfoList.add(userInfo);
+        }
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
     }
 
     // 카카오 로그인 API (정보 없으면 회원가입까지)

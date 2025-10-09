@@ -4,10 +4,7 @@ import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -18,6 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Builder
+@Setter
 public class WorkspaceParticipant extends BaseTimeEntity {
 
     @Id
@@ -57,7 +55,6 @@ public class WorkspaceParticipant extends BaseTimeEntity {
     @NotNull
     @Builder.Default
     private Boolean isDelete = false;
-
 
 
 }

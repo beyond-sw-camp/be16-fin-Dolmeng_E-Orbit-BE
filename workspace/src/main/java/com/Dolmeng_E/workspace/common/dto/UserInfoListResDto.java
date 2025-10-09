@@ -4,15 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.UUID;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
-public class UserInfoResDto {
-    private UUID userId;
-    private String userName;
-    private String userEmail;
+public class UserInfoListResDto {
+    private List<UserInfoResDto> userInfoList;
 }

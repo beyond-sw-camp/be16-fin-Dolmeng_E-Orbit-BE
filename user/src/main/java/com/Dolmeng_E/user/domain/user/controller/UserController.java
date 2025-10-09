@@ -1,5 +1,8 @@
 package com.Dolmeng_E.user.domain.user.controller;
 
+import com.Dolmeng_E.user.common.dto.UserIdListDto;
+import com.Dolmeng_E.user.common.dto.UserInfoListResDto;
+import com.Dolmeng_E.user.common.dto.UserInfoResDto;
 import com.Dolmeng_E.user.domain.user.dto.*;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.service.UserService;
@@ -32,11 +35,18 @@ public class UserController {
         return new ResponseEntity<>(new CommonSuccessDto(new UserLoginResDto(accessToken, refreshToken), HttpStatus.OK.value(), "로그인 성공"), HttpStatus.OK);
     }
 
-    // 유저 ID, 이름 반환 API
+    // 유저 ID, 이름, 이메일 반환 API
     @GetMapping("/return")
     public UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail) {
         UserInfoResDto userInfoResDto = userService.fetchUserInfo(userEmail);
         return userInfoResDto;
+    }
+
+    // 유저 정보 list 반환 API
+    @PostMapping("/return/users")
+    UserInfoListResDto fetchUserListInfo(@RequestBody UserIdListDto userIdListDto) {
+        UserInfoListResDto userInfoListResDto = userService.fetchUserListInfo(userIdListDto);
+        return userInfoListResDto;
     }
 
     // 카카오 로그인 API (정보 없으면 회원가입까지)

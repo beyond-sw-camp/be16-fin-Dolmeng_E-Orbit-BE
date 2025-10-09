@@ -1,17 +1,16 @@
-package com.Dolmeng_E.user.domain.user.dto;
+package com.Dolmeng_E.workspace.domain.workspace.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.util.List;
 import java.util.UUID;
 
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
 @Builder
-public class UserInfoResDto {
-    private UUID userId;
-    private String userName;
+public class WorkspaceAddUserDto {
+    private List<UUID> userIdList;
 }

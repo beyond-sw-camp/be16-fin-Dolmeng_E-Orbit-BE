@@ -1,12 +1,16 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
+import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceAddUserDto;
 import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceCreateDto;
+import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceInviteDto;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.file.AccessDeniedException;
 
 @RestController
 @RequestMapping("/workspace")
@@ -26,11 +30,50 @@ public class WorkspaceController {
                 HttpStatus.CREATED);
     }
 
-//    회원가입 시 워크스페이스 생성
+//    회원가입 시 개인 워크스페이스 생성
 
 //    워크스페이스 목록 조회
 
 //    워크스페이스 수정
 
 //    워크스페이스 변경
+
+    //    워크스페이스 회원 초대
+    @PostMapping("/{workspaceId}/participants")
+    public ResponseEntity<CommonSuccessDto> addWorkspaceParticipants(
+            @RequestHeader("X-User-Email") String userEmail,
+            @PathVariable String workspaceId,
+            @RequestBody WorkspaceAddUserDto dto
+    ) {
+        workspaceService.addParticipants(userEmail, workspaceId, dto);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result("워크스페이스 사용자 추가 완료")
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스 사용자 추가 성공")
+                .build(),
+                HttpStatus.OK);
+    }
+
+
+//    To-Do: throw로 던졌지만 공통 에러 코드로 잡아야함
+//    워크스페이스 이메일 회원 초대 (메일 발송)
+    @PostMapping("/{workspaceId}/invite")
+    public ResponseEntity<CommonSuccessDto> inviteUsersToWorkspace(
+            @RequestHeader("X-User-Email") String adminEmail,
+            @PathVariable String workspaceId,
+            @RequestBody WorkspaceInviteDto dto
+    ) throws AccessDeniedException {
+        workspaceService.inviteUsers(adminEmail, workspaceId, dto);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result("초대 메일 발송 완료")
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스 이메일 초대 성공")
+                .build(),
+                HttpStatus.OK);
+    }
+
+//    워크스페이스 참여자 목록 조회
+
+//    워크스페이스 회원 삭제
+
 }

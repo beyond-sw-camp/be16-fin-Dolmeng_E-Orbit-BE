@@ -1,9 +1,6 @@
 package com.Dolmeng_E.workspace.domain.access_group.controller;
 
-import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupListResDto;
-import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupModifyDto;
-import com.Dolmeng_E.workspace.domain.access_group.dto.CustomAccessGroupDto;
-import com.Dolmeng_E.workspace.domain.access_group.dto.DefaultAccessGroupCreateDto;
+import com.Dolmeng_E.workspace.domain.access_group.dto.*;
 import com.Dolmeng_E.workspace.domain.access_group.service.AccessGroupService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
@@ -51,8 +48,8 @@ public class AccessGroupController {
 
 //    커스터마이징 권한그룹 생성
     @PostMapping("/custom")
-    public ResponseEntity<?> createCustomAccessGroup(@RequestBody CustomAccessGroupDto customAccessGroupDto) {
-        accessGroupService.createCustomAccessGroup(customAccessGroupDto);
+    public ResponseEntity<?> createCustomAccessGroup(@RequestBody CustomAccessGroupDto customAccessGroupDto, @RequestHeader("X-User-Email") String userEmail) {
+        accessGroupService.createCustomAccessGroup(customAccessGroupDto, userEmail);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("커스텀 사용자 그룹 생성 완료")
                 .result(HttpStatus.CREATED)
@@ -86,9 +83,39 @@ public class AccessGroupController {
 
 //    권한그룹 상세 조회
 
-//    권한그룹 사용자 추가
+
+//    권한그룹 사용자 추가(워크스페이스 초대 받아서 가입 시 디폴트로 일반사용자 권한그룹에 추가되어 이거를 써야할지)
+    @PostMapping("/{groupId}/users")
+        public ResponseEntity<?> addUserToAccessGroup(@RequestHeader("X-User-Email") String userEmail
+            , @PathVariable String groupId, AccessGroupAddUserDto accessGroupAddUserDto) {
+        accessGroupService.addUserToAccessGroup(userEmail,groupId,accessGroupAddUserDto);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("권한그룹 사용자 추가 완료")
+                .result(HttpStatus.CREATED)
+                .statusCode(HttpStatus.CREATED.value())
+                .build()
+                ,HttpStatus.CREATED);
+    }
+
+    //    권한그룹 사용자 변경 (이미 워크스페이스에 존재하는 사용자의 그룹 변경)
+    @PatchMapping("/{groupId}/users")
+    public ResponseEntity<?> updateUserAccessGroup(
+            @RequestHeader("X-User-Email") String adminEmail,
+            @PathVariable String groupId,
+            @RequestBody AccessGroupAddUserDto dto
+    ) {
+        accessGroupService.updateUserAccessGroup(adminEmail, groupId, dto);
+
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("권한그룹 사용자 변경 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build(),
+                HttpStatus.OK);
+    }
 
 //    권한그룹 사용자 수정
+
 
 //    권한그룹 사용자 제거
 
