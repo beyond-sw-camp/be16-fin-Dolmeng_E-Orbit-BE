@@ -72,7 +72,7 @@ public class WorkspaceController {
                 HttpStatus.OK);
     }
 
-//    워크스페이스 회원 목록 조회
+//    워크스페이스 참여자 목록 조회
 
 //    워크스페이스 회원 삭제
 
