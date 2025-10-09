@@ -3,6 +3,8 @@ package com.Dolmeng_E.chat.domain.service;
 import com.Dolmeng_E.chat.common.dto.UserInfoResDto;
 import com.Dolmeng_E.chat.domain.dto.ChatCreateReqDto;
 import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
+import com.Dolmeng_E.chat.domain.dto.ChatRoomListResDto;
+import com.Dolmeng_E.chat.domain.dto.ChatRoomListReqDto;
 import com.Dolmeng_E.chat.domain.entity.ChatMessage;
 import com.Dolmeng_E.chat.domain.entity.ChatParticipant;
 import com.Dolmeng_E.chat.domain.entity.ChatRoom;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,6 +79,14 @@ public class ChatService {
             chatRoom.getChatParticipantList().add(chatParticipant);
         }
         chatRoomRepository.save(chatRoom);
+    }
+
+    // 채팅방 목록 조회
+    public List<ChatRoomListResDto> getChatRoomListByWorkspace(ChatRoomListReqDto dto) {
+        List<ChatRoom> chatRoomList = chatRoomRepository.findAllByUserAndWorkspace(dto.getUserId(), dto.getWorkspaceId());
+        List<ChatRoomListResDto> chatRoomListResDtoList = chatRoomList.stream().map(c -> ChatRoomListResDto.fromEntity(c)).toList();
+
+        return chatRoomListResDtoList;
     }
 
 
