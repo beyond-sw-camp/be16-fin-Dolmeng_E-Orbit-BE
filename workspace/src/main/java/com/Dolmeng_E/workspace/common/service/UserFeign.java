@@ -1,6 +1,6 @@
-package com.Dolmeng_E.workspace.domain.workspace.service;
+package com.Dolmeng_E.workspace.common.service;
 
-import com.Dolmeng_E.workspace.domain.workspace.dto.UserInfoResDto;
+import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;

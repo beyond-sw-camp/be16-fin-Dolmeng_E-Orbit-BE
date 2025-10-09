@@ -42,4 +42,8 @@ public class AccessDetail {
     @Builder.Default
     private Boolean isAccess = false;
 
+    public void setAccess(Boolean isAccess) {
+        this.isAccess = isAccess;
+    }
+
 }
