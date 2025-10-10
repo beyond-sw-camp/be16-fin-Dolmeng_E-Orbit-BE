@@ -42,6 +42,13 @@ public class UserController {
         return userInfoResDto;
     }
 
+    // 유저 ID, 이름, 이메일 반환 API
+    @GetMapping("/return/by-id")
+    UserInfoResDto fetchUserInfoById(@RequestHeader("X-User-Id")String userId) {
+        UserInfoResDto userInfoResDto = userService.fetchUserInfoById(UUID.fromString(userId));
+        return userInfoResDto;
+    }
+
     // 유저 정보 list 반환 API
     @PostMapping("/return/users")
     UserInfoListResDto fetchUserListInfo(@RequestBody UserIdListDto userIdListDto) {

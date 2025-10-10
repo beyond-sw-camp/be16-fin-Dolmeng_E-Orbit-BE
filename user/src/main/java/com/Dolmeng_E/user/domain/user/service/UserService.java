@@ -71,10 +71,18 @@ public class UserService {
         User user = userRepository.findByEmail(userEmail).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
         return UserInfoResDto.builder()
                 .userId(user.getId())
-                .userName(user.getEmail())
+                .userName(user.getName())
                 .userEmail(user.getEmail())
                 .build();
 
+    }
+    public UserInfoResDto fetchUserInfoById(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
+        return UserInfoResDto.builder()
+                .userId(user.getId())
+                .userName(user.getName())
+                .userEmail(user.getEmail())
+                .build();
     }
 
     // 유저 정보 list 반환 API

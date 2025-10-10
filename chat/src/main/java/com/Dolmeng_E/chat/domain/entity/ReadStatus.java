@@ -14,7 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
-public class MessageReadStatus extends BaseTimeEntity {
+public class ReadStatus extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
@@ -30,7 +30,7 @@ public class MessageReadStatus extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private ChatRoom chatRoom;
 
-    @JoinColumn(name = "message_id")
+    @JoinColumn(name = "chat_message_id")
     @ManyToOne(fetch = FetchType.LAZY)
-    private Message message;
+    private ChatMessage chatMessage;
 }

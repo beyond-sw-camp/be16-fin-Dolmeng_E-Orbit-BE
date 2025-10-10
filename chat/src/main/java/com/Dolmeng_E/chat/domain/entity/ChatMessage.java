@@ -14,7 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Getter
-public class Message extends BaseTimeEntity {
+public class ChatMessage extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,6 +24,8 @@ public class Message extends BaseTimeEntity {
 
     @Column(nullable = false)
     private String content;
+
+    // todo - 나중에 User name 넣어서 반정규화
 
     @JoinColumn(name = "chat_room_id")
     @ManyToOne(fetch = FetchType.LAZY)
