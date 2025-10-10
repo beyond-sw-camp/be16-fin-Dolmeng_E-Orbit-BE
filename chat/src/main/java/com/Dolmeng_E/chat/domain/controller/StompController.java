@@ -1,5 +1,6 @@
 package com.Dolmeng_E.chat.domain.controller;
 
+import com.Dolmeng_E.chat.common.service.KafkaService;
 import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
 import com.Dolmeng_E.chat.domain.service.ChatService;
 import lombok.RequiredArgsConstructor;
@@ -13,13 +14,17 @@ import org.springframework.stereotype.Controller;
 public class StompController {
     private final SimpMessageSendingOperations messageTemplate;
     private final ChatService chatService;
+    private final KafkaService kafkaService;
 
     @MessageMapping("/{roomId}")
     public void sendMessage(@DestinationVariable Long roomId, ChatMessageDto dto) {
-        System.out.println("sender: " + dto.getSenderEmail() + ", message: " + dto.getMessage());
+        System.out.println("sendMessage() - roomId: " + roomId + ", sender: " + dto.getSenderEmail() + ", message: " + dto.getMessage());
+
+        dto.setRoomId(roomId);
+        kafkaService.kafkaMessageKeyCreate(dto);
 
         chatService.saveMessage(roomId, dto);
-
-        messageTemplate.convertAndSend("/topic/"+roomId, dto);
+//
+//        messageTemplate.convertAndSend("/topic/"+roomId, dto);
     }
 }
