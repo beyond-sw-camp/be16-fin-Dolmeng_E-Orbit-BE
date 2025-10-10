@@ -28,9 +28,9 @@ public class ChatController {
     }
 
     // 채팅방 목록 조회
-    @GetMapping("/room/list")
-    public ResponseEntity<?> getChatRoomListByWorkspace(@ModelAttribute ChatRoomListReqDto dto) {
-        List<ChatRoomListResDto> chatRoomList = chatService.getChatRoomListByWorkspace(dto);
+    @GetMapping("/room/list/{workspaceId}")
+    public ResponseEntity<?> getChatRoomListByWorkspace(@PathVariable String workspaceId, @RequestHeader("X-User-Email")String email) {
+        List<ChatRoomListResDto> chatRoomList = chatService.getChatRoomListByWorkspace(workspaceId, email);
         return new ResponseEntity<>(new CommonSuccessDto(chatRoomList, HttpStatus.OK.value(), "채팅방 목록 조회 성공"), HttpStatus.OK);
     }
 

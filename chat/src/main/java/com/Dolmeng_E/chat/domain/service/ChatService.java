@@ -82,8 +82,9 @@ public class ChatService {
     }
 
     // 채팅방 목록 조회
-    public List<ChatRoomListResDto> getChatRoomListByWorkspace(ChatRoomListReqDto dto) {
-        List<ChatRoom> chatRoomList = chatRoomRepository.findAllByUserAndWorkspace(dto.getUserId(), dto.getWorkspaceId());
+    public List<ChatRoomListResDto> getChatRoomListByWorkspace(String workspaceId, String email) {
+        UUID userId = userFeignClient.fetchUserInfo(email).getUserId();
+        List<ChatRoom> chatRoomList = chatRoomRepository.findAllByUserAndWorkspace(userId, workspaceId);
         List<ChatRoomListResDto> chatRoomListResDtoList = chatRoomList.stream().map(c -> ChatRoomListResDto.fromEntity(c)).toList();
 
         return chatRoomListResDtoList;
