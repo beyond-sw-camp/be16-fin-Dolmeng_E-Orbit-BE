@@ -92,6 +92,15 @@ public class DriverService {
                     .type(file.getType())
                     .build());
         }
+        // 문서 불러오기
+        for(Document document : folder.getDocuments()){
+            folderContentsDtos.add(FolderContentsDto.builder()
+                    .createBy(document.getCreatedBy())
+                    .updateAt(document.getUpdatedBy())
+                    .name(document.getTitle())
+                    .type("document")
+                    .build());
+        }
         return folderContentsDtos;
     }
 
