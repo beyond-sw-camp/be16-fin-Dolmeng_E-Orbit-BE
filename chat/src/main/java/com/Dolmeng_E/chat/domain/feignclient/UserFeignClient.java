@@ -4,9 +4,6 @@ import com.Dolmeng_E.chat.common.dto.UserInfoResDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
-
-import java.util.UUID;
 
 // name 부분은 eureka에 등록된 application.name을 의미
 @FeignClient(name = "user-service")

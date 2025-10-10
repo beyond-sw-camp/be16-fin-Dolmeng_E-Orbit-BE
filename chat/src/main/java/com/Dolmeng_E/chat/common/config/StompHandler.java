@@ -2,10 +2,10 @@ package com.Dolmeng_E.chat.common.config;
 
 import com.Dolmeng_E.chat.domain.service.ChatService;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -15,9 +15,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.spec.SecretKeySpec;
-import javax.naming.AuthenticationException;
 import java.security.Key;
-import java.util.Date;
 
 @Component
 @RequiredArgsConstructor

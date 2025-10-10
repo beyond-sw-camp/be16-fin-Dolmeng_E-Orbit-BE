@@ -3,7 +3,6 @@ package com.Dolmeng_E.chat.domain.controller;
 import com.Dolmeng_E.chat.domain.dto.ChatCreateReqDto;
 import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
 import com.Dolmeng_E.chat.domain.dto.ChatRoomListResDto;
-import com.Dolmeng_E.chat.domain.dto.ChatRoomListReqDto;
 import com.Dolmeng_E.chat.domain.service.ChatService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
