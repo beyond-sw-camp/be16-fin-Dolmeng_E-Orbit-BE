@@ -113,7 +113,7 @@ public class DriverService {
     public String uploadFile(MultipartFile file, String folderId){
         String file_url = s3Uploader.upload(file, "drive");
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        if(fileRepository.findByFolderAndName(folder, file.getOriginalFilename()).isPresent()){
+        if(fileRepository.findByFolderAndNameAndIsDeleteFalse(folder, file.getOriginalFilename()).isPresent()){
             throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
         }
         File fileEntity = File.builder()
@@ -139,6 +139,9 @@ public class DriverService {
     // 문서 생성
     public String createDocument(String folderId, String documentTitle){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
+            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+        }
         Document document = Document.builder()
                 .createdBy("회원ID")
                 .title(documentTitle)
