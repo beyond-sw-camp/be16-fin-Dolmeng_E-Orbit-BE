@@ -86,4 +86,14 @@ public class DriveController {
                 .statusMessage("문서 생성 성공")
                 .build(), HttpStatus.CREATED);
     }
+
+    // 문서 삭제
+    @DeleteMapping("/document/{documentId}")
+    public ResponseEntity<?> deleteDocument(@PathVariable String documentId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.deleteDocument(documentId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 삭제 성공")
+                .build(), HttpStatus.OK);
+    }
 }

@@ -42,7 +42,13 @@ public class Document extends BaseTimeEntity {
 
     private String updatedBy;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isDelete = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id")
     private Folder folder;
+
+    public void updateIsDelete() {this.isDelete = true;}
 }

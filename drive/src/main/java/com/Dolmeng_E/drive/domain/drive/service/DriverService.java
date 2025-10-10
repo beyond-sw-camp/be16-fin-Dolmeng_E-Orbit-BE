@@ -140,4 +140,11 @@ public class DriverService {
                 .build();
         return documentRepository.save(document).getId();
     }
+
+    // 문서 삭제(소프트)
+    public String deleteDocument(String documentId){
+        Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
+        document.updateIsDelete();
+        return document.getTitle();
+    }
 }
