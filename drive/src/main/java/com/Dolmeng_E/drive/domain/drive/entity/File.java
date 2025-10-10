@@ -51,4 +51,6 @@ public class File extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id")
     private Folder folder;
+
+    public void updateIsDelete() {this.isDelete = true;}
 }

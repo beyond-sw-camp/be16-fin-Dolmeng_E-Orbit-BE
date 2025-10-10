@@ -13,6 +13,6 @@ public class FolderContentsDto {
     private String name;
     private String createBy;
     private String updateAt;
-    private String size;
+    private Long size;
     private String type;
 }

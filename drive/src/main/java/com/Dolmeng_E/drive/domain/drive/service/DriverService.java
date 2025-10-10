@@ -36,8 +36,8 @@ public class DriverService {
     }
 
     // 폴더명 수정
-    public String updateFolderName(FolderUpdateNameDto folderUpdateNameDto, String id){
-        Folder folder = folderRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+    public String updateFolderName(FolderUpdateNameDto folderUpdateNameDto, String folderId){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folder.getParentId(), folderUpdateNameDto.getName()).isPresent()){
             throw new IllegalArgumentException("중복된 폴더명입니다.");
         }
@@ -46,8 +46,8 @@ public class DriverService {
     }
 
     // 폴더 삭제
-    public String deleteFolder(String id){
-        Folder folder = folderRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+    public String deleteFolder(String folderId){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         // 폴더 하위 폴더 및 하위 모두 isDelete 수정 -> 재귀 함수 호출
         performRecursiveSoftDelete(folder);
         return folder.getName();
@@ -64,30 +64,35 @@ public class DriverService {
     }
     
     // 폴더 하위 요소들 조회
-    public List<FolderContentsDto> getFolderContents(String id){
-        Folder folder = folderRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(id);
-        // 파일 모두 불러오기
-
+    public List<FolderContentsDto> getFolderContents(String folderId){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
         List<FolderContentsDto> folderContentsDtos = new ArrayList<>();
-        // 폴더 넣기
+        // 하위 폴더 불러오기
         for(Folder Childfolder : folders){
             folderContentsDtos.add(FolderContentsDto.builder()
-                            .size("-")
                             .createBy(Childfolder.getCreatedBy())
                             .name(Childfolder.getName())
                             .updateAt(Childfolder.getUpdatedAt().toString())
-                            .name(Childfolder.getName())
-                            .type("폴더")
+                            .type("folder")
+                    .build());
+        }
+        // 파일 불러오기
+        for(File file : folder.getFiles()){
+            folderContentsDtos.add(FolderContentsDto.builder()
+                    .size(file.getSize())
+                    .createBy(file.getCreatedBy())
+                    .name(file.getName())
+                    .type(file.getType())
                     .build());
         }
         return folderContentsDtos;
     }
 
     // 파일 업로드
-    public String uploadFile(MultipartFile file, String id){
+    public String uploadFile(MultipartFile file, String folderId){
         String file_url = s3Uploader.upload(file, "drive");
-        Folder folder = folderRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         if(fileRepository.findByFolderAndName(folder, file.getOriginalFilename()).isPresent()){
             throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
         }
@@ -100,5 +105,14 @@ public class DriverService {
                 .size(file.getSize())
                 .build();
         return fileRepository.save(fileEntity).getId();
+    }
+
+    // 파일 삭제(소프트)
+    public String deleteFile(String fileId){
+        File file = fileRepository.findById(fileId).orElseThrow(()->new EntityNotFoundException("파일이 존재하지 않습니다."));
+        String fileName = file.getName();
+        s3Uploader.delete(file.getUrl());
+        file.updateIsDelete();
+        return fileName;
     }
 }
