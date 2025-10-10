@@ -76,4 +76,14 @@ public class DriveController {
                 .statusMessage("파일 삭제 성공")
                 .build(), HttpStatus.OK);
     }
+
+    // 문서 생성
+    @PostMapping("/folder/{folderId}/document")
+    public ResponseEntity<?> saveDocument(@PathVariable String folderId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.createDocument(folderId))
+                .statusCode(HttpStatus.CREATED.value())
+                .statusMessage("문서 생성 성공")
+                .build(), HttpStatus.CREATED);
+    }
 }

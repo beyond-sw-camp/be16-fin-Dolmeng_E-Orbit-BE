@@ -3,8 +3,10 @@ package com.Dolmeng_E.drive.domain.drive.service;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderContentsDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderSaveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderUpdateNameDto;
+import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.File;
 import com.Dolmeng_E.drive.domain.drive.entity.Folder;
+import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FolderRepository;
 import com.example.modulecommon.service.S3Uploader;
@@ -26,6 +28,7 @@ public class DriverService {
     private final FolderRepository folderRepository;
     private final S3Uploader s3Uploader;
     private final FileRepository fileRepository;
+    private final DocumentRepository documentRepository;
 
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto){
@@ -89,6 +92,15 @@ public class DriverService {
                     .type(file.getType())
                     .build());
         }
+        // 문서 불러오기
+        for(Document document : folder.getDocuments()){
+            folderContentsDtos.add(FolderContentsDto.builder()
+                    .createBy(document.getCreatedBy())
+                    .updateAt(document.getUpdatedBy())
+                    .name(document.getTitle())
+                    .type("document")
+                    .build());
+        }
         return folderContentsDtos;
     }
 
@@ -117,5 +129,15 @@ public class DriverService {
         s3Uploader.delete(file.getUrl());
         file.updateIsDelete();
         return fileName;
+    }
+
+    // 문서 생성
+    public String createDocument(String folderId){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        Document document = Document.builder()
+                .createdBy("회원ID")
+                .folder(folder)
+                .build();
+        return documentRepository.save(document).getId();
     }
 }

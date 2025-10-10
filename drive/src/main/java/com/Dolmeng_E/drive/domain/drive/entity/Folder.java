@@ -60,6 +60,10 @@ public class Folder extends BaseTimeEntity {
     @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<File> files = new ArrayList<>();
 
+    @Builder.Default
+    @OneToMany(mappedBy = "folder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Document> documents = new ArrayList<>();
+
     public void updateName(String updatedName) {
         this.name = updatedName;
     }
