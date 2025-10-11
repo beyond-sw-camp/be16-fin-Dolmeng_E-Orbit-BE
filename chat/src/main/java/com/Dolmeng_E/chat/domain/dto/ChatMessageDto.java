@@ -11,12 +11,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ChatMessageDto {
-//    private Long roomId;
+    private Long roomId;
     private String message;
     private String senderEmail;
 
     public static ChatMessageDto fromEntity(ChatMessage chatMessage, String email) {
         return ChatMessageDto.builder()
+                .roomId(chatMessage.getChatRoom().getId())
                 .message(chatMessage.getContent())
                 .senderEmail(email)
                 .build();
