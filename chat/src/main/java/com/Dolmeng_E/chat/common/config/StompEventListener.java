@@ -1,5 +1,6 @@
 package com.Dolmeng_E.chat.common.config;
 
+import com.Dolmeng_E.chat.domain.service.ChatService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -29,11 +30,13 @@ public class StompEventListener {
 
     private final Set<String> sessions = ConcurrentHashMap.newKeySet();
     private final RedisTemplate<String, String> redisTemplate;
+    private final ChatService chatService;
 
     private Key secret_at_key;
 
-    public StompEventListener(@Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate) {
+    public StompEventListener(@Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate, ChatService chatService) {
         this.redisTemplate = redisTemplate;
+        this.chatService = chatService;
     }
 
     @PostConstruct
@@ -72,6 +75,8 @@ public class StompEventListener {
         String[] parts = destination.split("/");
         String roomId = parts[parts.length - 1];
 
+        // 참여한 채팅방의 모든 메시지 읽음 처리
+        chatService.messageRead(Long.parseLong(roomId), email);
 
         log.info("subscribeHandle() - 입장 roomId: {}, email: {}, session: {}", roomId, email, sessionId);
 

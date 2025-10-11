@@ -126,5 +126,17 @@ public class ChatService {
         return chatMessageDtoList;
     }
 
+    // 특정 room의 모든 메시지 읽음 처리
+    public void messageRead(Long roomId, String email) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
+        UserInfoResDto userInfo = userFeignClient.fetchUserInfo(email);
+
+        // 채팅방에 접속한 사용자의 모든 읽음 여부 가져와 true 설정 (접속한 채팅방의 읽음 여부)
+        List<ReadStatus> readStatuses = chatRoom.getReadStatusList().stream().filter(r -> r.getUserId().equals(userInfo.getUserId())).toList();
+        for(ReadStatus r : readStatuses){
+            r.updateIsRead(true);
+        }
+    }
+
 
 }

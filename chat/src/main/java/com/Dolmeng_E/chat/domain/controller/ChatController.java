@@ -40,4 +40,11 @@ public class ChatController {
         return new ResponseEntity<>(new CommonSuccessDto(chatMessageDtoList, HttpStatus.OK.value(), "채팅방 채팅 목록 조회 성공"), HttpStatus.OK);
     }
 
+    // 특정 room의 모든 메시지 읽음 처리
+    @PostMapping("/room/{roomId}/read_status")
+    public ResponseEntity<?> messageRead(@PathVariable("roomId") Long roomId, @RequestHeader("X-User-Email")String email) {
+        chatService.messageRead(roomId, email);
+        return new ResponseEntity<>(new CommonSuccessDto(email, HttpStatus.OK.value(), "채팅방 전체채팅 읽음 성공"), HttpStatus.OK);
+    }
+
 }
