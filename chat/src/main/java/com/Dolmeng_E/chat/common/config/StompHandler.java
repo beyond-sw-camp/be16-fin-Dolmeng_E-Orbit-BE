@@ -22,8 +22,6 @@ import java.security.Key;
 @RequiredArgsConstructor
 @Slf4j
 public class StompHandler implements ChannelInterceptor {
-    private final ChatService chatService;
-
     @Value("${jwt.secretKeyAt}")
     private String secretKeyAt;
 
@@ -41,35 +39,31 @@ public class StompHandler implements ChannelInterceptor {
         if(StompCommand.CONNECT == accessor.getCommand()){
             log.info("preSend() - connect요청 시 토큰 유효성 검증");
             String bearerToken = accessor.getFirstNativeHeader("Authorization");
-            String token = bearerToken.substring(7);
-
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(secret_at_key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-            String email = claims.getSubject();
-
-            log.info("preSend() - 토큰 검증 완료");
-        }
-        if(StompCommand.SUBSCRIBE == accessor.getCommand()){
-            log.info("preSend() - subscribe 요청 시 토큰 검증 및 참여자 검증");
-            String bearerToken = accessor.getFirstNativeHeader("Authorization");
-            String token = bearerToken.substring(7);
-
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(secret_at_key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-
-            String email = claims.getSubject();
-            String roomId = accessor.getDestination().split("/")[2];
-
-            if(!chatService.isRoomParticipant(email, Long.parseLong(roomId))) {
-                throw new IllegalArgumentException("해당 room에 대한 권한이 없습니다.");
+            if (bearerToken == null || !bearerToken.startsWith("Bearer ")) {
+                throw new IllegalArgumentException("Authorization header 누락");
             }
-            log.info("preSend() - subscribe 검증 완료");
+
+            String token = bearerToken.substring(7);
+            Jwts.parserBuilder()
+                    .setSigningKey(secret_at_key)
+                    .build()
+                    .parseClaimsJws(token);
+
+            log.info("preSend() - connect 토큰 검증 완료");
+        }
+        if (StompCommand.SUBSCRIBE == accessor.getCommand()) {
+            log.info("preSend() - subscribe요청 시 토큰 유효성 검증");
+            String bearerToken = accessor.getFirstNativeHeader("Authorization");
+            if (bearerToken == null || !bearerToken.startsWith("Bearer ")) {
+                throw new IllegalArgumentException("Authorization header 누락");
+            }
+
+            String token = bearerToken.substring(7);
+            Jwts.parserBuilder()
+                    .setSigningKey(secret_at_key)
+                    .build()
+                    .parseClaimsJws(token);
+            log.info("preSend() - subscribe 토큰 검증 완료");
         }
 
         return message;

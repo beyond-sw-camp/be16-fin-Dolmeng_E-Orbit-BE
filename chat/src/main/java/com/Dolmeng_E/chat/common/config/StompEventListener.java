@@ -1,5 +1,6 @@
 package com.Dolmeng_E.chat.common.config;
 
+import com.Dolmeng_E.chat.common.service.JwtParserUtil;
 import com.Dolmeng_E.chat.domain.service.ChatService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -31,12 +32,14 @@ public class StompEventListener {
     private final Set<String> sessions = ConcurrentHashMap.newKeySet();
     private final RedisTemplate<String, String> redisTemplate;
     private final ChatService chatService;
+    private final JwtParserUtil jwtParserUtil;
 
     private Key secret_at_key;
 
-    public StompEventListener(@Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate, ChatService chatService) {
+    public StompEventListener(@Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate, ChatService chatService, JwtParserUtil jwtParserUtil) {
         this.redisTemplate = redisTemplate;
         this.chatService = chatService;
+        this.jwtParserUtil = jwtParserUtil;
     }
 
     @PostConstruct
@@ -63,27 +66,22 @@ public class StompEventListener {
 
         String accessToken = bearerToken.substring(7);
 
-        // token검증 및 email추출
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secret_at_key)
-                .build()
-                .parseClaimsJws(accessToken)
-                .getBody();
-        String email = claims.getSubject();
+        // 검증 없이 email만 추출
+        String email = jwtParserUtil.extractEmailWithoutValidation(accessToken);
 
         // destination에서 roomId 추출
         String[] parts = destination.split("/");
         String roomId = parts[parts.length - 1];
 
-        // 참여한 채팅방의 모든 메시지 읽음 처리
+        // room의 권한 체크 후 참여한 채팅방의 모든 메시지 읽음 처리
+        if(!chatService.isRoomParticipant(email, Long.parseLong(roomId))) {
+            throw new IllegalArgumentException("해당 room에 대한 권한이 없습니다.");
+        }
         chatService.messageRead(Long.parseLong(roomId), email);
 
         log.info("subscribeHandle() - 입장 roomId: {}, email: {}, session: {}", roomId, email, sessionId);
 
-        // redis - 방에 사용자 추가
         redisTemplate.opsForSet().add("chat:room:" + roomId + ":users", email);
-
-        // redis - 세션에 방 정보 매핑 (퇴장 시 찾기용)
         redisTemplate.opsForHash().put("chat:session:" + sessionId, "email", email);
         redisTemplate.opsForHash().put("chat:session:" + sessionId, "roomId", roomId);
     }

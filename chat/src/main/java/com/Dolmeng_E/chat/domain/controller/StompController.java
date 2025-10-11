@@ -22,9 +22,9 @@ public class StompController {
     public void sendMessage(@DestinationVariable Long roomId, ChatMessageDto dto) {
         log.info("sendMessage() - roomId: " + roomId + ", sender: " + dto.getSenderEmail() + ", message: " + dto.getMessage());
 
+        chatService.saveMessage(roomId, dto);
+
         dto.setRoomId(roomId);
         kafkaService.kafkaMessageKeyCreate(dto);
-
-        chatService.saveMessage(roomId, dto);
     }
 }

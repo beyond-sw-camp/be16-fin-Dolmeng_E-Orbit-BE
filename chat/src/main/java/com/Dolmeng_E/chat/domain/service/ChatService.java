@@ -4,6 +4,7 @@ import com.Dolmeng_E.chat.common.dto.UserInfoResDto;
 import com.Dolmeng_E.chat.domain.dto.ChatCreateReqDto;
 import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
 import com.Dolmeng_E.chat.domain.dto.ChatRoomListResDto;
+import com.Dolmeng_E.chat.domain.dto.ChatSummaryDto;
 import com.Dolmeng_E.chat.domain.entity.ChatMessage;
 import com.Dolmeng_E.chat.domain.entity.ChatParticipant;
 import com.Dolmeng_E.chat.domain.entity.ChatRoom;
@@ -13,8 +14,10 @@ import com.Dolmeng_E.chat.domain.repository.ChatMessageRepository;
 import com.Dolmeng_E.chat.domain.repository.ChatRoomRepository;
 import com.Dolmeng_E.chat.domain.repository.ReadStatusRepository;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,19 +28,22 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@Slf4j
 public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStatusRepository readStatusRepository;
     private final UserFeignClient userFeignClient;
     private final RedisTemplate<String, String> redisTemplate;
+    private final SimpMessageSendingOperations messageTemplate;
 
-    public ChatService(ChatRoomRepository chatRoomRepository, ChatMessageRepository chatMessageRepository, ReadStatusRepository readStatusRepository, UserFeignClient userFeignClient, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate) {
+    public ChatService(ChatRoomRepository chatRoomRepository, ChatMessageRepository chatMessageRepository, ReadStatusRepository readStatusRepository, UserFeignClient userFeignClient, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate, SimpMessageSendingOperations messageTemplate) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.readStatusRepository = readStatusRepository;
         this.userFeignClient = userFeignClient;
         this.redisTemplate = redisTemplate;
+        this.messageTemplate = messageTemplate;
     }
 
     // 채팅 메시지 저장
@@ -137,6 +143,28 @@ public class ChatService {
             r.updateIsRead(true);
         }
     }
+
+    // 채팅 목록 업데이트를 위한 브로드캐스트
+    public void broadcastChatSummary(ChatMessageDto dto) {
+        ChatRoom room = chatRoomRepository.findById(dto.getRoomId())
+                .orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
+
+        for (ChatParticipant p : room.getChatParticipantList()) {
+            Long unreadCount = readStatusRepository
+                    .countByUserIdAndChatRoom_IdAndIsReadFalse(p.getUserId(), room.getId());
+
+            ChatSummaryDto summary = ChatSummaryDto.builder()
+                    .roomId(room.getId())
+                    .lastMessage(dto.getMessage())
+                    .lastSenderEmail(dto.getSenderEmail())
+                    .unreadCount(unreadCount)
+                    .build();
+
+            // 각 사용자별 summary 토픽 전송
+            messageTemplate.convertAndSend("/topic/summary/" + p.getUserId(), summary);
+        }
+    }
+
 
 
 }

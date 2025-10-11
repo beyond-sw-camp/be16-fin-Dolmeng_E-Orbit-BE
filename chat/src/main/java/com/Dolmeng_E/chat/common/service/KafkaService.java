@@ -1,6 +1,8 @@
 package com.Dolmeng_E.chat.common.service;
 
 import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
+import com.Dolmeng_E.chat.domain.dto.ChatSummaryDto;
+import com.Dolmeng_E.chat.domain.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class KafkaService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final SimpMessageSendingOperations messageTemplate;
+    private final ChatService chatService;
 
     // producer
     public void kafkaMessageKeyCreate(ChatMessageDto dto) {
@@ -43,9 +46,13 @@ public class KafkaService {
     public void chatConsumer(@Header(KafkaHeaders.RECEIVED_KEY) String key, String message, Acknowledgment ack) throws JsonProcessingException {
         log.info("chatConsumer() - key : " + key + "message: " + message);
 
-        ChatMessageDto dto = objectMapper.readValue(message, ChatMessageDto.class);
+        // 채팅방
+        ChatMessageDto chatMessageDto = objectMapper.readValue(message, ChatMessageDto.class);
 //        chatService.saveMessage(Long.parseLong(key), dto);
-        messageTemplate.convertAndSend("/topic/"+key, dto);
+        messageTemplate.convertAndSend("/topic/"+key, chatMessageDto);
+
+        // 채팅방 목록
+        chatService.broadcastChatSummary(chatMessageDto);
 
         // 위 작업들 문제없으면 커밋 (offset)
         ack.acknowledge();
