@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface AccessDetailRepository extends JpaRepository<AccessDetail,String> {
     List<AccessDetail> findByAccessGroup(AccessGroup accessGroup);
+    void deleteAllByAccessGroup(AccessGroup accessGroup);
 }

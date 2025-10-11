@@ -15,4 +15,5 @@ public class UserInfoResDto {
     private UUID userId;
     private String userName;
     private String userEmail;
+    private String profileImageUrl;
 }

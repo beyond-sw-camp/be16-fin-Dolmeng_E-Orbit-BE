@@ -36,7 +36,7 @@ public class WorkspaceController {
 
 //    워크스페이스 수정
 
-//    워크스페이스 변경
+//    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
 
     //    워크스페이스 회원 초대
     @PostMapping("/{workspaceId}/participants")

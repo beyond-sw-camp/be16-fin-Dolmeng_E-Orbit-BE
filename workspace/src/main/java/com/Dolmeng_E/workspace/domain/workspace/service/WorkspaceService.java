@@ -77,7 +77,7 @@ public class WorkspaceService {
 
 //    워크스페이스 수정
 
-//    워크스페이스 변경
+//    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
 
 //    워크스페이스 회원 초대
 public void addParticipants(String userEmail, String workspaceId, WorkspaceAddUserDto dto) {
@@ -166,6 +166,7 @@ public void addParticipants(String userEmail, String workspaceId, WorkspaceAddUs
 }
 
 //    워크스페이스 회원 목록 조회
+
 
 //    워크스페이스 회원 삭제
 
