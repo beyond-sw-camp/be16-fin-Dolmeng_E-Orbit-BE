@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 
 @Service
@@ -224,6 +225,69 @@ public class AccessGroupService {
     }
 
     //    권한그룹 상세 조회
+
+    @Transactional(readOnly = true)
+    public AccessGroupUserListResDto  getAccessGroupDetail(String userEmail, String groupId) {
+
+        // 1. 권한그룹 조회
+        AccessGroup accessGroup = accessGroupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 권한그룹이 존재하지 않습니다."));
+
+        Workspace workspace = accessGroup.getWorkspace();
+
+        // 2. 요청자(관리자) 확인
+        UserInfoResDto adminInfo = userFeign.fetchUserInfo(userEmail);
+        WorkspaceParticipant admin = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
+
+        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자만 권한그룹 상세를 조회할 수 있습니다.");
+        }
+
+        // 3. 해당 그룹 참여자 조회
+        List<WorkspaceParticipant> participants = workspaceParticipantRepository.findByAccessGroup(accessGroup);
+
+        if (participants.isEmpty()) {
+            return AccessGroupUserListResDto.builder()
+                    .groupId(accessGroup.getId())
+                    .groupName(accessGroup.getAccessGroupName())
+                    .userList(List.of())
+                    .build();
+        }
+
+        // 4. 유저 ID 리스트 구성
+        List<UUID> userIds = participants.stream()
+                .map(WorkspaceParticipant::getUserId)
+                .toList();
+
+        // 5. UserFeign 호출 → 사용자 상세 정보 조회
+        UserIdListDto userIdListDto = new UserIdListDto(userIds);
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+
+        // 6. 사용자 정보 + 역할 결합
+        List<AccessGroupUserDetailDto> detailedUserList = participants.stream()
+                .map(participant -> {
+                    UserInfoResDto userInfo = userInfoListResDto.getUserInfoList().stream()
+                            .filter(u -> u.getUserId().equals(participant.getUserId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    return AccessGroupUserDetailDto.builder()
+                            .userInfo(userInfo)
+                            .workspaceRole(participant.getWorkspaceRole())
+                            .build();
+                })
+                .toList();
+
+        // 7. 반환 DTO 구성
+        return AccessGroupUserListResDto.builder()
+                .groupId(accessGroup.getId())
+                .groupName(accessGroup.getAccessGroupName())
+                .userList(detailedUserList)
+                .build();
+
+    }
 
     //    권한그룹 사용자 추가
 

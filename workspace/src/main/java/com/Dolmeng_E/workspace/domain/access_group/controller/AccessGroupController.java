@@ -81,6 +81,15 @@ public class AccessGroupController {
     }
 
 //    권한그룹 상세 조회
+    @GetMapping("/group-detail/{groupId}")
+    public ResponseEntity<?> getAccessGroupDetail(@RequestHeader("X-User-Email") String userEmail, @PathVariable String groupId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("권한 그룹 상세 조회 완료")
+                .result(accessGroupService.getAccessGroupDetail(userEmail,groupId))
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
 
 //    권한그룹 사용자 추가(워크스페이스 초대 받아서 가입 시 디폴트로 일반사용자 권한그룹에 추가되어 이거를 써야할지)
@@ -96,7 +105,7 @@ public class AccessGroupController {
                 ,HttpStatus.CREATED);
     }
 
-    //    권한그룹 사용자 변경 (이미 워크스페이스에 존재하는 사용자의 그룹 변경)
+    //    권한그룹 사용자 변경 (이미 워크스페이스에 존재하는 사용자의 그룹 변경 - A그룹에 있던 유저를 B그룹으로 옮겨라)
     @PatchMapping("/{groupId}/users")
     public ResponseEntity<?> updateUserAccessGroup(
             @RequestHeader("X-User-Email") String adminEmail,
@@ -114,7 +123,7 @@ public class AccessGroupController {
     }
 
 
-//    권한그룹 사용자 이동(일반사용자 그룹으로 이동)
+//    권한그룹 사용자 이동(일반사용자 그룹으로 이동 - 이 그룹(A)에 있던 유저를 일반 그룹으로 돌려라 )
     @PatchMapping("/{groupId}/move")
     public ResponseEntity<?> moveUserAccessGroup(
             @RequestHeader("X-User-Email") String adminEmail,
