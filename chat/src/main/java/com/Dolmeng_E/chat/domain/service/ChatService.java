@@ -160,8 +160,9 @@ public class ChatService {
                     .unreadCount(unreadCount)
                     .build();
 
+            String email = userFeignClient.fetchUserInfoById(String.valueOf(p.getUserId())).getUserEmail();
             // 각 사용자별 summary 토픽 전송
-            messageTemplate.convertAndSend("/topic/summary/" + p.getUserId(), summary);
+            messageTemplate.convertAndSend("/topic/summary/" + email, summary);
         }
     }
 
