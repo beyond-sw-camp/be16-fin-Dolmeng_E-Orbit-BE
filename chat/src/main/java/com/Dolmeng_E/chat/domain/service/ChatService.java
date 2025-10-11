@@ -13,22 +13,32 @@ import com.Dolmeng_E.chat.domain.repository.ChatMessageRepository;
 import com.Dolmeng_E.chat.domain.repository.ChatRoomRepository;
 import com.Dolmeng_E.chat.domain.repository.ReadStatusRepository;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional
-@RequiredArgsConstructor
 public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ReadStatusRepository readStatusRepository;
     private final UserFeignClient userFeignClient;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    public ChatService(ChatRoomRepository chatRoomRepository, ChatMessageRepository chatMessageRepository, ReadStatusRepository readStatusRepository, UserFeignClient userFeignClient, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate) {
+        this.chatRoomRepository = chatRoomRepository;
+        this.chatMessageRepository = chatMessageRepository;
+        this.readStatusRepository = readStatusRepository;
+        this.userFeignClient = userFeignClient;
+        this.redisTemplate = redisTemplate;
+    }
 
     // 채팅 메시지 저장
     public void saveMessage(Long roomId, ChatMessageDto chatMessageDto) {
@@ -44,17 +54,19 @@ public class ChatService {
                 .userId(senderInfo.getUserId())
                 .content(chatMessageDto.getMessage())
                 .build();
-
         chatMessageRepository.save(chatMessage);
 
-        // 사용자별로 읽음여부 저장
+        // 사용자별로 읽음여부 저장 (현재 방에 접속 중인 사용자와 비교)
+        Set<String> connectedUsers = redisTemplate.opsForSet().members("chat:room:" + roomId + ":users");
+
         List<ChatParticipant> chatParticipantList = chatRoom.getChatParticipantList();
         for(ChatParticipant chatParticipant : chatParticipantList) {
+            String email = userFeignClient.fetchUserInfoById(String.valueOf(chatParticipant.getUserId())).getUserEmail();
             ReadStatus readStatus = ReadStatus.builder()
                     .chatRoom(chatRoom)
-                    .userId(senderInfo.getUserId())
+                    .userId(chatParticipant.getUserId())
                     .chatMessage(chatMessage)
-                    .isRead(chatParticipant.getUserId().equals(senderInfo.getUserId()))
+                    .isRead(connectedUsers.contains(email))
                     .build();
             readStatusRepository.save(readStatus);
         }
