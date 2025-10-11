@@ -16,4 +16,5 @@ public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceP
     Optional<WorkspaceParticipant> findByWorkspaceIdAndUserId(String workspaceId, UUID userId);
     int countByAccessGroup(AccessGroup accessGroup);
     List<WorkspaceParticipant> findByAccessGroup(AccessGroup accessGroup);
+    List<WorkspaceParticipant> findByWorkspaceId(String workspaceId);
 }
