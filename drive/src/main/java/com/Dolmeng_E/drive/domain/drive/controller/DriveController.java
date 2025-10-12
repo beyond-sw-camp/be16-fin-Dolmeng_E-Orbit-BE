@@ -79,9 +79,9 @@ public class DriveController {
 
     // 문서 생성
     @PostMapping("/folder/{folderId}/document")
-    public ResponseEntity<?> saveDocument(@PathVariable String folderId) {
+    public ResponseEntity<?> saveDocument(@PathVariable String folderId, @RequestParam String documentTitle) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.createDocument(folderId))
+                .result(driverService.createDocument(folderId, documentTitle))
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("문서 생성 성공")
                 .build(), HttpStatus.CREATED);

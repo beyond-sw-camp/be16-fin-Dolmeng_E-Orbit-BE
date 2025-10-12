@@ -30,8 +30,7 @@ public class Document extends BaseTimeEntity {
     private String id;
 
     @Column(nullable = false)
-    @Builder.Default
-    private String title = "제목없음";
+    private String title;
 
     @Lob // 내용이 매우 길 수 있음을 나타냄
     @Column(columnDefinition = "TEXT")

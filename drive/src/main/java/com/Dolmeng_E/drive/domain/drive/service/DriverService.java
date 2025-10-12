@@ -57,7 +57,6 @@ public class DriverService {
     }
     
     // 폴더 삭제(소프트) 재귀 함수
-    // 문서 삭제 로직 추가 필요
     private void performRecursiveSoftDelete(Folder folder){
         folder.updateIsDelete();
         List<Folder> childFolders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folder.getId());
@@ -67,6 +66,9 @@ public class DriverService {
         for(File file : folder.getFiles()){
             file.updateIsDelete();
         }
+        for(Document document : folder.getDocuments()){
+            document.updateIsDelete();
+        }
     }
     
     // 폴더 하위 요소들 조회
@@ -75,16 +77,18 @@ public class DriverService {
         List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
         List<FolderContentsDto> folderContentsDtos = new ArrayList<>();
         // 하위 폴더 불러오기
-        for(Folder Childfolder : folders){
+        for(Folder childfolder : folders){
+            if(childfolder.getIsDelete().equals(true)) continue;
             folderContentsDtos.add(FolderContentsDto.builder()
-                            .createBy(Childfolder.getCreatedBy())
-                            .name(Childfolder.getName())
-                            .updateAt(Childfolder.getUpdatedAt().toString())
+                            .createBy(childfolder.getCreatedBy())
+                            .name(childfolder.getName())
+                            .updateAt(childfolder.getUpdatedAt().toString())
                             .type("folder")
                     .build());
         }
         // 파일 불러오기
         for(File file : folder.getFiles()){
+            if(file.getIsDelete().equals(true)) continue;
             folderContentsDtos.add(FolderContentsDto.builder()
                     .size(file.getSize())
                     .createBy(file.getCreatedBy())
@@ -94,6 +98,7 @@ public class DriverService {
         }
         // 문서 불러오기
         for(Document document : folder.getDocuments()){
+            if(document.getIsDelete().equals(true)) continue;
             folderContentsDtos.add(FolderContentsDto.builder()
                     .createBy(document.getCreatedBy())
                     .updateAt(document.getUpdatedBy())
@@ -108,7 +113,7 @@ public class DriverService {
     public String uploadFile(MultipartFile file, String folderId){
         String file_url = s3Uploader.upload(file, "drive");
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        if(fileRepository.findByFolderAndName(folder, file.getOriginalFilename()).isPresent()){
+        if(fileRepository.findByFolderAndNameAndIsDeleteFalse(folder, file.getOriginalFilename()).isPresent()){
             throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
         }
         File fileEntity = File.builder()
@@ -132,10 +137,14 @@ public class DriverService {
     }
 
     // 문서 생성
-    public String createDocument(String folderId){
+    public String createDocument(String folderId, String documentTitle){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
+            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+        }
         Document document = Document.builder()
                 .createdBy("회원ID")
+                .title(documentTitle)
                 .folder(folder)
                 .build();
         return documentRepository.save(document).getId();
