@@ -53,8 +53,11 @@ public class UserService {
         if(userRepository.findByEmail(dto.getEmail()).isPresent()) throw new EntityExistsException("중복되는 이메일입니다.");
 
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
-        String profileImgaeUrl = s3Uploader.upload(dto.getProfileImageUrl(), "user");
-
+        String profileImgaeUrl = null;
+        if(dto.getProfileImageUrl() != null && !dto.getProfileImageUrl().isEmpty()) {
+            profileImgaeUrl = s3Uploader.upload(dto.getProfileImageUrl(), "user");
+        }
+        
         User user = dto.toEntity(encodedPassword, profileImgaeUrl);
         userRepository.save(user);
     }
@@ -83,6 +86,7 @@ public class UserService {
                 .userId(user.getId())
                 .userName(user.getName())
                 .userEmail(user.getEmail())
+                .profileImageUrl(user.getProfileImageUrl())
                 .build();
     }
 
