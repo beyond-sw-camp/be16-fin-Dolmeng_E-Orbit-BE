@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
+import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
@@ -99,6 +100,28 @@ public class StompEventListener {
     }
 
     @EventListener
+    public void unsubscribeHandle(SessionUnsubscribeEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = accessor.getSessionId();
+
+        Map<Object, Object> sessionInfo = redisTemplate.opsForHash().entries("chat:session:" + sessionId);
+        if (sessionInfo.isEmpty()) return;
+
+        log.info("unsubscribeHandle() - sessionId: {}, sessionInfo: {}", sessionId, sessionInfo);
+
+        String email = (String) sessionInfo.get("email");
+        Object roomIdObj = sessionInfo.get("roomId");
+        String roomId = (roomIdObj instanceof Long) ? String.valueOf(roomIdObj)
+                : (String) roomIdObj;
+
+        if (email != null && roomId != null) {
+            redisTemplate.opsForSet().remove("chat:room:" + roomId + ":users", email);
+            log.info("unsubscribeHandle() - 구독 해제 roomId: {}, email: {}", roomId, email);
+        }
+    }
+
+
+    @EventListener
     public void disconnectHandle(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         sessions.remove(accessor.getSessionId());
@@ -111,11 +134,15 @@ public class StompEventListener {
         if (sessionInfo.isEmpty()) return;
 
         String email = (String) sessionInfo.get("email");
-        String roomId = (String) sessionInfo.get("roomId");
+        Object roomIdObj = sessionInfo.get("roomId");
+        String roomId = (roomIdObj instanceof Long) ? String.valueOf(roomIdObj)
+                : (String) roomIdObj;
+
+        System.out.println("disconnectHandle() - sessionId: " + sessionId + ", roomId: " + roomId + ", email: " + email);
 
         if (email != null && roomId != null) {
             redisTemplate.opsForSet().remove("chat:room:" + roomId + ":users", email);
-            log.info("disconnectHandle() - 퇴장 roomId: {}, email: {}, session: {}", roomId, email, sessionId);
+            log.info("disconnectHandle() - roomId: {}, email: {}, session: {}", roomId, email, sessionId);
         }
 
         // 세션 데이터 정리
