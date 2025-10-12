@@ -16,28 +16,35 @@ import org.hibernate.annotations.Parameter;
 @AllArgsConstructor
 @Getter
 @Builder
+@Table(
+        name = "user_group",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        columnNames = {"workspace_id", "user_group_name"}
+                )
+        }
+)
 public class UserGroup extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_group_seq_generator")
     @GenericGenerator(
-            name = "user_group_seq_generator", // generator 이름
-            strategy = "com.Dolmeng_E.workspace.common.domain.StringPrefixedSequenceIdGenerator", // 1단계에서 만든 클래스 경로
+            name = "user_group_seq_generator",
+            strategy = "com.Dolmeng_E.workspace.common.domain.StringPrefixedSequenceIdGenerator",
             parameters = {
-                    @org.hibernate.annotations.Parameter(name = "sequence_name", value = "user_group_seq"), // DB에 생성할 시퀀스 이름
-                    @org.hibernate.annotations.Parameter(name = "initial_value", value = "1"), // 시퀀스 시작 값
-                    @org.hibernate.annotations.Parameter(name = "increment_size", value = "1"), // 시퀀스 증가 값
-                    @Parameter(name = "valuePrefix", value = "user_grp_") // ID에 붙일 접두사!
+                    @org.hibernate.annotations.Parameter(name = "sequence_name", value = "user_group_seq"),
+                    @org.hibernate.annotations.Parameter(name = "initial_value", value = "1"),
+                    @org.hibernate.annotations.Parameter(name = "increment_size", value = "1"),
+                    @Parameter(name = "valuePrefix", value = "user_grp_")
             }
     )
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @NotNull
-    @JoinColumn(name = "workspace_id")
+    @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
 
     @NotNull
-    @Column(length = 30,unique = true)
+    @Column(name = "user_group_name", length = 30)
     private String userGroupName;
 }
