@@ -149,7 +149,6 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
 
     // 4. 이름 변경
     workspace.updateWorkspaceName(dto.getWorkspaceName());
-    workspaceRepository.save(workspace);
 }
 
 //    워크스페이스 회원 초대
@@ -247,15 +246,6 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
         // 2. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));
-
-        // 3. 관리자 권한 확인
-        WorkspaceParticipant requesterParticipant = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
-
-        if (!requesterParticipant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new EntityNotFoundException("관리자만 워크스페이스 참여자 목록을 조회할 수 있습니다.");
-        }
 
         // 4. 전체 참여자 조회
         List<WorkspaceParticipant> participants = workspaceParticipantRepository.findAllByWorkspaceId(workspaceId);
