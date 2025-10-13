@@ -1,16 +1,15 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
-import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceAddUserDto;
-import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceCreateDto;
-import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceInviteDto;
+import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.nio.file.AccessDeniedException;
+import java.util.List;
+
 
 @RestController
 @RequestMapping("/workspace")
@@ -32,13 +31,54 @@ public class WorkspaceController {
 
 //    회원가입 시 개인 워크스페이스 생성
 
-//    워크스페이스 목록 조회
 
-//    워크스페이스 수정
+//    워크스페이스 목록 조회
+    @GetMapping("")
+    public ResponseEntity<?> getWorkspaceList(@RequestHeader("X-User-Email") String userEmail) {
+
+        List<WorkspaceListResDto> workspaces = workspaceService.getWorkspaceList(userEmail);
+
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스 목록 조회 성공")
+                .result(workspaces)
+                .build(),
+                HttpStatus.OK);
+    }
+//    워크스페이스 상세조회
+    @GetMapping("/{workspaceId}")
+        public ResponseEntity<?> getWorkspaceDetail(
+                @RequestHeader("X-User-Email") String userEmail,
+                @PathVariable String workspaceId
+        ) {
+            WorkspaceDetailResDto workspaceDetail = workspaceService.getWorkspaceDetail(userEmail, workspaceId);
+
+            return new ResponseEntity<>(CommonSuccessDto.builder()
+                    .statusCode(HttpStatus.OK.value())
+                    .statusMessage("워크스페이스 상세 조회 성공")
+                    .result(workspaceDetail)
+                    .build(),
+                    HttpStatus.OK);
+        }
 
 //    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
+    @PatchMapping("/{workspaceId}/name")
+    public ResponseEntity<?> updateWorkspaceName(
+            @RequestHeader("X-User-Email") String userEmail,
+            @PathVariable String workspaceId,
+            @RequestBody WorkspaceNameUpdateDto dto
+    ) {
+        workspaceService.updateWorkspaceName(userEmail, workspaceId, dto);
 
-    //    워크스페이스 회원 초대
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스명 변경 성공")
+                .result("변경된 이름: " + dto.getWorkspaceName())
+                .build(),
+                HttpStatus.OK);
+    }
+
+//    워크스페이스 회원 초대
     @PostMapping("/{workspaceId}/participants")
     public ResponseEntity<CommonSuccessDto> addWorkspaceParticipants(
             @RequestHeader("X-User-Email") String userEmail,
@@ -73,7 +113,36 @@ public class WorkspaceController {
     }
 
 //    워크스페이스 참여자 목록 조회
+    @GetMapping("/{workspaceId}/participants")
+    public ResponseEntity<?> getWorkspaceParticipants(
+            @RequestHeader("X-User-Email") String userEmail,
+            @PathVariable String workspaceId
+    ) {
+        List<WorkspaceParticipantResDto> participants = workspaceService.getWorkspaceParticipants(userEmail, workspaceId);
+
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스 참여자 목록 조회 성공")
+                .result(participants)
+                .build(),
+                HttpStatus.OK);
+    }
 
 //    워크스페이스 회원 삭제
+    @DeleteMapping("/{workspaceId}/participants")
+    public ResponseEntity<?> deleteWorkspaceParticipants(
+            @RequestHeader("X-User-Email") String adminEmail,
+            @PathVariable String workspaceId,
+            @RequestBody WorkspaceDeleteUserDto dto
+    ) {
+        workspaceService.deleteWorkspaceParticipants(adminEmail, workspaceId, dto);
+
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스 회원 삭제 성공")
+                .result(dto.getUserIdList())
+                .build(),
+                HttpStatus.OK);
+    }
 
 }

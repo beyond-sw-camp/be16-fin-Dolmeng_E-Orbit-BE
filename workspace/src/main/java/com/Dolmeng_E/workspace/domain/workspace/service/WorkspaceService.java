@@ -7,9 +7,7 @@ import com.Dolmeng_E.workspace.common.service.UserFeign;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupRepository;
 import com.Dolmeng_E.workspace.domain.access_group.service.AccessGroupService;
-import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceAddUserDto;
-import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceCreateDto;
-import com.Dolmeng_E.workspace.domain.workspace.dto.WorkspaceInviteDto;
+import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceInvite;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
@@ -74,47 +72,122 @@ public class WorkspaceService {
 //    회원가입 시 워크스페이스 생성
 
 //    워크스페이스 목록 조회
+    @Transactional(readOnly = true)
+    public List<WorkspaceListResDto> getWorkspaceList(String userEmail) {
+        // 1. 유저 정보 조회 (Feign)
+        UserInfoResDto userInfo = userFeign.fetchUserInfo(userEmail);
 
-//    워크스페이스 수정
+        // 2. 사용자가 속한 워크스페이스 조회
+        List<WorkspaceParticipant> participants =
+                workspaceParticipantRepository.findByUserIdAndIsDeleteFalse(userInfo.getUserId());
 
-//    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
-
-//    워크스페이스 회원 초대
-public void addParticipants(String userEmail, String workspaceId, WorkspaceAddUserDto dto) {
-
-    // 1. 워크스페이스 확인
-    Workspace workspace = workspaceRepository.findById(workspaceId)
-            .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
-
-    // 2. 요청자 권한 확인
-    UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
-    WorkspaceParticipant admin = workspaceParticipantRepository
-            .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
-            .orElseThrow(() -> new EntityNotFoundException("요청자 워크스페이스 참가자 정보가 없습니다."));
-
-    if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-        throw new IllegalArgumentException("관리자만 사용자 추가 가능");
+        // 3. DTO 변환
+        return participants.stream()
+                .map(p -> {
+                    Workspace workspace = p.getWorkspace();
+                    return WorkspaceListResDto.builder()
+                            .workspaceId(workspace.getId())
+                            .workspaceName(workspace.getWorkspaceName())
+                            .workspaceTemplates(workspace.getWorkspaceTemplates())
+                            .subscribe(workspace.getSubscribe())
+                            .currentStorage(workspace.getCurrentStorage())
+                            .maxStorage(workspace.getMaxStorage())
+                            .role(p.getWorkspaceRole().name())
+                            .build();
+                })
+                .toList();
     }
 
-    // 3. 유저 리스트
-    UserIdListDto userIdListDto = new UserIdListDto(dto.getUserIdList());
-    UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+//    워크스페이스 상세조회
+    @Transactional(readOnly = true)
+    public WorkspaceDetailResDto getWorkspaceDetail(String userEmail, String workspaceId) {
+        // 1. 유저 확인
+        UserInfoResDto userInfo = userFeign.fetchUserInfo(userEmail);
 
-    // 4. 신규 사용자 추가 (이름 매핑)
-    AccessGroup commonAccessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId,"일반 유저 그룹")
-            .orElseThrow(()->new EntityNotFoundException("워크스페이스 ID 혹은 권한 그룹명에 맞는 정보가 없습니다."));
-    List<WorkspaceParticipant> newParticipants = userInfoListResDto.getUserInfoList().stream()
-            .map(userInfo -> WorkspaceParticipant.builder()
-                    .workspace(workspace)
-                    .workspaceRole(WorkspaceRole.COMMON)
-                    .userId(userInfo.getUserId())
-                    .accessGroup(commonAccessGroup)
-                    .userName(userInfo.getUserName())
-                    .isDelete(false)
-                    .build())
-            .toList();
+        // 2. 워크스페이스 존재 여부
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));
 
-        workspaceParticipantRepository.saveAll(newParticipants);
+        // 3. 참여자 확인 (접근 권한)
+        workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspaceId, userInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스에 접근 권한이 없습니다."));
+
+        // 4. 구성원 수
+        long memberCount = workspaceParticipantRepository.countByWorkspaceIdAndIsDeleteFalse(workspaceId);
+
+        // 5. 상세 DTO 변환
+        return WorkspaceDetailResDto.builder()
+                .workspaceId(workspace.getId())
+                .workspaceName(workspace.getWorkspaceName())
+                .workspaceTemplates(workspace.getWorkspaceTemplates())
+                .createdAt(workspace.getCreatedAt())
+                .subscribe(workspace.getSubscribe())
+                .memberCount(memberCount)
+                .currentStorage(workspace.getCurrentStorage())
+                .maxStorage(workspace.getMaxStorage())
+                .build();
+    }
+
+//    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
+@Transactional
+public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceNameUpdateDto dto) {
+    // 1. 요청자 정보 조회
+    UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+
+    // 2. 워크스페이스 조회
+    Workspace workspace = workspaceRepository.findById(workspaceId)
+            .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
+
+    // 3. 관리자 권한 확인
+    WorkspaceParticipant participant = workspaceParticipantRepository
+            .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
+            .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참가자 정보를 찾을 수 없습니다."));
+
+    if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+        throw new EntityNotFoundException("관리자만 워크스페이스명을 변경할 수 있습니다.");
+    }
+
+    // 4. 이름 변경
+    workspace.updateWorkspaceName(dto.getWorkspaceName());
+    workspaceRepository.save(workspace);
+}
+
+//    워크스페이스 회원 초대
+    public void addParticipants(String userEmail, String workspaceId, WorkspaceAddUserDto dto) {
+
+        // 1. 워크스페이스 확인
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
+
+        // 2. 요청자 권한 확인
+        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+        WorkspaceParticipant admin = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자 워크스페이스 참가자 정보가 없습니다."));
+
+        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자만 사용자 추가 가능");
+        }
+
+        // 3. 유저 리스트
+        UserIdListDto userIdListDto = new UserIdListDto(dto.getUserIdList());
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+
+        // 4. 신규 사용자 추가 (이름 매핑)
+        AccessGroup commonAccessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId,"일반 유저 그룹")
+                .orElseThrow(()->new EntityNotFoundException("워크스페이스 ID 혹은 권한 그룹명에 맞는 정보가 없습니다."));
+        List<WorkspaceParticipant> newParticipants = userInfoListResDto.getUserInfoList().stream()
+                .map(userInfo -> WorkspaceParticipant.builder()
+                        .workspace(workspace)
+                        .workspaceRole(WorkspaceRole.COMMON)
+                        .userId(userInfo.getUserId())
+                        .accessGroup(commonAccessGroup)
+                        .userName(userInfo.getUserName())
+                        .isDelete(false)
+                        .build())
+                .toList();
+
+            workspaceParticipantRepository.saveAll(newParticipants);
     }
 
 
@@ -166,8 +239,73 @@ public void addParticipants(String userEmail, String workspaceId, WorkspaceAddUs
 }
 
 //    워크스페이스 회원 목록 조회
+    @Transactional(readOnly = true)
+    public List<WorkspaceParticipantResDto> getWorkspaceParticipants(String userEmail, String workspaceId) {
+        // 1. 요청자 유효성 검증
+        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+
+        // 2. 워크스페이스 조회
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));
+
+        // 3. 관리자 권한 확인
+        WorkspaceParticipant requesterParticipant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
+
+        if (!requesterParticipant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new EntityNotFoundException("관리자만 워크스페이스 참여자 목록을 조회할 수 있습니다.");
+        }
+
+        // 4. 전체 참여자 조회
+        List<WorkspaceParticipant> participants = workspaceParticipantRepository.findAllByWorkspaceId(workspaceId);
+
+        // 5. DTO 변환 (삭제 상태 처리)
+        return participants.stream()
+                .map(p -> WorkspaceParticipantResDto.builder()
+                        .userId(p.getUserId())
+                        .userName(p.getUserName())
+                        .workspaceRole(p.getWorkspaceRole().name())
+                        .isDeleted(p.isDelete())
+                        .accessGroupId(p.getAccessGroup() != null ? p.getAccessGroup().getId() : null)
+                        .accessGroupName(p.getAccessGroup() != null ? p.getAccessGroup().getAccessGroupName() : null)
+                        .build())
+                .toList();
+    }
 
 
 //    워크스페이스 회원 삭제
+    public void deleteWorkspaceParticipants(String adminEmail, String workspaceId, WorkspaceDeleteUserDto dto) {
+        // 1. 관리자 확인
+        UserInfoResDto adminInfo = userFeign.fetchUserInfo(adminEmail);
+
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));
+
+        WorkspaceParticipant admin = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, adminInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스에 존재하지 않습니다."));
+
+        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new EntityNotFoundException("관리자만 회원 삭제가 가능합니다.");
+        }
+
+        // 2. 자기 자신 포함 방지
+        if (dto.getUserIdList().contains(adminInfo.getUserId())) {
+            throw new IllegalArgumentException("관리자는 자기 자신을 삭제할 수 없습니다.");
+        }
+
+        // 3. 유저 리스트 순회하면서 논리 삭제 처리
+        for (UUID targetUserId : dto.getUserIdList()) {
+            WorkspaceParticipant target = workspaceParticipantRepository
+                    .findByWorkspaceIdAndUserId(workspaceId, targetUserId)
+                    .orElseThrow(() -> new EntityNotFoundException("삭제 대상 사용자를 찾을 수 없습니다."));
+
+            if (!target.isDelete()) {
+                target.setDelete(true);
+                workspaceParticipantRepository.save(target);
+            }
+        }
+    }
 
 }

@@ -56,5 +56,13 @@ public class WorkspaceParticipant extends BaseTimeEntity {
     @Builder.Default
     private Boolean isDelete = false;
 
+    public boolean isDelete() {
+        return isDelete;
+    }
+
+    public void setDelete(boolean delete) {
+        this.isDelete = delete;
+    }
+
 
 }

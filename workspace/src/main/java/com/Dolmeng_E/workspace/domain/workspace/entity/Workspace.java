@@ -60,4 +60,8 @@ public class Workspace extends BaseTimeEntity {
         }
     }
 
+    public void updateWorkspaceName(String newName) {
+        this.workspaceName = newName;
+    }
+
 }
