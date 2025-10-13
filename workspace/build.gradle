@@ -47,7 +47,7 @@ dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 
 	// 공통 모듈 의존성
-	implementation "com.example:module-common:1.1.2"
+	implementation "com.example:module-common:1.1.5"
 
 	// 메일 기능 사용을 위한 의존성
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
