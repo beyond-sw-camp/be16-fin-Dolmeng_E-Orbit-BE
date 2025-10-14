@@ -110,16 +110,16 @@ public class UserController {
 
     // 로그아웃 API
     @PostMapping("/auth/logout")
-    public ResponseEntity<?> logout(@RequestHeader("X-User-Email")String userEmail) {
-        userService.logout(userEmail);
-        return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "로그아웃 성공"),  HttpStatus.OK);
+    public ResponseEntity<?> logout(@RequestHeader("X-User-Id")String userId) {
+        userService.logout(userId);
+        return new ResponseEntity<>(new CommonSuccessDto(userId, HttpStatus.OK.value(), "로그아웃 성공"),  HttpStatus.OK);
     }
 
     // 회원 탈퇴 API
     @DeleteMapping("/auth")
-    public ResponseEntity<?> delete(@RequestHeader("X-User-Email")String userEmail) {
-        userService.delete(userEmail);
-        return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "회원탈퇴 성공"),  HttpStatus.OK);
+    public ResponseEntity<?> delete(@RequestHeader("X-User-Id")String userId) {
+        userService.delete(userId);
+        return new ResponseEntity<>(new CommonSuccessDto(userId, HttpStatus.OK.value(), "회원탈퇴 성공"),  HttpStatus.OK);
     }
 
     // 회원정보 조회 API
@@ -131,9 +131,9 @@ public class UserController {
 
     // 회원 정보 수정
     @PutMapping("/auth")
-    public ResponseEntity<?> update(@ModelAttribute @Valid UserUpdateReqDto dto, @RequestHeader("X-User-Email")String userEmail) {
-        userService.update(dto, userEmail);
-        return new ResponseEntity<>(new CommonSuccessDto(userEmail, HttpStatus.OK.value(), "회원정보 수정 성공"), HttpStatus.OK);
+    public ResponseEntity<?> update(@ModelAttribute @Valid UserUpdateReqDto dto, @RequestHeader("X-User-Id")String userId) {
+        userService.update(dto, userId);
+        return new ResponseEntity<>(new CommonSuccessDto(userId, HttpStatus.OK.value(), "회원정보 수정 성공"), HttpStatus.OK);
     }
 
     // 비밀번호 리셋 API 구현1 - 이메일 검증

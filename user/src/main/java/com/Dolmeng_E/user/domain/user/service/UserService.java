@@ -183,14 +183,14 @@ public class UserService {
     }
 
     // 로그아웃 API
-    public void logout(String userEmail) {
-        userRepository.findByEmail(userEmail).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
-        jwtTokenProvider.removeRt(userEmail);
+    public void logout(String userId) {
+        userRepository.findById(UUID.fromString(userId)).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+        jwtTokenProvider.removeRt(userId);
     }
 
     // 회원 탈퇴 API
-    public void delete(String userEmail) {
-        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+    public void delete(String userId) {
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
         user.updateDeleted(true);
     }
 
@@ -201,8 +201,8 @@ public class UserService {
     }
 
     // 회원 정보 수정
-    public void update(UserUpdateReqDto dto, String userEmail) {
-        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+    public void update(UserUpdateReqDto dto, String userId) {
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
         if(dto.getName() != null && !dto.getName().isEmpty()) { user.updateName(dto.getName()); }
         if(dto.getPhoneNumber() != null) { user.updatePhoneNumber(dto.getPhoneNumber()); }
         if(dto.getProfileImage() != null) {

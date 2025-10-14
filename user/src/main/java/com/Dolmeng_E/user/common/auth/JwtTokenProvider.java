@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -54,11 +55,11 @@ public class JwtTokenProvider {
 
 
     public String createAtToken(User user) {
-        String email = user.getEmail();
+        UUID userId = user.getId();
 //        String role = user.getRole().toString();
 
         // claims는 페이로드 (사용자 정보)
-        Claims claims = Jwts.claims().setSubject(email);
+        Claims claims = Jwts.claims().setSubject(String.valueOf(userId));
 //        claims.put("role", role);
 
         Date now = new Date();
@@ -73,11 +74,11 @@ public class JwtTokenProvider {
     }
 
     public String createRtToken(User user, boolean rememberMe) {
-        String email = user.getEmail();
+        UUID userId = user.getId();
 //        String role = user.getUserRole().toString();
 
         int refreshTokenExpiryDays = rememberMe ? refreshTokenExpiryDaysPersistent : refreshTokenExpiryDaysNonPersistent;
-        Claims claims = Jwts.claims().setSubject(email);
+        Claims claims = Jwts.claims().setSubject(String.valueOf(userId));
 //        claims.put("role", role);
         Date now = new Date();
         String refreshToken = Jwts.builder()
@@ -87,7 +88,7 @@ public class JwtTokenProvider {
                 .signWith(secret_rt_key)
                 .compact();
 
-        redisTemplate.opsForValue().set("RefreshToken:"+user.getEmail(), refreshToken, refreshTokenExpiryDays, TimeUnit.DAYS);
+        redisTemplate.opsForValue().set("RefreshToken:"+user.getId(), refreshToken, refreshTokenExpiryDays, TimeUnit.DAYS);
 
         return refreshToken;
     }
@@ -99,10 +100,11 @@ public class JwtTokenProvider {
                 .parseClaimsJws(refreshToken)
                 .getBody();
 
-        String email = claims.getSubject();
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("없는 사용자"));
+        String userIdString = claims.getSubject();
+        UUID userId = UUID.fromString(userIdString);
+        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("없는 사용자"));
 
-        String redisRt = redisTemplate.opsForValue().get("RefreshToken:"+user.getEmail());
+        String redisRt = redisTemplate.opsForValue().get("RefreshToken:"+user.getId());
         if(!redisRt.equals(refreshToken)) {
             throw new IllegalArgumentException("잘못된 토큰입니다.");
         }
@@ -110,7 +112,7 @@ public class JwtTokenProvider {
         return user;
     }
 
-    public void removeRt(String userEmail) {
-        redisTemplate.delete("RefreshToken:"+userEmail);
+    public void removeRt(String userId) {
+        redisTemplate.delete("RefreshToken:"+userId);
     }
 }
