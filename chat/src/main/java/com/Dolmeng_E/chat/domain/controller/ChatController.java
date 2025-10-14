@@ -1,8 +1,6 @@
 package com.Dolmeng_E.chat.domain.controller;
 
-import com.Dolmeng_E.chat.domain.dto.ChatCreateReqDto;
-import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
-import com.Dolmeng_E.chat.domain.dto.ChatRoomListResDto;
+import com.Dolmeng_E.chat.domain.dto.*;
 import com.Dolmeng_E.chat.domain.service.ChatService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
@@ -10,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -28,8 +27,8 @@ public class ChatController {
 
     // 채팅방 목록 조회
     @GetMapping("/room/list/{workspaceId}")
-    public ResponseEntity<?> getChatRoomListByWorkspace(@PathVariable String workspaceId, @RequestHeader("X-User-Email")String email) {
-        List<ChatRoomListResDto> chatRoomList = chatService.getChatRoomListByWorkspace(workspaceId, email);
+    public ResponseEntity<?> getChatRoomListByWorkspace(@PathVariable String workspaceId, @RequestHeader("X-User-Id")String userId) {
+        List<ChatRoomListResDto> chatRoomList = chatService.getChatRoomListByWorkspace(workspaceId, userId);
         return new ResponseEntity<>(new CommonSuccessDto(chatRoomList, HttpStatus.OK.value(), "채팅방 목록 조회 성공"), HttpStatus.OK);
     }
 
@@ -42,9 +41,30 @@ public class ChatController {
 
     // 특정 room의 모든 메시지 읽음 처리
     @PostMapping("/room/{roomId}/read_status")
-    public ResponseEntity<?> messageRead(@PathVariable("roomId") Long roomId, @RequestHeader("X-User-Email")String email) {
-        chatService.messageRead(roomId, email);
-        return new ResponseEntity<>(new CommonSuccessDto(email, HttpStatus.OK.value(), "채팅방 전체채팅 읽음 성공"), HttpStatus.OK);
+    public ResponseEntity<?> messageRead(@PathVariable("roomId") Long roomId, @RequestHeader("X-User-Id")String userId) {
+        chatService.messageRead(roomId, userId);
+        return new ResponseEntity<>(new CommonSuccessDto(userId, HttpStatus.OK.value(), "채팅방 전체채팅 읽음 성공"), HttpStatus.OK);
+    }
+
+    // 파일 업로드
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadFileList(@RequestParam("fileList") List<MultipartFile> fileList) {
+        List<ChatFileListDto> chatFileListResDtoIdList = chatService.uploadFileList(fileList);
+        return new ResponseEntity<>(new CommonSuccessDto(chatFileListResDtoIdList, HttpStatus.OK.value(), "파일 업로드 성공"), HttpStatus.OK);
+    }
+
+    // 채팅방 참여자 목록 조회
+    @GetMapping("/room/{roomId}/participants")
+    public ResponseEntity<?> getParticipantListByRoom (@PathVariable("roomId") Long roomId) {
+        List<ChatParticipantListResDto> participantListDto = chatService.getParticipantListByRoom(roomId);
+        return new ResponseEntity<>(new CommonSuccessDto(participantListDto, HttpStatus.OK.value(), "채팅방 참여자 목록 조회 성공"), HttpStatus.OK);
+    }
+
+    // 채팅방 파일 목록 조회
+    @GetMapping("/room/{roomId}/files")
+    public ResponseEntity<?> getFileListByRoom (@PathVariable("roomId") Long roomId) {
+        List<ChatFileListDto> fileListDto = chatService.getFileListByRoom(roomId);
+        return new ResponseEntity<>(new CommonSuccessDto(fileListDto, HttpStatus.OK.value(), "채팅방 파일 목록 조회 성공"), HttpStatus.OK);
     }
 
 }

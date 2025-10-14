@@ -1,12 +1,14 @@
 package com.Dolmeng_E.chat.domain.dto;
 
-import com.Dolmeng_E.chat.domain.entity.ChatMessage;
+import com.Dolmeng_E.chat.domain.entity.MessageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -15,8 +17,10 @@ import java.time.LocalDateTime;
 public class ChatMessageDto {
     private Long roomId;
     private String message;
-    private String senderEmail;
+    private String senderId;
     private String senderName;
     private LocalDateTime lastSendTime;
     private String userProfileImageUrl;
+    private MessageType messageType;
+    private List<ChatFileListDto> chatFileListDtoList = new ArrayList<>();
 }

@@ -1,18 +1,11 @@
 package com.Dolmeng_E.chat.domain.service;
 
 import com.Dolmeng_E.chat.common.dto.UserInfoResDto;
-import com.Dolmeng_E.chat.domain.dto.ChatCreateReqDto;
-import com.Dolmeng_E.chat.domain.dto.ChatMessageDto;
-import com.Dolmeng_E.chat.domain.dto.ChatRoomListResDto;
-import com.Dolmeng_E.chat.domain.dto.ChatSummaryDto;
-import com.Dolmeng_E.chat.domain.entity.ChatMessage;
-import com.Dolmeng_E.chat.domain.entity.ChatParticipant;
-import com.Dolmeng_E.chat.domain.entity.ChatRoom;
-import com.Dolmeng_E.chat.domain.entity.ReadStatus;
+import com.Dolmeng_E.chat.common.service.S3Uploader;
+import com.Dolmeng_E.chat.domain.dto.*;
+import com.Dolmeng_E.chat.domain.entity.*;
 import com.Dolmeng_E.chat.domain.feignclient.UserFeignClient;
-import com.Dolmeng_E.chat.domain.repository.ChatMessageRepository;
-import com.Dolmeng_E.chat.domain.repository.ChatRoomRepository;
-import com.Dolmeng_E.chat.domain.repository.ReadStatusRepository;
+import com.Dolmeng_E.chat.domain.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,6 +13,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,29 +30,40 @@ public class ChatService {
     private final UserFeignClient userFeignClient;
     private final RedisTemplate<String, String> redisTemplate;
     private final SimpMessageSendingOperations messageTemplate;
+    private final S3Uploader s3Uploader;
+    private final ChatFileRepository chatFileRepository;
+    private final ChatParticipantRepository chatParticipantRepository;
 
-    public ChatService(ChatRoomRepository chatRoomRepository, ChatMessageRepository chatMessageRepository, ReadStatusRepository readStatusRepository, UserFeignClient userFeignClient, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate, SimpMessageSendingOperations messageTemplate) {
+    public ChatService(ChatRoomRepository chatRoomRepository, ChatMessageRepository chatMessageRepository, ReadStatusRepository readStatusRepository, UserFeignClient userFeignClient, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate, SimpMessageSendingOperations messageTemplate, S3Uploader s3Uploader, ChatFileRepository chatFileRepository, ChatParticipantRepository chatParticipantRepository) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.readStatusRepository = readStatusRepository;
         this.userFeignClient = userFeignClient;
         this.redisTemplate = redisTemplate;
         this.messageTemplate = messageTemplate;
+        this.s3Uploader = s3Uploader;
+        this.chatFileRepository = chatFileRepository;
+        this.chatParticipantRepository = chatParticipantRepository;
     }
 
     // 채팅 메시지 저장
-    public void saveMessage(Long roomId, ChatMessageDto chatMessageDto) {
+    public ChatMessageDto saveMessage(Long roomId, ChatMessageDto chatMessageDto) {
+        // 반환을 위한 dto
+        ChatMessageDto newChatMessageDto = chatMessageDto;
+        newChatMessageDto.setRoomId(roomId);
+
         // 채팅방 조회
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
 
         // 보낸사람 조회
-        UserInfoResDto senderInfo = userFeignClient.fetchUserInfo(chatMessageDto.getSenderEmail());
+        UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(chatMessageDto.getSenderId());
 
         // 메시지 저장
         ChatMessage chatMessage = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .userId(senderInfo.getUserId())
                 .content(chatMessageDto.getMessage())
+                .type(chatMessageDto.getMessageType())
                 .build();
         chatMessageRepository.save(chatMessage);
 
@@ -67,15 +72,28 @@ public class ChatService {
 
         List<ChatParticipant> chatParticipantList = chatRoom.getChatParticipantList();
         for(ChatParticipant chatParticipant : chatParticipantList) {
-            String email = userFeignClient.fetchUserInfoById(String.valueOf(chatParticipant.getUserId())).getUserEmail();
             ReadStatus readStatus = ReadStatus.builder()
                     .chatRoom(chatRoom)
                     .userId(chatParticipant.getUserId())
                     .chatMessage(chatMessage)
-                    .isRead(connectedUsers.contains(email))
+                    .isRead(connectedUsers.contains(String.valueOf(chatParticipant.getUserId())))
                     .build();
             readStatusRepository.save(readStatus);
         }
+
+        // 파일 있으면 파일 저장
+        if(chatMessageDto.getMessageType() != MessageType.TEXT) {
+            List<ChatFileListDto> fileListCopy = new ArrayList<>(chatMessageDto.getChatFileListDtoList());
+            for (ChatFileListDto chatFileListDto : fileListCopy) {
+                ChatFile chatFile = getChatFile(chatFileListDto.getFileId());
+                chatFile.setChatMessage(chatMessage);
+
+                chatFileListDto.setFileName(chatFile.getFileName());
+                chatFileListDto.setFileSize(chatFile.getFileSize());
+                chatFileListDto.setFileUrl(chatFile.getFileUrl());
+            }
+        }
+        return newChatMessageDto;
     }
 
     // 채팅방 생성
@@ -99,8 +117,8 @@ public class ChatService {
     }
 
     // 채팅방 목록 조회
-    public List<ChatRoomListResDto> getChatRoomListByWorkspace(String workspaceId, String email) {
-        UserInfoResDto senderInfo = userFeignClient.fetchUserInfo(email);
+    public List<ChatRoomListResDto> getChatRoomListByWorkspace(String workspaceId, String userId) {
+        UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(userId);
         // 워크스페이스에서 사용자가 포함된 채팅방 조회
         List<ChatRoom> chatRoomList = chatRoomRepository.findAllByUserAndWorkspace(senderInfo.getUserId(), workspaceId);
 
@@ -133,12 +151,11 @@ public class ChatService {
     }
 
     // 해당 room의 참여자가 맞는 지 검증
-    public boolean isRoomParticipant(String email, Long roomId) {
+    public boolean isRoomParticipant(String userId, Long roomId) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
-        UUID userId = userFeignClient.fetchUserInfo(email).getUserId();
 
         return chatRoom.getChatParticipantList().stream()
-                .anyMatch(p -> p.getUserId().equals(userId));
+                .anyMatch(p -> p.getUserId().equals(UUID.fromString(userId)));
     }
 
     // 채팅방 채팅 목록 조회
@@ -153,11 +170,13 @@ public class ChatService {
             UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(String.valueOf(c.getUserId()));
 
             ChatMessageDto chatMessageDto = ChatMessageDto.builder()
-                    .senderEmail(senderInfo.getUserEmail())
+                    .senderId(String.valueOf(senderInfo.getUserId()))
                     .senderName(senderInfo.getUserName())
                     .message(c.getContent())
                     .lastSendTime(c.getCreatedAt())
                     .userProfileImageUrl(senderInfo.getProfileImageUrl())
+                    .messageType(c.getType())
+                    .chatFileListDtoList(c.getChatFileList().stream().map(chatFile -> ChatFileListDto.fromEntity(chatFile)).toList())
                     .build();
 
             chatMessageDtoList.add(chatMessageDto);
@@ -167,9 +186,9 @@ public class ChatService {
     }
 
     // 특정 room의 모든 메시지 읽음 처리
-    public void messageRead(Long roomId, String email) {
+    public void messageRead(Long roomId, String userId) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
-        UserInfoResDto userInfo = userFeignClient.fetchUserInfo(email);
+        UserInfoResDto userInfo = userFeignClient.fetchUserInfoById(userId);
 
         // 채팅방에 접속한 사용자의 모든 읽음 여부 가져와 true 설정 (접속한 채팅방의 읽음 여부)
         List<ReadStatus> readStatuses = chatRoom.getReadStatusList().stream().filter(r -> r.getUserId().equals(userInfo.getUserId())).toList();
@@ -191,16 +210,57 @@ public class ChatService {
                     .roomId(room.getId())
                     .lastMessage(dto.getMessage())
                     .lastSendTime(dto.getLastSendTime())
-                    .lastSenderEmail(dto.getSenderEmail())
+                    .lastSenderId(dto.getSenderId())
                     .unreadCount(unreadCount)
                     .build();
 
-            String email = userFeignClient.fetchUserInfoById(String.valueOf(p.getUserId())).getUserEmail();
             // 각 사용자별 summary 토픽 전송
-            messageTemplate.convertAndSend("/topic/summary/" + email, summary);
+            messageTemplate.convertAndSend("/topic/summary/" + p.getUserId(), summary);
         }
     }
 
+    // 파일 업로드
+    public List<ChatFileListDto> uploadFileList(List<MultipartFile> fileList) {
+        List<ChatFileListDto> chatFileListDtoList = new ArrayList<>();
 
+        for(MultipartFile file : fileList) {
+            String fileUrl = s3Uploader.upload(file, "chat");
 
+            ChatFile chatFile = ChatFile.builder()
+                    .fileName(file.getOriginalFilename())
+                    .fileSize(file.getSize())
+                    .fileUrl(fileUrl)
+                    .build();
+
+            chatFileRepository.save(chatFile);
+
+            chatFileListDtoList.add(ChatFileListDto.builder().fileId(chatFile.getId()).build());
+        }
+
+        return chatFileListDtoList;
+    }
+
+    public ChatFile getChatFile(Long id) {
+        return chatFileRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("없는 파일입니다."));
+    }
+
+    // 채팅방 참여자 목록 조회
+    public List<ChatParticipantListResDto> getParticipantListByRoom(Long roomId) {
+        List<ChatParticipant> chatParticipantList = chatParticipantRepository.findByChatRoomId(roomId);
+        List<ChatParticipantListResDto> chatParticipantListResDtoList = new ArrayList<>();
+
+        for(ChatParticipant p : chatParticipantList) {
+            UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(String.valueOf(p.getUserId()));
+            chatParticipantListResDtoList.add(ChatParticipantListResDto.from(senderInfo));
+        }
+
+        return chatParticipantListResDtoList;
+    }
+
+    // 채팅방 파일 목록 조회
+    public List<ChatFileListDto> getFileListByRoom(Long roomId) {
+        List<ChatFile> chatFileList = chatFileRepository.findAllByRoomId(roomId);
+        List<ChatFileListDto> chatFileListDtoList = chatFileList.stream().map(chatFile -> ChatFileListDto.fromEntity(chatFile)).toList();
+        return chatFileListDtoList;
+    }
 }
