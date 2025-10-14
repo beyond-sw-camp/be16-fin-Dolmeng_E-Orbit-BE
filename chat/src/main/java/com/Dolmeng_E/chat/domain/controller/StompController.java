@@ -24,6 +24,7 @@ public class StompController {
 
         chatService.saveMessage(roomId, dto);
 
+
         dto.setRoomId(roomId);
         kafkaService.kafkaMessageKeyCreate(dto);
     }
