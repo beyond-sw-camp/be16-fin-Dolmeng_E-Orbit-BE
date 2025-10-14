@@ -21,10 +21,10 @@ public class UserGroupController {
 
     @PostMapping("")
     public ResponseEntity<?> createUserGroup(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User-Id") String userId,
             @RequestBody UserGroupCreateDto dto
     ) {
-        String groupId = userGroupService.createUserGroup(userEmail,dto);
+        String groupId = userGroupService.createUserGroup(userId,dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("기본 사용자 그룹 생성 완료")
                 .result("group id : " + groupId)
@@ -36,11 +36,11 @@ public class UserGroupController {
     // 사용자 그룹 목록 조회
     @GetMapping("")
     public ResponseEntity<?> getUserGroupList(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User-Id") String userId,
             @RequestParam("workspaceId") String workspaceId,
             @PageableDefault(size = 8, sort = "createdAt") Pageable pageable
     ) {
-        Page<UserGroupListResDto> userGroups = userGroupService.getUserGroupList(userEmail, workspaceId, pageable);
+        Page<UserGroupListResDto> userGroups = userGroupService.getUserGroupList(userId, workspaceId, pageable);
 
         return ResponseEntity.ok(CommonSuccessDto.builder()
                 .statusMessage("사용자 그룹 목록 조회 완료")
@@ -52,11 +52,11 @@ public class UserGroupController {
     // 사용자 그룹에 추가
     @PostMapping("/{groupId}/users")
     public ResponseEntity<?> addUsersToGroup(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User_id") String userId,
             @PathVariable String groupId,
             @RequestBody UserGroupAddUserDto dto
     ) {
-        userGroupService.addUsersToGroup(userEmail, groupId, dto);
+        userGroupService.addUsersToGroup(userId, groupId, dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("사용자 그룹에 사용자 추가 완료")
                 .result(HttpStatus.CREATED)
@@ -70,11 +70,11 @@ public class UserGroupController {
     // 사용자 그룹 상세 조회
     @GetMapping("/{groupId}")
     public ResponseEntity<?> getUserGroupDetail(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User_id") String userId,
             @PathVariable String groupId,
             @PageableDefault(size = 10) Pageable pageable
     ) {
-        UserGroupDetailResDto resDto = userGroupService.getUserGroupDetail(userEmail, groupId, pageable);
+        UserGroupDetailResDto resDto = userGroupService.getUserGroupDetail(userId, groupId, pageable);
 
         return ResponseEntity.ok(CommonSuccessDto.builder()
                 .statusMessage("사용자 그룹 상세 조회 완료")
@@ -88,11 +88,11 @@ public class UserGroupController {
     // 사용자 그룹에서 삭제
     @DeleteMapping("/{groupId}/users")
     public ResponseEntity<?> removeUsersFromGroup(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User_id") String userId,
             @PathVariable String groupId,
             @RequestBody UserGroupRemoveUserDto dto
     ) {
-        userGroupService.removeUsersFromGroup(userEmail, groupId, dto);
+        userGroupService.removeUsersFromGroup(userId, groupId, dto);
 
         return ResponseEntity.ok(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
@@ -104,10 +104,10 @@ public class UserGroupController {
     // 사용자 그룹 삭제
     @DeleteMapping("/{groupId}")
     public ResponseEntity<?> deleteUserGroup(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User_id") String userId,
             @PathVariable String groupId
     ) {
-        userGroupService.deleteUserGroup(userEmail, groupId);
+        userGroupService.deleteUserGroup(userId, groupId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("사용자 그룹 삭제 완료")
                 .result("group id : " + groupId)

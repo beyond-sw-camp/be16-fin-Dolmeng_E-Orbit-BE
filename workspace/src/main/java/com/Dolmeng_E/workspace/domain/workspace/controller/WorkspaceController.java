@@ -19,8 +19,8 @@ public class WorkspaceController {
 
 //    새 워크스페이스 생성
     @PostMapping("")
-    public ResponseEntity<?> createWorkspace(@RequestBody WorkspaceCreateDto workspaceCreateDto, @RequestHeader("X-User-Email") String userEmail) {
-        String workspaceId = workspaceService.createWorkspace(workspaceCreateDto, userEmail);
+    public ResponseEntity<?> createWorkspace(@RequestBody WorkspaceCreateDto workspaceCreateDto, @RequestHeader("X-User-Id") String userId) {
+        String workspaceId = workspaceService.createWorkspace(workspaceCreateDto, userId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(workspaceId)
                 .statusCode(HttpStatus.CREATED.value())
@@ -34,9 +34,9 @@ public class WorkspaceController {
 
 //    워크스페이스 목록 조회
     @GetMapping("")
-    public ResponseEntity<?> getWorkspaceList(@RequestHeader("X-User-Email") String userEmail) {
+    public ResponseEntity<?> getWorkspaceList(@RequestHeader("X-User-Id") String userId) {
 
-        List<WorkspaceListResDto> workspaces = workspaceService.getWorkspaceList(userEmail);
+        List<WorkspaceListResDto> workspaces = workspaceService.getWorkspaceList(userId);
 
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
@@ -48,10 +48,10 @@ public class WorkspaceController {
 //    워크스페이스 상세조회
     @GetMapping("/{workspaceId}")
         public ResponseEntity<?> getWorkspaceDetail(
-                @RequestHeader("X-User-Email") String userEmail,
+                @RequestHeader("X-User-Id") String userId,
                 @PathVariable String workspaceId
         ) {
-            WorkspaceDetailResDto workspaceDetail = workspaceService.getWorkspaceDetail(userEmail, workspaceId);
+            WorkspaceDetailResDto workspaceDetail = workspaceService.getWorkspaceDetail(userId, workspaceId);
 
             return new ResponseEntity<>(CommonSuccessDto.builder()
                     .statusCode(HttpStatus.OK.value())
@@ -64,11 +64,11 @@ public class WorkspaceController {
 //    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
     @PatchMapping("/{workspaceId}/name")
     public ResponseEntity<?> updateWorkspaceName(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String workspaceId,
             @RequestBody WorkspaceNameUpdateDto dto
     ) {
-        workspaceService.updateWorkspaceName(userEmail, workspaceId, dto);
+        workspaceService.updateWorkspaceName(userId, workspaceId, dto);
 
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
@@ -81,11 +81,11 @@ public class WorkspaceController {
 //    워크스페이스 회원 초대
     @PostMapping("/{workspaceId}/participants")
     public ResponseEntity<CommonSuccessDto> addWorkspaceParticipants(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String workspaceId,
             @RequestBody WorkspaceAddUserDto dto
     ) {
-        workspaceService.addParticipants(userEmail, workspaceId, dto);
+        workspaceService.addParticipants(userId, workspaceId, dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result("워크스페이스 사용자 추가 완료")
                 .statusCode(HttpStatus.OK.value())
@@ -99,11 +99,11 @@ public class WorkspaceController {
 //    워크스페이스 이메일 회원 초대 (메일 발송)
     @PostMapping("/{workspaceId}/invite")
     public ResponseEntity<CommonSuccessDto> inviteUsersToWorkspace(
-            @RequestHeader("X-User-Email") String adminEmail,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String workspaceId,
             @RequestBody WorkspaceInviteDto dto
     ) throws AccessDeniedException {
-        workspaceService.inviteUsers(adminEmail, workspaceId, dto);
+        workspaceService.inviteUsers(userId, workspaceId, dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result("초대 메일 발송 완료")
                 .statusCode(HttpStatus.OK.value())
@@ -115,10 +115,10 @@ public class WorkspaceController {
 //    워크스페이스 참여자 목록 조회
     @GetMapping("/{workspaceId}/participants")
     public ResponseEntity<?> getWorkspaceParticipants(
-            @RequestHeader("X-User-Email") String userEmail,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String workspaceId
     ) {
-        List<WorkspaceParticipantResDto> participants = workspaceService.getWorkspaceParticipants(userEmail, workspaceId);
+        List<WorkspaceParticipantResDto> participants = workspaceService.getWorkspaceParticipants(userId, workspaceId);
 
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
@@ -131,11 +131,11 @@ public class WorkspaceController {
 //    워크스페이스 회원 삭제
     @DeleteMapping("/{workspaceId}/participants")
     public ResponseEntity<?> deleteWorkspaceParticipants(
-            @RequestHeader("X-User-Email") String adminEmail,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String workspaceId,
             @RequestBody WorkspaceDeleteUserDto dto
     ) {
-        workspaceService.deleteWorkspaceParticipants(adminEmail, workspaceId, dto);
+        workspaceService.deleteWorkspaceParticipants(userId, workspaceId, dto);
 
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())

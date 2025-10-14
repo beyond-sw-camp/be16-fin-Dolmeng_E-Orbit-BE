@@ -39,13 +39,13 @@ public class UserGroupService {
     private final UserFeign userFeign;
 
     // 사용자 그룹 생성
-    public String createUserGroup(String userEmail, UserGroupCreateDto dto) {
+    public String createUserGroup(String userId, UserGroupCreateDto dto) {
         // 1️. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
 
         // 2️. 관리자 검증
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -75,14 +75,14 @@ public class UserGroupService {
     }
 
     // 사용자 그룹 목록 조회
-    public Page<UserGroupListResDto> getUserGroupList(String userEmail, String workspaceId, Pageable pageable) {
+    public Page<UserGroupListResDto> getUserGroupList(String userId, String workspaceId, Pageable pageable) {
 
         // 1️. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
 
         // 2️. 관리자 검증
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -105,7 +105,7 @@ public class UserGroupService {
     }
 
     // 사용자 그룹에 추가
-    public void addUsersToGroup(String userEmail, String groupId, UserGroupAddUserDto dto) {
+    public void addUsersToGroup(String userId, String groupId, UserGroupAddUserDto dto) {
         // 1. 그룹 조회
         UserGroup userGroup = userGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 사용자 그룹이 존재하지 않습니다."));
@@ -113,7 +113,7 @@ public class UserGroupService {
         Workspace workspace = userGroup.getWorkspace();
 
         // 2. 관리자 검증
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -153,7 +153,7 @@ public class UserGroupService {
 
 
     // 사용자 그룹 상세 조회
-    public UserGroupDetailResDto getUserGroupDetail(String userEmail, String groupId, Pageable pageable) {
+    public UserGroupDetailResDto getUserGroupDetail(String userId, String groupId, Pageable pageable) {
 
         // 1. 사용자 그룹 조회
         UserGroup userGroup = userGroupRepository.findById(groupId)
@@ -162,7 +162,7 @@ public class UserGroupService {
         Workspace workspace = userGroup.getWorkspace();
 
         // 2. 관리자 검증
-        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant participant = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), requester.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -193,14 +193,14 @@ public class UserGroupService {
         // 6. 사용자 정보 + 매핑 결합
         List<UserGroupMemberDto> memberDtos = mappings.stream()
                 .map(mapping -> {
-                    UUID userId = mapping.getWorkspaceParticipant().getUserId();
+                    UUID id = mapping.getWorkspaceParticipant().getUserId();
                     UserInfoResDto userInfo = userInfoListResDto.getUserInfoList().stream()
-                            .filter(u -> u.getUserId().equals(userId))
+                            .filter(u -> u.getUserId().equals(id))
                             .findFirst()
                             .orElse(null);
 
                     return UserGroupMemberDto.builder()
-                            .userId(userId)
+                            .userId(id)
                             .userName(userInfo != null ? userInfo.getUserName() : "유저 이름 없음")
                             .userEmail(userInfo != null ? userInfo.getUserEmail() : "유저 이메일 없음")
                             .profileImageUrl(userInfo != null ? userInfo.getProfileImageUrl() : null)
@@ -222,7 +222,7 @@ public class UserGroupService {
 
 
     // 사용자 그룹에서 삭제
-    public void removeUsersFromGroup(String userEmail, String groupId, UserGroupRemoveUserDto dto) {
+    public void removeUsersFromGroup(String userId, String groupId, UserGroupRemoveUserDto dto) {
 
         // 1. 사용자 그룹 조회
         UserGroup userGroup = userGroupRepository.findById(groupId)
@@ -231,7 +231,7 @@ public class UserGroupService {
         Workspace workspace = userGroup.getWorkspace();
 
         // 2. 관리자 검증
-        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), requester.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -284,7 +284,7 @@ public class UserGroupService {
     }
 
     // 사용자 그룹 삭제
-    public void deleteUserGroup(String userEmail, String groupId) {
+    public void deleteUserGroup(String userId, String groupId) {
 
         // 1. 그룹 조회
         UserGroup userGroup = userGroupRepository.findById(groupId)
@@ -293,7 +293,7 @@ public class UserGroupService {
         Workspace workspace = userGroup.getWorkspace();
 
         // 2. 관리자 검증
-        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), requester.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));

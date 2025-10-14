@@ -107,14 +107,14 @@ public class AccessGroupService {
 
     //    커스터마이징 권한그룹 생성
 
-    public void createCustomAccessGroup(CustomAccessGroupDto dto, String userEmail) {
+    public void createCustomAccessGroup(CustomAccessGroupDto dto, String userId) {
 
 
         // 1. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + dto.getWorkspaceId()));
         // 2. 유저 권한 체크
-        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),userInfoResDto.getUserId())
                 .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
         if (workspaceParticipant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
@@ -158,12 +158,12 @@ public class AccessGroupService {
 
     //    권한그룹 수정
 
-    public void modifyAccessGroup(AccessGroupModifyDto dto, String userEmail) {
+    public void modifyAccessGroup(AccessGroupModifyDto dto, String userId) {
         // 1. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + dto.getWorkspaceId()));
         // 2. 유저 권한 체크
-        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),userInfoResDto.getUserId())
                 .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
         if (workspaceParticipant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
@@ -215,7 +215,7 @@ public class AccessGroupService {
 
     //    권한그룹 리스트 조회
 
-    public Page<AccessGroupListResDto> accessGroupList(Pageable pageable, String userEmail, String workspaceId) {
+    public Page<AccessGroupListResDto> accessGroupList(Pageable pageable, String userId, String workspaceId) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + workspaceId));
         Page<AccessGroup> accessGroupPage = accessGroupRepository.findByWorkspaceId(workspace.getId(), pageable);
@@ -227,7 +227,7 @@ public class AccessGroupService {
     //    권한그룹 상세 조회
 
     @Transactional(readOnly = true)
-    public AccessGroupUserListResDto  getAccessGroupDetail(String userEmail, String groupId) {
+    public AccessGroupUserListResDto  getAccessGroupDetail(String userId, String groupId) {
 
         // 1. 권한그룹 조회
         AccessGroup accessGroup = accessGroupRepository.findById(groupId)
@@ -236,7 +236,7 @@ public class AccessGroupService {
         Workspace workspace = accessGroup.getWorkspace();
 
         // 2. 요청자(관리자) 확인
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -291,13 +291,13 @@ public class AccessGroupService {
 
     //    권한그룹 사용자 추가
 
-    public void addUserToAccessGroup(String userEmail, String groupId, AccessGroupAddUserDto accessGroupAddUserDto) {
+    public void addUserToAccessGroup(String userId, String groupId, AccessGroupAddUserDto accessGroupAddUserDto) {
         // 1. 워크스페이스 조회
         AccessGroup accessGroup = accessGroupRepository.findById(groupId).orElseThrow(()->new EntityNotFoundException("해당 권한그룹 없습니다."));
         Workspace workspace = workspaceRepository.findById(accessGroup.getWorkspace().getId())
                 .orElseThrow(() -> new IllegalArgumentException("워크스페이스를 찾을 수 없습니다. ID=" + accessGroup.getWorkspace().getId()));
         // 2. 유저 워크스페이스 참여자 체크
-        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),userInfoResDto.getUserId())
                 .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
 
@@ -329,7 +329,7 @@ public class AccessGroupService {
 
     //    권한그룹 사용자 변경 (워크스페이스 내 기존 사용자 그룹 변경)
     @Transactional
-    public void updateUserAccessGroup(String adminEmail, String groupId, AccessGroupAddUserDto dto) {
+    public void updateUserAccessGroup(String userId, String groupId, AccessGroupAddUserDto dto) {
         // 1. 권한그룹 조회
         AccessGroup accessGroup = accessGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 권한그룹이 존재하지 않습니다."));
@@ -337,7 +337,7 @@ public class AccessGroupService {
         Workspace workspace = accessGroup.getWorkspace();
 
         // 2. 요청자(관리자) 확인
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(adminEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -368,7 +368,7 @@ public class AccessGroupService {
 
 
     //    권한그룹 사용자 이동(일반 그룹으로 이동)
-    public void moveUserAccessGroup(String adminEmail, String groupId, AccessGroupMoveDto dto) {
+    public void moveUserAccessGroup(String userId, String groupId, AccessGroupMoveDto dto) {
         // 1. 권한그룹 조회
         AccessGroup accessGroup = accessGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 권한그룹이 존재하지 않습니다."));
@@ -376,7 +376,7 @@ public class AccessGroupService {
         Workspace workspace = accessGroup.getWorkspace();
 
         // 2. 요청자(관리자) 확인
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(adminEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
@@ -415,7 +415,7 @@ public class AccessGroupService {
 
     //    권한그룹 삭제
 
-    public void deleteUserAccessGroup(String adminEmail, String groupId) {
+    public void deleteUserAccessGroup(String userId, String groupId) {
         // 1. 권한그룹 조회
         AccessGroup accessGroup = accessGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 권한그룹이 존재하지 않습니다."));
@@ -423,7 +423,7 @@ public class AccessGroupService {
         Workspace workspace = accessGroup.getWorkspace();
 
         // 2. 요청자(관리자) 확인
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(adminEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));

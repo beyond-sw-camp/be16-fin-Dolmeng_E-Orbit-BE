@@ -20,7 +20,7 @@ public class JwtAuthFilter implements GlobalFilter {
     private String secretKeyAt;
 
     private static final List<String> ALLOWED_PATH = List.of(
-
+            "/user",
             "/user/auth/login",
             "/user/kakao/login",
             "/user/google/login",

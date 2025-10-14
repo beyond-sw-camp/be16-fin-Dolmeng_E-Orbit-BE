@@ -38,11 +38,11 @@ public class WorkspaceService {
     private final WorkspaceInviteRepository workspaceInviteRepository;
 
 //    워크스페이스 생성
-    public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userEmail) {
+    public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
 
 
         // 1. 워크스페이스 생성
-        UserInfoResDto userInfoResDto = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto userInfoResDto = userFeign.fetchUserInfoById(userId);
         Workspace workspace = workspaceCreateDto.toEntity(userInfoResDto.getUserId());
         workspace.settingMaxStorage(workspaceCreateDto.getWorkspaceTemplates());
         workspaceRepository.save(workspace);
@@ -73,9 +73,9 @@ public class WorkspaceService {
 
 //    워크스페이스 목록 조회
     @Transactional(readOnly = true)
-    public List<WorkspaceListResDto> getWorkspaceList(String userEmail) {
+    public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         // 1. 유저 정보 조회 (Feign)
-        UserInfoResDto userInfo = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
 
         // 2. 사용자가 속한 워크스페이스 조회
         List<WorkspaceParticipant> participants =
@@ -100,9 +100,9 @@ public class WorkspaceService {
 
 //    워크스페이스 상세조회
     @Transactional(readOnly = true)
-    public WorkspaceDetailResDto getWorkspaceDetail(String userEmail, String workspaceId) {
+    public WorkspaceDetailResDto getWorkspaceDetail(String userId, String workspaceId) {
         // 1. 유저 확인
-        UserInfoResDto userInfo = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
 
         // 2. 워크스페이스 존재 여부
         Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -130,9 +130,9 @@ public class WorkspaceService {
 
 //    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
 @Transactional
-public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceNameUpdateDto dto) {
+public void updateWorkspaceName(String userId, String workspaceId, WorkspaceNameUpdateDto dto) {
     // 1. 요청자 정보 조회
-    UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+    UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
 
     // 2. 워크스페이스 조회
     Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -152,14 +152,14 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
 }
 
 //    워크스페이스 회원 초대
-    public void addParticipants(String userEmail, String workspaceId, WorkspaceAddUserDto dto) {
+    public void addParticipants(String userId, String workspaceId, WorkspaceAddUserDto dto) {
 
         // 1. 워크스페이스 확인
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
 
         // 2. 요청자 권한 확인
-        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자 워크스페이스 참가자 정보가 없습니다."));
@@ -190,14 +190,14 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
     }
 
 
-//    워크스페이스 이메일 회원 초대
-    public void inviteUsers(String adminEmail, String workspaceId, WorkspaceInviteDto dto) throws AccessDeniedException {
+//    워크스페이스 이메일 회원 초대 (To-Do : 로직 반드시 수정 할 것, X-User-Id 로 바뀌어서 그에 맞게!)
+    public void inviteUsers(String userId, String workspaceId, WorkspaceInviteDto dto) throws AccessDeniedException {
         // 1. 워크스페이스 확인
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
 
         // 2. 요청자 권한 확인
-        UserInfoResDto requester = userFeign.fetchUserInfo(adminEmail);
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자 워크스페이스 참가자 정보가 없습니다."));
@@ -211,7 +211,7 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
             // 1. User 서비스에 회원 존재 여부 확인
             boolean userExists;
             try {
-                userFeign.fetchUserInfo(email);
+                userFeign.fetchUserInfoById(email);
                 userExists = true;
             } catch (FeignException.NotFound e) {
                 userExists = false;
@@ -239,9 +239,9 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
 
 //    워크스페이스 회원 목록 조회
     @Transactional(readOnly = true)
-    public List<WorkspaceParticipantResDto> getWorkspaceParticipants(String userEmail, String workspaceId) {
+    public List<WorkspaceParticipantResDto> getWorkspaceParticipants(String userId, String workspaceId) {
         // 1. 요청자 유효성 검증
-        UserInfoResDto requester = userFeign.fetchUserInfo(userEmail);
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
 
         // 2. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -265,9 +265,9 @@ public void updateWorkspaceName(String userEmail, String workspaceId, WorkspaceN
 
 
 //    워크스페이스 회원 삭제
-    public void deleteWorkspaceParticipants(String adminEmail, String workspaceId, WorkspaceDeleteUserDto dto) {
+    public void deleteWorkspaceParticipants(String userId, String workspaceId, WorkspaceDeleteUserDto dto) {
         // 1. 관리자 확인
-        UserInfoResDto adminInfo = userFeign.fetchUserInfo(adminEmail);
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));

@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 @FeignClient(name = "user-service")
 public interface UserFeign {
 
-    @GetMapping("/user/return")
-    UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail);
+    @GetMapping("/user/return/by-id")
+    UserInfoResDto fetchUserInfoById(@RequestHeader("X-User-Id")String userId);
 
     @PostMapping("/user/return/users")
     UserInfoListResDto fetchUserListInfo(@RequestBody UserIdListDto userIdListDto);
