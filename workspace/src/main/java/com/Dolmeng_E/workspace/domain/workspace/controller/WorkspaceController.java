@@ -145,4 +145,17 @@ public class WorkspaceController {
                 HttpStatus.OK);
     }
 
+    @DeleteMapping("/{workspaceId}")
+    public ResponseEntity<?> deleteWorkspace(@RequestHeader("X-User-Id") String userId,
+                                             @PathVariable String workspaceId
+    ) {
+        workspaceService.deleteWorkspace(userId,workspaceId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("워크스페이스 회원 삭제 성공")
+                .result(HttpStatus.OK)
+                .build(),
+                HttpStatus.OK);
+    }
+
 }

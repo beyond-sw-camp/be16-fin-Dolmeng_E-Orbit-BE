@@ -60,8 +60,8 @@ public class WorkspaceParticipant extends BaseTimeEntity {
         return isDelete;
     }
 
-    public void setDelete(boolean delete) {
-        this.isDelete = delete;
+    public void deleteParticipant() {
+        this.isDelete = true;
     }
 
 

@@ -72,31 +72,32 @@ public class WorkspaceService {
 //    회원가입 시 워크스페이스 생성
 
 //    워크스페이스 목록 조회
-    @Transactional(readOnly = true)
-    public List<WorkspaceListResDto> getWorkspaceList(String userId) {
-        // 1. 유저 정보 조회 (Feign)
-        UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
+@Transactional(readOnly = true)
+public List<WorkspaceListResDto> getWorkspaceList(String userId) {
+    // 1. 유저 정보 조회 (Feign)
+    UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
 
-        // 2. 사용자가 속한 워크스페이스 조회
-        List<WorkspaceParticipant> participants =
-                workspaceParticipantRepository.findByUserIdAndIsDeleteFalse(userInfo.getUserId());
+    // 2. 사용자가 속한 워크스페이스 조회
+    List<WorkspaceParticipant> participants =
+            workspaceParticipantRepository.findByUserIdAndIsDeleteFalse(userInfo.getUserId());
 
-        // 3. DTO 변환
-        return participants.stream()
-                .map(p -> {
-                    Workspace workspace = p.getWorkspace();
-                    return WorkspaceListResDto.builder()
-                            .workspaceId(workspace.getId())
-                            .workspaceName(workspace.getWorkspaceName())
-                            .workspaceTemplates(workspace.getWorkspaceTemplates())
-                            .subscribe(workspace.getSubscribe())
-                            .currentStorage(workspace.getCurrentStorage())
-                            .maxStorage(workspace.getMaxStorage())
-                            .role(p.getWorkspaceRole().name())
-                            .build();
-                })
-                .toList();
-    }
+    // 3. DTO 변환 + 필터링
+    return participants.stream()
+            .filter(p -> p.getWorkspace() != null && !Boolean.TRUE.equals(p.getWorkspace().getIsDelete())) // 워크스페이스 삭제 제외
+            .map(p -> {
+                Workspace workspace = p.getWorkspace();
+                return WorkspaceListResDto.builder()
+                        .workspaceId(workspace.getId())
+                        .workspaceName(workspace.getWorkspaceName())
+                        .workspaceTemplates(workspace.getWorkspaceTemplates())
+                        .subscribe(workspace.getSubscribe())
+                        .currentStorage(workspace.getCurrentStorage())
+                        .maxStorage(workspace.getMaxStorage())
+                        .role(p.getWorkspaceRole().name())
+                        .build();
+            })
+            .toList();
+}
 
 //    워크스페이스 상세조회
     @Transactional(readOnly = true)
@@ -111,6 +112,11 @@ public class WorkspaceService {
         // 3. 참여자 확인 (접근 권한)
         workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspaceId, userInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스에 접근 권한이 없습니다."));
+
+        // 삭제 여부 확인
+        if (Boolean.TRUE.equals(workspace.getIsDelete())) {
+            throw new EntityNotFoundException("삭제된 워크스페이스입니다.");
+        }
 
         // 4. 구성원 수
         long memberCount = workspaceParticipantRepository.countByWorkspaceIdAndIsDeleteFalse(workspaceId);
@@ -128,28 +134,28 @@ public class WorkspaceService {
                 .build();
     }
 
-//    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
-@Transactional
-public void updateWorkspaceName(String userId, String workspaceId, WorkspaceNameUpdateDto dto) {
-    // 1. 요청자 정보 조회
-    UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
+    //    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
+    @Transactional
+    public void updateWorkspaceName(String userId, String workspaceId, WorkspaceNameUpdateDto dto) {
+        // 1. 요청자 정보 조회
+        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
 
-    // 2. 워크스페이스 조회
-    Workspace workspace = workspaceRepository.findById(workspaceId)
-            .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
+        // 2. 워크스페이스 조회
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
 
-    // 3. 관리자 권한 확인
-    WorkspaceParticipant participant = workspaceParticipantRepository
-            .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
-            .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참가자 정보를 찾을 수 없습니다."));
+        // 3. 관리자 권한 확인
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참가자 정보를 찾을 수 없습니다."));
 
-    if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-        throw new EntityNotFoundException("관리자만 워크스페이스명을 변경할 수 있습니다.");
+        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new EntityNotFoundException("관리자만 워크스페이스명을 변경할 수 있습니다.");
+        }
+
+        // 4. 이름 변경
+        workspace.updateWorkspaceName(dto.getWorkspaceName());
     }
-
-    // 4. 이름 변경
-    workspace.updateWorkspaceName(dto.getWorkspaceName());
-}
 
 //    워크스페이스 회원 초대
     public void addParticipants(String userId, String workspaceId, WorkspaceAddUserDto dto) {
@@ -256,6 +262,7 @@ public void updateWorkspaceName(String userId, String workspaceId, WorkspaceName
                         .userId(p.getUserId())
                         .userName(p.getUserName())
                         .workspaceRole(p.getWorkspaceRole().name())
+                        .workspaceParticipantId(p.getId())
                         .isDeleted(p.isDelete())
                         .accessGroupId(p.getAccessGroup() != null ? p.getAccessGroup().getId() : null)
                         .accessGroupName(p.getAccessGroup() != null ? p.getAccessGroup().getAccessGroupName() : null)
@@ -292,10 +299,39 @@ public void updateWorkspaceName(String userId, String workspaceId, WorkspaceName
                     .orElseThrow(() -> new EntityNotFoundException("삭제 대상 사용자를 찾을 수 없습니다."));
 
             if (!target.isDelete()) {
-                target.setDelete(true);
+                target.deleteParticipant();
                 workspaceParticipantRepository.save(target);
             }
         }
+    }
+
+    public void deleteWorkspace(String userId, String workspaceId) {
+        // 1. 유저 정보 검증 (Feign)
+        UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
+
+        // 2. 워크스페이스 존재 여부 및 삭제여부 확인
+        Workspace workspace = workspaceRepository.findByIdAndIsDeleteFalse(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않거나 이미 삭제된 워크스페이스입니다."));
+
+        // 3. 접근 권한 확인 (참여자인지 체크)
+        workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspaceId, userInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스에 접근 권한이 없습니다."));
+
+        // 4. 워크스페이스 관리자인지 체크
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, userInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스에 접근 권한이 없습니다."));
+
+        if (participant.getWorkspaceRole() != WorkspaceRole.ADMIN) {
+            throw new IllegalArgumentException("관리자가 아니면 워크스페이스 삭제 불가능합니다.");
+        }
+
+        // 5. 삭ㅂ제
+        workspace.deleteWorkspace();
+
+        // 6. 워크스페이스 참여자들도 함께 비활성화
+        List<WorkspaceParticipant> participants = workspaceParticipantRepository.findAllByWorkspaceId(workspaceId);
+        participants.forEach(p -> p.deleteParticipant());
     }
 
 }

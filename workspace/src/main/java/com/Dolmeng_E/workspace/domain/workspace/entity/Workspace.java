@@ -40,6 +40,10 @@ public class Workspace extends BaseTimeEntity {
     @Column(length = 20)
     private String workspaceName;
 
+    @Builder.Default
+    @Column(name = "is_delete")
+    private Boolean isDelete = false;
+
 //    결제 구현 완료 시 구독개월 활용 예정
     private Integer subscribe;
 
@@ -62,6 +66,10 @@ public class Workspace extends BaseTimeEntity {
 
     public void updateWorkspaceName(String newName) {
         this.workspaceName = newName;
+    }
+
+    public void deleteWorkspace() {
+        this.isDelete = true;
     }
 
 }

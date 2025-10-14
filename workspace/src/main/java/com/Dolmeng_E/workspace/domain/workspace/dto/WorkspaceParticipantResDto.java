@@ -13,6 +13,7 @@ import java.util.UUID;
 public class WorkspaceParticipantResDto {
     private UUID userId;
     private String userName;
+    private String workspaceParticipantId;
     private String workspaceRole;
     private String accessGroupId;
     private String accessGroupName;
