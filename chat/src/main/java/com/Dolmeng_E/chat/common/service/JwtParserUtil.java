@@ -12,7 +12,7 @@ import java.util.Base64;
 public class JwtParserUtil {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    public String extractEmailWithoutValidation(String token) {
+    public String extractIdWithoutValidation(String token) {
         try {
             // JWT는 header.payload.signature 구조이므로 가운데 부분(payload)만 추출
             String[] parts = token.split("\\.");

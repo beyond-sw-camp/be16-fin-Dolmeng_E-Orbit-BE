@@ -20,7 +20,7 @@ public class StompController {
 
     @MessageMapping("/{roomId}")
     public void sendMessage(@DestinationVariable Long roomId, ChatMessageDto dto) {
-        log.info("sendMessage() - roomId: " + roomId + ", sender: " + dto.getSenderEmail() + ", message: " + dto.getMessage());
+        log.info("sendMessage() - roomId: " + roomId + ", sender: " + dto.getSenderId() + ", message: " + dto.getMessage());
 
         chatService.saveMessage(roomId, dto);
 

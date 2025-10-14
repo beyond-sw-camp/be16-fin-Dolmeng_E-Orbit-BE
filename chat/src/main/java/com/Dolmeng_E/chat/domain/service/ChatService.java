@@ -52,7 +52,7 @@ public class ChatService {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
 
         // 보낸사람 조회
-        UserInfoResDto senderInfo = userFeignClient.fetchUserInfo(chatMessageDto.getSenderEmail());
+        UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(chatMessageDto.getSenderId());
 
         // 메시지 저장
         ChatMessage chatMessage = ChatMessage.builder()
@@ -67,12 +67,11 @@ public class ChatService {
 
         List<ChatParticipant> chatParticipantList = chatRoom.getChatParticipantList();
         for(ChatParticipant chatParticipant : chatParticipantList) {
-            String email = userFeignClient.fetchUserInfoById(String.valueOf(chatParticipant.getUserId())).getUserEmail();
             ReadStatus readStatus = ReadStatus.builder()
                     .chatRoom(chatRoom)
                     .userId(chatParticipant.getUserId())
                     .chatMessage(chatMessage)
-                    .isRead(connectedUsers.contains(email))
+                    .isRead(connectedUsers.contains(String.valueOf(chatParticipant.getUserId())))
                     .build();
             readStatusRepository.save(readStatus);
         }
@@ -133,12 +132,11 @@ public class ChatService {
     }
 
     // 해당 room의 참여자가 맞는 지 검증
-    public boolean isRoomParticipant(String email, Long roomId) {
+    public boolean isRoomParticipant(String userId, Long roomId) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
-        UUID userId = userFeignClient.fetchUserInfo(email).getUserId();
 
         return chatRoom.getChatParticipantList().stream()
-                .anyMatch(p -> p.getUserId().equals(userId));
+                .anyMatch(p -> p.getUserId().equals(UUID.fromString(userId)));
     }
 
     // 채팅방 채팅 목록 조회
@@ -153,7 +151,7 @@ public class ChatService {
             UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(String.valueOf(c.getUserId()));
 
             ChatMessageDto chatMessageDto = ChatMessageDto.builder()
-                    .senderEmail(senderInfo.getUserEmail())
+                    .senderId(String.valueOf(senderInfo.getUserId()))
                     .senderName(senderInfo.getUserName())
                     .message(c.getContent())
                     .lastSendTime(c.getCreatedAt())
@@ -191,13 +189,12 @@ public class ChatService {
                     .roomId(room.getId())
                     .lastMessage(dto.getMessage())
                     .lastSendTime(dto.getLastSendTime())
-                    .lastSenderEmail(dto.getSenderEmail())
+                    .lastSenderId(dto.getSenderId())
                     .unreadCount(unreadCount)
                     .build();
 
-            String email = userFeignClient.fetchUserInfoById(String.valueOf(p.getUserId())).getUserEmail();
             // 각 사용자별 summary 토픽 전송
-            messageTemplate.convertAndSend("/topic/summary/" + email, summary);
+            messageTemplate.convertAndSend("/topic/summary/" + p.getUserId(), summary);
         }
     }
 

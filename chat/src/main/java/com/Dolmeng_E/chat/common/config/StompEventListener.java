@@ -2,8 +2,6 @@ package com.Dolmeng_E.chat.common.config;
 
 import com.Dolmeng_E.chat.common.service.JwtParserUtil;
 import com.Dolmeng_E.chat.domain.service.ChatService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -66,11 +64,11 @@ public class StompEventListener {
         if (bearerToken == null || destination == null) return;
 
         String accessToken = bearerToken.substring(7);
-        String email = jwtParserUtil.extractEmailWithoutValidation(accessToken);
+        String userId = jwtParserUtil.extractIdWithoutValidation(accessToken);
 
         // summary 구독이면 검증 로직 스킵
         if (destination.startsWith("/topic/summary")) {
-            log.info("subscribeHandle() - summary 구독 감지 (email: {}, session: {})", email, sessionId);
+            log.info("subscribeHandle() - summary 구독 감지 (userId: {}, session: {})", userId, sessionId);
             return;
         }
 
@@ -82,16 +80,16 @@ public class StompEventListener {
             Long roomId = Long.parseLong(roomIdStr);
 
             // room 권한 검증 및 읽음 처리
-            if (!chatService.isRoomParticipant(email, roomId)) {
+            if (!chatService.isRoomParticipant(userId, roomId)) {
                 throw new IllegalArgumentException("해당 room에 대한 권한이 없습니다.");
             }
-            chatService.messageRead(roomId, email);
+            chatService.messageRead(roomId, userId);
 
-            log.info("subscribeHandle() - 입장 roomId: {}, email: {}, session: {}", roomId, email, sessionId);
+            log.info("subscribeHandle() - 입장 roomId: {}, userId: {}, session: {}", roomId, userId, sessionId);
 
             // Redis 저장
-            redisTemplate.opsForSet().add("chat:room:" + roomId + ":users", email);
-            redisTemplate.opsForHash().put("chat:session:" + sessionId, "email", email);
+            redisTemplate.opsForSet().add("chat:room:" + roomId + ":users", userId);
+            redisTemplate.opsForHash().put("chat:session:" + sessionId, "userId", userId);
             redisTemplate.opsForHash().put("chat:session:" + sessionId, "roomId", roomId);
 
         } catch (NumberFormatException e) {
@@ -109,14 +107,14 @@ public class StompEventListener {
 
         log.info("unsubscribeHandle() - sessionId: {}, sessionInfo: {}", sessionId, sessionInfo);
 
-        String email = (String) sessionInfo.get("email");
+        String userId = (String) sessionInfo.get("userId");
         Object roomIdObj = sessionInfo.get("roomId");
         String roomId = (roomIdObj instanceof Long) ? String.valueOf(roomIdObj)
                 : (String) roomIdObj;
 
-        if (email != null && roomId != null) {
-            redisTemplate.opsForSet().remove("chat:room:" + roomId + ":users", email);
-            log.info("unsubscribeHandle() - 구독 해제 roomId: {}, email: {}", roomId, email);
+        if (userId != null && roomId != null) {
+            redisTemplate.opsForSet().remove("chat:room:" + roomId + ":users", userId);
+            log.info("unsubscribeHandle() - 구독 해제 roomId: {}, userId: {}", roomId, userId);
         }
     }
 
@@ -133,16 +131,16 @@ public class StompEventListener {
         Map<Object, Object> sessionInfo = redisTemplate.opsForHash().entries("chat:session:" + sessionId);
         if (sessionInfo.isEmpty()) return;
 
-        String email = (String) sessionInfo.get("email");
+        String userId = (String) sessionInfo.get("userId");
         Object roomIdObj = sessionInfo.get("roomId");
         String roomId = (roomIdObj instanceof Long) ? String.valueOf(roomIdObj)
                 : (String) roomIdObj;
 
-        System.out.println("disconnectHandle() - sessionId: " + sessionId + ", roomId: " + roomId + ", email: " + email);
+        System.out.println("disconnectHandle() - sessionId: " + sessionId + ", roomId: " + roomId + ", userId: " + userId);
 
-        if (email != null && roomId != null) {
-            redisTemplate.opsForSet().remove("chat:room:" + roomId + ":users", email);
-            log.info("disconnectHandle() - roomId: {}, email: {}, session: {}", roomId, email, sessionId);
+        if (userId != null && roomId != null) {
+            redisTemplate.opsForSet().remove("chat:room:" + roomId + ":users", userId);
+            log.info("disconnectHandle() - roomId: {}, userId: {}, session: {}", roomId, userId, sessionId);
         }
 
         // 세션 데이터 정리
