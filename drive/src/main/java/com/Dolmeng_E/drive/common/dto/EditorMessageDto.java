@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 public class EditorMessageDto {
     public enum MessageType {
         JOIN, // 특정 문서 편집 세션에 참여
-        UPDATE // 문서 내용 업데이트
+        UPDATE, // 문서 내용 업데이트
+        CURSOR_UPDATE // 커서 위치 업데이트
     }
 
     private MessageType type;
