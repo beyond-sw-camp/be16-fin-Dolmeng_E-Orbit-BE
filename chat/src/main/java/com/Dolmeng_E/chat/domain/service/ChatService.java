@@ -244,6 +244,7 @@ public class ChatService {
         return chatFileRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("없는 파일입니다."));
     }
 
+    // 채팅방 참여자 목록 조회
     public List<ChatParticipantListResDto> getParticipantListByRoom(Long roomId) {
         List<ChatParticipant> chatParticipantList = chatParticipantRepository.findByChatRoomId(roomId);
         List<ChatParticipantListResDto> chatParticipantListResDtoList = new ArrayList<>();
@@ -256,4 +257,10 @@ public class ChatService {
         return chatParticipantListResDtoList;
     }
 
+    // 채팅방 파일 목록 조회
+    public List<ChatFileListDto> getFileListByRoom(Long roomId) {
+        List<ChatFile> chatFileList = chatFileRepository.findAllByRoomId(roomId);
+        List<ChatFileListDto> chatFileListDtoList = chatFileList.stream().map(chatFile -> ChatFileListDto.fromEntity(chatFile)).toList();
+        return chatFileListDtoList;
+    }
 }

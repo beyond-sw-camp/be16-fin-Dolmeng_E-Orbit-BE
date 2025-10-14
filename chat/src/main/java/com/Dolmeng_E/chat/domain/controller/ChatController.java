@@ -60,4 +60,11 @@ public class ChatController {
         return new ResponseEntity<>(new CommonSuccessDto(participantListDto, HttpStatus.OK.value(), "채팅방 참여자 목록 조회 성공"), HttpStatus.OK);
     }
 
+    // 채팅방 파일 목록 조회
+    @GetMapping("/room/{roomId}/files")
+    public ResponseEntity<?> getFileListByRoom (@PathVariable("roomId") Long roomId) {
+        List<ChatFileListDto> fileListDto = chatService.getFileListByRoom(roomId);
+        return new ResponseEntity<>(new CommonSuccessDto(fileListDto, HttpStatus.OK.value(), "채팅방 파일 목록 조회 성공"), HttpStatus.OK);
+    }
+
 }
