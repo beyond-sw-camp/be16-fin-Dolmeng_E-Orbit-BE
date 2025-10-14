@@ -62,10 +62,12 @@ public class Stone extends BaseTimeEntity {
 
     // 채팅방 생성 여부
     @Column(name = "chat_creation", nullable = false)
+    @Builder.Default
     private Boolean chatCreation = false;
 
     // 태스크 생성 여부
     @Column(name = "task_creation", nullable = false)
+    @Builder.Default
     private Boolean taskCreation = false;
 
     // 진행 상태

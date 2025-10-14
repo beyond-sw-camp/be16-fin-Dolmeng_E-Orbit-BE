@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.project.entity;
 
+import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
@@ -63,5 +64,25 @@ public class Project extends BaseTimeEntity {
     @Column(name = "project_status")
     @Builder.Default
     private ProjectStatus projectStatus = ProjectStatus.PROGRESS; // PROGRESS,COMPLETED,STORAGE
+
+    @Column(name = "is_delete")
+    @Builder.Default
+    private Boolean isDelete = false;
+
+    public void update(ProjectModifyDto dto) {
+        if (dto.getStartTime() != null) this.startTime = dto.getStartTime();
+        if (dto.getEndTime() != null) this.endTime = dto.getEndTime();
+        if (dto.getProjectObjective() != null) this.projectObjective = dto.getProjectObjective();
+        if (dto.getProjectDescription() != null) this.projectDescription = dto.getProjectDescription();
+        if (dto.getProjectStatus() != null) this.projectDescription = dto.getProjectDescription();
+    }
+
+    public void changeManager(WorkspaceParticipant newManager) {
+        this.workspaceParticipant = newManager;
+    }
+
+    public void deleteProject() {
+        this.isDelete = true;
+    }
 
 }
