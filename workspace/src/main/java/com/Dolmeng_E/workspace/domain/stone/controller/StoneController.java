@@ -128,10 +128,23 @@ public class StoneController {
                 HttpStatus.OK);
     }
 
+    // 스톤 삭제
+    @DeleteMapping("/{stoneId}")
+    public ResponseEntity<?> deleteStone(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String stoneId
+    ) {
+        stoneService.deleteStone(userId, stoneId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤 삭제 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build(),
+                HttpStatus.OK);
+    }
+
 
     // 내 마일스톤 목록 조회(삭제되지 않은 스톤 조회)
-
-    // 스톤 삭제
 
     // 스톤 상세 정보 조회
 

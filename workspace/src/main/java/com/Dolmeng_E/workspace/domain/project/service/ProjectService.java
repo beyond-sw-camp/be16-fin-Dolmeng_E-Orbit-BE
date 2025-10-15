@@ -4,15 +4,18 @@ import com.Dolmeng_E.workspace.common.service.AccessCheckService;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessDetailRepository;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupRepository;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectDeleteDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectListDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
+import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.dto.TopStoneCreateDto;
+import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.stone.service.StoneService;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
@@ -40,6 +43,8 @@ public class ProjectService {
     private final WorkspaceRepository workspaceRepository;
     private final AccessCheckService accessCheckService;
     private final StoneService stoneService;
+    private final StoneRepository stoneRepository;
+    private final StoneParticipantRepository stoneParticipantRepository;
 
 // 프로젝트 생성
 
@@ -136,25 +141,53 @@ public class ProjectService {
 
 
 // 프로젝트 삭제
-    public void deleteProject(String userId, ProjectDeleteDto dto) {
-        // 1. 참여자 검증
+    public void deleteProject(String userId, String projectId) {
+
+        // 1. 프로젝트 조회
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
+        Workspace workspace = project.getWorkspace();
+        // 2. 참여자 검증
         WorkspaceParticipant participant = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
-        // 2. 프로젝트 조회
-        Project project = projectRepository.findById(dto.getProjectId())
-                .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
+        // 3. 권한 검증: 관리자 or 프로젝트 담당자 or 권한그룹
+        if (participant.getWorkspaceRole() != WorkspaceRole.ADMIN &&
+                !project.getWorkspaceParticipant().getId().equals(participant.getId())) {
+            accessCheckService.validateAccess(participant, "ws_acc_list_2");
+        }
 
-        // 3. 권한 검증: 담당자 or 권한그룹 or 관리자
-        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-                accessCheckService.validateAccess(participant, "ws_acc_list_2");
+        // 4. 이미 삭제된 프로젝트인지 확인
+        if (Boolean.TRUE.equals(project.getIsDelete())) {
+            throw new IllegalStateException("이미 삭제된 프로젝트입니다.");
+        }
+
+        // 5. 프로젝트 내 스톤 전체 조회
+        List<Stone> stones = stoneRepository.findAllByProject(project);
+
+        for (Stone stone : stones) {
+            // 5-1. 스톤 논리 삭제
+            stone.setIsDelete(true);
+
+            // 5-2. 스톤 참여자 하드삭제
+            List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(stone);
+            if (!stoneParticipants.isEmpty()) {
+                stoneParticipantRepository.deleteAll(stoneParticipants);
             }
         }
 
-        // 4. 삭제
+        // 6. 프로젝트 참여자 하드삭제
+        List<ProjectParticipant> projectParticipants = projectParticipantRepository.findAllByProject(project);
+        if (!projectParticipants.isEmpty()) {
+            projectParticipantRepository.deleteAll(projectParticipants);
+        }
+
+        // 7. 프로젝트 논리 삭제
         project.deleteProject();
+
+        // 8. 저장
+        projectRepository.save(project);
     }
 
 // 프로젝트가 프로젝트 캘린더에 노출 여부 설정(프로젝트 캘린더 조회용 API)

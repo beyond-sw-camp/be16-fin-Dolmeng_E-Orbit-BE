@@ -470,9 +470,73 @@ public class StoneService {
         stoneRepository.save(stone);
     }
 
-    // 내 스톤 목록 조회
+// 스톤 삭제
+public void deleteStone(String userId, String stoneId) {
 
-    // 스톤 삭제
+    // 1. 스톤 조회
+    Stone stone = stoneRepository.findById(stoneId)
+            .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+    // 2. 부모 스톤이 없는 경우 (최상위 스톤) 삭제 불가
+    if (stone.getParentStoneId() == null) {
+        throw new IllegalArgumentException("최상위 스톤은 삭제할 수 없습니다. (프로젝트 루트 스톤)");
+    }
+
+    // 3. 스톤이 포함된 프로젝트 및 워크스페이스 조회
+    Project project = stone.getProject();
+    Workspace workspace = project.getWorkspace();
+
+    // 4. 요청 사용자 검증
+    WorkspaceParticipant requester = workspaceParticipantRepository
+            .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+            .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+    // 5. 권한 검증 (ADMIN, 프로젝트 담당자, 스톤 담당자)
+    if (requester.getWorkspaceRole() != WorkspaceRole.ADMIN &&
+            !project.getWorkspaceParticipant().getId().equals(requester.getId()) &&
+            !stone.getStoneManager().getId().equals(requester.getId())) {
+        throw new IllegalArgumentException("관리자, 프로젝트 담당자, 혹은 스톤 담당자만 삭제 가능합니다.");
+    }
+
+    // 6. 이미 삭제된 스톤인지 확인
+    if (Boolean.TRUE.equals(stone.getIsDelete())) {
+        throw new IllegalStateException("이미 삭제된 스톤입니다.");
+    }
+
+    // 7. 스톤 논리 삭제
+    stone.setIsDelete(true);
+
+    // 8. 스톤 참여자 하드 삭제
+    List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(stone);
+    if (!stoneParticipants.isEmpty()) {
+        stoneParticipantRepository.deleteAll(stoneParticipants);
+    }
+
+    // 9. 프로젝트 참여자 조건부 삭제
+    for (StoneParticipant sp : stoneParticipants) {
+        WorkspaceParticipant wp = sp.getWorkspaceParticipant();
+
+        // 해당 참여자가 이 프로젝트의 다른 스톤에도 속해 있는지 확인
+        boolean stillExists = stoneParticipantRepository.existsByStone_ProjectAndWorkspaceParticipant(project, wp);
+
+        // 다른 스톤에도 없으면 프로젝트 참여자에서도 제거
+        if (!stillExists) {
+            ProjectParticipant projectParticipant = projectParticipantRepository
+                    .findByProjectAndWorkspaceParticipant(project, wp)
+                    .orElse(null);
+
+            if (projectParticipant != null) {
+                projectParticipantRepository.delete(projectParticipant);
+            }
+        }
+    }
+
+    // 10. 변경 저장
+    stoneRepository.save(stone);
+}
+
+
+    // 내 스톤 목록 조회
 
     // 스톤 목록? 스톤들 뿌리처럼 보이는 거
 

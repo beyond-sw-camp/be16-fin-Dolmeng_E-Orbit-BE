@@ -45,6 +45,10 @@ public class StoneParticipant extends BaseTimeEntity {
     @Builder.Default
     private Boolean isMilestoneHidden = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isDelete = false;
+
     public void updateMilestoneHidden(Boolean hidden) {
         this.isMilestoneHidden = hidden;
     }

@@ -1,7 +1,6 @@
 package com.Dolmeng_E.workspace.domain.project.controller;
 
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectDeleteDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.example.modulecommon.dto.CommonSuccessDto;
@@ -62,11 +61,11 @@ public class ProjectController {
 // 프로젝트 상세 조회(To-Do: 스톤, 태스트 생성 완료 후 프로젝트 구조 조회 API 구현 필요)
 
 // 프로젝트 삭제
-    @DeleteMapping("")
+    @DeleteMapping("/{projectId}")
     public ResponseEntity<?> deleteProject(@RequestHeader("X-User-Id") String userId,
-                                           @RequestBody ProjectDeleteDto dto
+                                           @PathVariable String projectId
     ) {
-        projectService.deleteProject(userId,dto);
+        projectService.deleteProject(userId, projectId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("프로젝트 삭제 완료")
                 .result(HttpStatus.OK)
