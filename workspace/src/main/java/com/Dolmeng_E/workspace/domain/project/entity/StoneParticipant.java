@@ -15,7 +15,7 @@ import org.hibernate.annotations.GenericGenerator;
 @AllArgsConstructor
 @Getter
 @Builder
-public class ProjectCalendar extends BaseTimeEntity {
+public class StoneParticipant extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "project_calendar_seq_generator")
     @GenericGenerator(
@@ -25,7 +25,7 @@ public class ProjectCalendar extends BaseTimeEntity {
                     @org.hibernate.annotations.Parameter(name = "sequence_name", value = "project_calendar_seq"),
                     @org.hibernate.annotations.Parameter(name = "initial_value", value = "1"),
                     @org.hibernate.annotations.Parameter(name = "increment_size", value = "1"),
-                    @org.hibernate.annotations.Parameter(name = "valuePrefix", value = "pjt_s_cal_")
+                    @org.hibernate.annotations.Parameter(name = "valuePrefix", value = "pjt_s_par_")
             }
     )
     private String id;

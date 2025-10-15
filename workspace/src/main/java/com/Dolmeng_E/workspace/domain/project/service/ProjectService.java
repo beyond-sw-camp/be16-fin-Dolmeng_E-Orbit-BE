@@ -1,8 +1,6 @@
 package com.Dolmeng_E.workspace.domain.project.service;
 
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
-import com.Dolmeng_E.workspace.domain.access_group.entity.AccessDetail;
-import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessDetailRepository;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupRepository;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
@@ -11,7 +9,7 @@ import com.Dolmeng_E.workspace.domain.project.dto.ProjectListDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
-import com.Dolmeng_E.workspace.domain.project.repository.ProjectCalendarRepository;
+import com.Dolmeng_E.workspace.domain.project.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.dto.TopStoneCreateDto;
@@ -22,10 +20,8 @@ import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantR
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +31,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProjectService {
     private final ProjectRepository projectRepository;
-    private final ProjectCalendarRepository projectCalendarRepository;
+    private final StoneParticipantRepository projectCalendarRepository;
     private final ProjectParticipantRepository projectParticipantRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final AccessDetailRepository accessDetailRepository;
@@ -153,6 +149,10 @@ public class ProjectService {
         // 4. 삭제
         project.deleteProject();
     }
+
+// 프로젝트 안보임 설정(프로젝트 캘린더 조회용 API)
+
+// 내 프로젝트 목록 조회
 
 
 

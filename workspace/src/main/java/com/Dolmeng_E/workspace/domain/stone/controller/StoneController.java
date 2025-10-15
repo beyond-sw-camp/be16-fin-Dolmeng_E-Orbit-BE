@@ -42,6 +42,12 @@ public class StoneController {
                 ,HttpStatus.CREATED);
     }
 
+    // 스톤 참여자 추가
+
+    // 스톤 안보임 설정(프로젝트 캘린더 조회용 API)
+
+    // 내 스톤 목록 조회
+
     // 스톤 수정
 
     // 스톤 삭제

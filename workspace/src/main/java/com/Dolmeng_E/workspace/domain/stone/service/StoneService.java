@@ -2,7 +2,9 @@ package com.Dolmeng_E.workspace.domain.stone.service;
 
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.project.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
+import com.Dolmeng_E.workspace.domain.project.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.Dolmeng_E.workspace.domain.stone.dto.StoneCreateDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.TopStoneCreateDto;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -34,6 +38,7 @@ public class StoneService {
     private final AccessCheckService accessCheckService;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final ProjectRepository projectRepository;
+    private final StoneParticipantRepository stoneParticipantRepository;
 
     // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
@@ -115,8 +120,31 @@ public class StoneService {
                         .childStone(childStone) // 자식스톤
                         .build()
         );
+
+        // 7. dto에 스톤 참여자 목록이 있다면 저장
+        if(dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
+            List<StoneParticipant> participantEntities = new ArrayList<>();
+
+            for (String participantId : dto.getParticipantIds()) {
+                WorkspaceParticipant stoneParticipant = workspaceParticipantRepository.findById(participantId)
+                        .orElseThrow(() -> new EntityNotFoundException("참여자 정보를 찾을 수 없습니다."));
+
+                StoneParticipant entity = StoneParticipant.builder()
+                        .stone(childStone)
+                        .workspaceParticipant(stoneParticipant)
+                        .build();
+                participantEntities.add(entity);
+            }
+            stoneParticipantRepository.saveAll(participantEntities);
+        }
         return childStone.getId();
     }
+
+    // 스톤 참여자 추가
+
+    // 스톤 안보임 설정(프로젝트 캘린더 조회용 API)
+
+    // 내 스톤 목록 조회
 
     // 스톤 수정
 
