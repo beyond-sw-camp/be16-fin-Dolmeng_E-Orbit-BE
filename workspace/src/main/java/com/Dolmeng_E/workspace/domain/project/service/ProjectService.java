@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.project.service;
 
+import com.Dolmeng_E.workspace.common.service.AccessCheckService;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessDetail;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessDetailRepository;
@@ -13,6 +14,8 @@ import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectCalendarRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
+import com.Dolmeng_E.workspace.domain.stone.dto.TopStoneCreateDto;
+import com.Dolmeng_E.workspace.domain.stone.service.StoneService;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
@@ -38,6 +41,8 @@ public class ProjectService {
     private final AccessDetailRepository accessDetailRepository;
     private final AccessGroupRepository accessGroupRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final AccessCheckService accessCheckService;
+    private final StoneService stoneService;
 
 // 프로젝트 생성
 
@@ -49,13 +54,9 @@ public class ProjectService {
 
         // 2. 권한 검증 (공통 메서드)
         // 커스터마이징 필요한 부분 ex. 프로젝트 관련 -> ws_acc_list_2 , 스톤 관련 -> ws_acc_list_3 등등
-        validateAccess(participant, "ws_acc_list_2");
+        accessCheckService.validateAccess(participant, "ws_acc_list_2");
 
-        // 3. 스톤 생성
-
-
-
-        // 4. 워크스페이스 담당자 객체 생성
+        // 3. 워크스페이스 담당자 객체 생성
         WorkspaceParticipant projectManager = workspaceParticipantRepository.findById(dto.getProjectManagerId())
                 .orElseThrow(()->new EntityNotFoundException("회원 정보 없습니다."));
 
@@ -63,13 +64,25 @@ public class ProjectService {
             throw new IllegalArgumentException("담당자는 해당 워크스페이스 소속이어야 합니다.");
         }
 
-        // 5. 프로젝트 생성
+        // 4. 프로젝트 생성
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(()->new EntityNotFoundException("워크스페이스 정보를 찾을 수 없습니다."));
         Project project = dto.toEntity(workspace,projectManager);
         projectRepository.save(project);
 
-        //To-Do: 만약 boolean이 true면 채팅방, 스톤 생성 로직 추가해야 함.
+        // 5. 스톤 생성
+        stoneService.createStone(
+                TopStoneCreateDto.builder()
+                        .projectId(project.getId())
+                        .participantId(projectManager.getId())
+                        .stoneName(project.getProjectName()) //최상위 스톤 이름은 프로젝트 이름과 같게 설정
+                        .workspaceId(workspace.getId())
+                        .startTime(project.getStartTime())
+                        .endTime(project.getEndTime())
+                        .chatCreation(dto.getChatCreation())
+                        .chatCreation(dto.getChatCreation())
+                        .build()
+        );
         return project.getId();
     }
 
@@ -87,7 +100,7 @@ public class ProjectService {
 
         // 3. 권한 검증: 담당자 or 권한그룹
         if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-            validateAccess(participant, "ws_acc_list_2");
+            accessCheckService.validateAccess(participant, "ws_acc_list_2");
         }
 
         // 4. 담당자 변경 처리 (선택)
@@ -135,7 +148,7 @@ public class ProjectService {
 
         // 3. 권한 검증: 담당자 or 권한그룹
         if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-            validateAccess(participant, "ws_acc_list_2");
+            accessCheckService.validateAccess(participant, "ws_acc_list_2");
         }
 
         // 4. 삭제
@@ -143,20 +156,7 @@ public class ProjectService {
     }
 
 
-    // 공통 서비스 로직: 권한 체크
-    public void validateAccess(WorkspaceParticipant participant, String accessListId) {
-        String accessGroupId = participant.getAccessGroup().getId();
-        AccessGroup accessGroup = accessGroupRepository.findById(accessGroupId)
-                .orElseThrow(() -> new EntityNotFoundException("권한그룹이 존재하지 않습니다."));
 
-        AccessDetail accessDetail = accessDetailRepository
-                .findByAccessGroupAndAccessListId(accessGroup, accessListId)
-                .orElseThrow(() -> new EntityNotFoundException("권한 상세정보가 없습니다."));
-
-        if (!accessDetail.getIsAccess()) {
-            throw new IllegalArgumentException("해당 작업에 대한 권한이 없습니다.");
-        }
-    }
 
 
 }

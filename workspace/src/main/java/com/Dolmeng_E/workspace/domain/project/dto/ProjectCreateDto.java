@@ -18,7 +18,6 @@ public class ProjectCreateDto {
     private String projectObjective;
     private String projectDescription;
     private String projectManagerId; //workspace 참여자 Id : 프로젝트 담당자
-
     private Boolean chatCreation;
     private Boolean taskCreation;
 
