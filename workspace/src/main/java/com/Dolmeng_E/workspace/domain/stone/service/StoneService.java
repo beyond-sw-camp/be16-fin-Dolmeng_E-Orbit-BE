@@ -2,12 +2,12 @@ package com.Dolmeng_E.workspace.domain.stone.service;
 
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
-import com.Dolmeng_E.workspace.domain.project.entity.StoneParticipant;
+import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
+import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
+import com.Dolmeng_E.workspace.domain.stone.dto.*;
+import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
-import com.Dolmeng_E.workspace.domain.project.repository.StoneParticipantRepository;
-import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
-import com.Dolmeng_E.workspace.domain.stone.dto.StoneCreateDto;
-import com.Dolmeng_E.workspace.domain.stone.dto.TopStoneCreateDto;
+import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
@@ -16,17 +16,19 @@ import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
+import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -39,8 +41,9 @@ public class StoneService {
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final ProjectRepository projectRepository;
     private final StoneParticipantRepository stoneParticipantRepository;
+    private final ProjectParticipantRepository projectParticipantRepository;
 
-    // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
+// 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
 
         // 1. 참여자 검증
@@ -59,13 +62,21 @@ public class StoneService {
         }
         */
 
+        // 스톤 담당자 프로젝트 참여자에 추가
+        projectParticipantRepository.save(
+                ProjectParticipant.builder()
+                        .workspaceParticipant(participant)
+                        .project(project)
+                        .build()
+        );
+
         // 3. 스톤생성 후 ID 리턴
         return stoneRepository.save( Stone.builder()
                 .stoneName(dto.getStoneName())
                 .startTime(dto.getStartTime())
                 .endTime(dto.getEndTime())
                 .project(project)
-                .stoneParticipant(participant)
+                .stoneParticipant(participant) //스톤의 담당자
                 .chatCreation(dto.getChatCreation() != null ? dto.getChatCreation() : false)
                 .taskCreation(false) // 최상위 스톤은 태스크 x
                 .milestone(dto.getMilestone() != null ? dto.getMilestone() : BigDecimal.ZERO) // 최초 마일스톤은 0퍼센트
@@ -75,54 +86,82 @@ public class StoneService {
 
     }
 
-    // 일반 스톤 생성
+// 일반 스톤 생성
     public String createStone(String userId, StoneCreateDto dto) {
 
-        // 1. 참여자 검증
+        // 1. 상위 스톤 조회
+        Stone parentStone = stoneRepository.findById(dto.getParentStoneId())
+                .orElseThrow(() -> new EntityNotFoundException("상위스톤이 존재하지 않습니다."));
+
+        // 2. 상위 스톤을 통해 프로젝트, 워크스페이스 추적
+        Project project = parentStone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 현재 요청 사용자가 워크스페이스에 속해 있는지 검증
         WorkspaceParticipant participant = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
-        // 2. 프로젝트 조회
-        Project project = projectRepository.findById(dto.getProjectId())
-                .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
-
-        // 3. 스톤 관련 권한 검증(프로젝트 담당자도 스톤 생성 가능하게)
-        // Memo: 프로젝트와 스톤의 권한을 합치는 것도 고려할 부분(다만, 그렇게 되면 스톤 생성 권한이 있는 사람도 프로젝트 수정이 됨)
-        if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-            accessCheckService.validateAccess(participant, "ws_acc_list_3");
+        // 4. 권한 검증 (프로젝트 담당자이거나, 스톤 생성 권한이 있어야 함, 혹은 관리자)
+        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
+                accessCheckService.validateAccess(participant, "ws_acc_list_3");
+            }
         }
 
-        // 4. 상위 스톤 객체 조회
-        Stone parentStone = stoneRepository.findById(dto.getParentStoneId())
-                .orElseThrow(()->new EntityNotFoundException("상위스톤이 존재하지 않습니다."));
+        // 5. 스톤 참여자들 중 프로젝트 참여자에 아직 등록되지 않은 경우 자동 등록
+        if (dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
+            for (String participantId : dto.getParticipantIds()) {
+                WorkspaceParticipant wp = workspaceParticipantRepository.findById(participantId)
+                        .orElseThrow(() -> new EntityNotFoundException("참여자 정보를 찾을 수 없습니다."));
 
-        // 5. 상위 스톤 ID를 넣어 스톤 객체 생성
+                boolean exists = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, wp);
+
+                if (!exists) {
+                    ProjectParticipant newProjectParticipant = ProjectParticipant.builder()
+                            .project(project)
+                            .workspaceParticipant(wp)
+                            .build();
+
+                    projectParticipantRepository.save(newProjectParticipant);
+                }
+            }
+        }
+
+        // 스톤 담당자 프로젝트 참여자에 추가
+        projectParticipantRepository.save(
+                ProjectParticipant.builder()
+                        .workspaceParticipant(participant)
+                        .project(project)
+                        .build()
+        );
+
+        // 6. 자식 스톤 생성
         Stone childStone = stoneRepository.save(
                 Stone.builder()
                         .stoneName(dto.getStoneName())
                         .startTime(dto.getStartTime())
                         .endTime(dto.getEndTime())
                         .project(project)
-                        .stoneParticipant(participant)
+                        .stoneParticipant(participant) // 스톤 담당자
                         .chatCreation(dto.getChatCreation() != null ? dto.getChatCreation() : false)
-                        .parentStoneId(parentStone.getId()) //일반 스톤 생성의 경우 부모스톤 추가
-                        .taskCreation(true) // 무조건 태스크 허용 - default도 ture
-                        .milestone(dto.getMilestone() != null ? dto.getMilestone() : BigDecimal.ZERO) // 최초 마일스톤은 0퍼센트, NPE방지
-                        .status(StoneStatus.PROGRESS) // 최초 상태는 진행중으로 세팅
+                        .parentStoneId(parentStone.getId()) // 상위 스톤 참조
+                        .taskCreation(true) // 기본값 true
+                        .milestone(dto.getMilestone() != null ? dto.getMilestone() : BigDecimal.ZERO)
+                        .status(StoneStatus.PROGRESS)
                         .build()
         );
 
-        // 6. 상위스톤의 자식스톤 리스트 생성
+        // 7. 상위 스톤의 자식 스톤 리스트 등록
         childStoneListRepository.save(
                 ChildStoneList.builder()
-                        .stone(parentStone) // 부모스톤
-                        .childStone(childStone) // 자식스톤
+                        .stone(parentStone)
+                        .childStone(childStone)
                         .build()
         );
 
-        // 7. dto에 스톤 참여자 목록이 있다면 저장
-        if(dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
+        // 8. 스톤 참여자 등록
+        if (dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
             List<StoneParticipant> participantEntities = new ArrayList<>();
 
             for (String participantId : dto.getParticipantIds()) {
@@ -133,20 +172,305 @@ public class StoneService {
                         .stone(childStone)
                         .workspaceParticipant(stoneParticipant)
                         .build();
+
                 participantEntities.add(entity);
             }
+
             stoneParticipantRepository.saveAll(participantEntities);
         }
+
         return childStone.getId();
     }
 
-    // 스톤 참여자 추가
+// 스톤 참여자 추가
+    public void joinStoneParticipant(String userId, StoneParticipantListDto dto) {
 
-    // 스톤 안보임 설정(프로젝트 캘린더 조회용 API)
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(()->new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 객체 생성
+        Project project = stone.getProject();
+
+        // 3. 참여자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 스톤 관련 권한 검증(프로젝트 담당자와 스톤 담당자만 참여자 추가 가능하도록 혹은 관리자)
+        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
+                    && !stone.getStoneParticipant().getId().equals(participant.getId())) {
+                throw new IllegalArgumentException("관리자나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
+            }
+        }
+
+        // 5. 프로젝트 참여자에 추가
+        if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
+            for (String wpId : dto.getStoneParticipantList()) {
+
+                // 워크스페이스 참여자 조회
+                WorkspaceParticipant wp = workspaceParticipantRepository.findById(wpId)
+                        .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
+
+                // 이미 프로젝트에 포함되어 있는지 확인
+                boolean exists = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, wp);
+
+                // 포함되어 있지 않으면 새로 추가
+                if (!exists) {
+                    ProjectParticipant newProjectParticipant = ProjectParticipant.builder()
+                            .project(project)
+                            .workspaceParticipant(wp)
+                            .build();
+                    projectParticipantRepository.save(newProjectParticipant);
+                }
+            }
+        }
+
+        // 6. 기존 참여자 조회
+        List<StoneParticipant> existingParticipants = stoneParticipantRepository.findAllByStone(stone);
+        // true일 경우 기존값 존재, false의 경우 기존값 없다는 뜻
+        boolean hasExisting = !existingParticipants.isEmpty();
+
+        // 7. 스톤에 참여자가 없거나, 중복되지 않은 경우 새로 저장
+        if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
+            // dto에 넣어놓은 id 리스트
+            Set<String> participantIds = dto.getStoneParticipantList();
+            // 엔티티에 추가할 리스트 생성
+            List<StoneParticipant> newParticipants = new ArrayList<>();
+
+            // dto의 각 id별로 워크스페이스 참여자 조회
+            for (String id : participantIds) {
+                WorkspaceParticipant wp = workspaceParticipantRepository.findById(id)
+                        .orElseThrow(() -> new EntityNotFoundException("참여자 정보를 찾을 수 없습니다."));
+
+                // 기존 참여자가 없거나, 해당 참여자가 DB에 없는 경우에만 추가(중복 추가 검증)
+                if (!hasExisting || !stoneParticipantRepository.existsByStoneAndWorkspaceParticipant(stone, wp)) {
+                    // 새로운 스톤 참여자 엔티티 생성 및 리스트에 추가
+                    newParticipants.add(
+                            StoneParticipant.builder()
+                                    .stone(stone)
+                                    .workspaceParticipant(wp)
+                                    .build()
+                    );
+                }
+            }
+
+            // 모두 저장(새로 구성한 리스트가 비어있지 않다면)
+            if (!newParticipants.isEmpty()) {
+                // DB에 일괄 저장 (saveAll()로 bulk insert)
+                stoneParticipantRepository.saveAll(newParticipants);
+            }
+        }
+    }
+
+// 스톤 참여자 리스트 삭제
+    public void deleteStoneParticipantList(String userId, StoneParticipantListDto dto) {
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 조회
+        Project project = stone.getProject();
+
+        // 3. 요청 사용자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 권한 검증 (프로젝트 담당자 or 스톤 담당자 or 관리자)
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(requester.getId())
+                    && !stone.getStoneParticipant().getId().equals(requester.getId())) {
+                throw new IllegalArgumentException("프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
+            }
+        }
+        // 5. 스톤 참여자 삭제 (일괄 처리)
+        if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
+
+            List<StoneParticipant> toDeleteStoneParticipants = new ArrayList<>();
+
+            for (String participantId : dto.getStoneParticipantList()) {
+                WorkspaceParticipant wp = workspaceParticipantRepository.findById(participantId)
+                        .orElseThrow(() -> new EntityNotFoundException("참여자 정보를 찾을 수 없습니다."));
+
+                StoneParticipant stoneParticipant = stoneParticipantRepository
+                        .findByStoneAndWorkspaceParticipant(stone, wp)
+                        .orElseThrow(() -> new EntityNotFoundException("스톤 참여자 정보를 찾을 수 없습니다."));
+
+                toDeleteStoneParticipants.add(stoneParticipant);
+
+                // 프로젝트 참여자 삭제
+                ProjectParticipant projectParticipant = projectParticipantRepository
+                        .findByProjectAndWorkspaceParticipant(project, wp)
+                        .orElse(null); // 아래에서 검증 후 삭제하기 위해 orElse 사용..
+
+                if (projectParticipant != null) {
+                    projectParticipantRepository.delete(projectParticipant);
+                }
+            }
+
+            stoneParticipantRepository.deleteAll(toDeleteStoneParticipants);
+        }
+    }
+
+// 스톤 참여자 전체 삭제
+    public void deleteAllStoneParticipants(String userId, String stoneId) {
+
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 조회
+        Project project = stone.getProject();
+
+        // 3. 요청 사용자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 권한 검증 (프로젝트 담당자 or 스톤 담당자만 가능)
+        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
+                    && !stone.getStoneParticipant().getId().equals(participant.getId())) {
+                throw new IllegalArgumentException("관리자이거나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
+            }
+        }
+
+        // 5. 스톤 참여자 전체 삭제
+        List<StoneParticipant> participants = stoneParticipantRepository.findAllByStone(stone);
+        if (!participants.isEmpty()) {
+            stoneParticipantRepository.deleteAll(participants);
+        }
+
+        // 프로젝트 참여자 일괄 삭제
+        List<ProjectParticipant> projectParticipants =
+                projectParticipantRepository.findAllByProject(project);
+        if (!projectParticipants.isEmpty()) {
+            projectParticipantRepository.deleteAll(projectParticipants);
+        }
+    }
+
+
+// 스톤 보임/안보임 설정(프로젝트 캘린더 조회용 API)
+    public void settingStone(String userId, StoneSettingDto dto) {
+
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(()->new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 객체 생성
+        Project project = stone.getProject();
+
+        // 3. 참여자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 스톤 참여자 조회
+        StoneParticipant stoneParticipant = stoneParticipantRepository
+                .findByStoneAndWorkspaceParticipant(stone, participant)
+                .orElseThrow(() -> new EntityNotFoundException("스톤참여자 정보가 없습니다."));
+
+        // 5. isMilestoneHidden 값 설정
+        stoneParticipant.updateMilestoneHidden(dto.getIsMilestoneHidden());
+
+        // 6. 변경사항 저장
+        stoneParticipantRepository.save(stoneParticipant);
+    }
+
+// 스톤 정보 수정
+    public void modifyStone(String userId, StoneModifyDto dto) {
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 속한 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 요청 사용자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 스톤 관련 권한 검증(프로젝트 담당자와 스톤 담당자만 참여자 추가 가능하도록)
+        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
+                    && !stone.getStoneParticipant().getId().equals(participant.getId())) {
+                throw new IllegalArgumentException("관리자이거나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
+            }
+        }
+
+        // 5. 기본 필드 수정 (null 체크해서 들어온 값만 반영)
+        if (dto.getStoneName() != null) {
+            stone.setStoneName(dto.getStoneName());
+        }
+        if (dto.getStartTime() != null) {
+            stone.setStartTime(dto.getStartTime());
+        }
+        if (dto.getEndTime() != null) {
+            stone.setEndTime(dto.getEndTime());
+        }
+        if (dto.getStoneStatus() != null) {
+            stone.setStatus(dto.getStoneStatus());
+        }
+
+        // 6. 수정된 스톤 저장
+        stoneRepository.save(stone);
+    }
+
+    // 스톤 담당자 수정
+    public void modifyStoneManager(String userId, StoneManagerModifyDto dto) {
+
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 요청 사용자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 권한 검증 (관리자이거나 프로젝트 담당자 또는 기존 스톤 담당자만 가능)
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(requester.getId())
+                    && !stone.getStoneParticipant().getId().equals(requester.getId())) {
+                throw new IllegalArgumentException("관리자나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
+            }
+        }
+
+        // 5. 새 담당자 검증
+        WorkspaceParticipant newManager = workspaceParticipantRepository.findById(dto.getNewManagerId())
+                .orElseThrow(() -> new EntityNotFoundException("새 담당자 정보를 찾을 수 없습니다."));
+
+        // 같은 워크스페이스 소속인지 검증 (보안 강화)
+        if (!newManager.getWorkspace().getId().equals(workspace.getId())) {
+            throw new IllegalArgumentException("해당 담당자는 같은 워크스페이스 소속이 아닙니다.");
+        }
+
+        // 6. 스톤 담당자 교체
+        stone.setStoneParticipant(newManager);
+
+        // 7. (선택) 새 담당자가 프로젝트 참여자가 아니라면 자동 등록
+        boolean existsInProject = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, newManager);
+        if (!existsInProject) {
+            ProjectParticipant newProjectParticipant = ProjectParticipant.builder()
+                    .project(project)
+                    .workspaceParticipant(newManager)
+                    .build();
+            projectParticipantRepository.save(newProjectParticipant);
+        }
+
+        // 8. 변경된 스톤 저장
+        stoneRepository.save(stone);
+    }
 
     // 내 스톤 목록 조회
-
-    // 스톤 수정
 
     // 스톤 삭제
 

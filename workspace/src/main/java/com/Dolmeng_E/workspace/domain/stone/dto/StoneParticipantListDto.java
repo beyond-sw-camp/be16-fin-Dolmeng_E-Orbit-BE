@@ -7,5 +7,6 @@ import java.util.Set;
 @Data
 @Builder
 public class StoneParticipantListDto {
+    String stoneId;
     Set<String> stoneParticipantList;
 }

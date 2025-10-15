@@ -9,8 +9,6 @@ import java.util.Set;
 @Data
 @Builder
 public class StoneCreateDto {
-    private String workspaceId;
-    private String projectId;
     private String parentStoneId;
     private String stoneName;
     private LocalDateTime startTime;

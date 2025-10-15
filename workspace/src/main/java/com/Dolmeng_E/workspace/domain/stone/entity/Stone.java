@@ -4,10 +4,7 @@ import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Getter
 @Builder
+@Setter
 public class Stone extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "stone_seq_generator")
@@ -36,8 +34,9 @@ public class Stone extends BaseTimeEntity {
     @JoinColumn(name = "project_id")
     private Project project;
 
+    // 스톤 담당자
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "stone_participant_id")
+    @JoinColumn(name = "stone_manager_id")
     private WorkspaceParticipant stoneParticipant;
 
     // 부모 스톤 (nullable 가능)

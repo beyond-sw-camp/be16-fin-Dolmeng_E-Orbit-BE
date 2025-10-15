@@ -1,6 +1,5 @@
-package com.Dolmeng_E.workspace.domain.project.entity;
+package com.Dolmeng_E.workspace.domain.stone.entity;
 
-import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
@@ -45,4 +44,9 @@ public class StoneParticipant extends BaseTimeEntity {
     @Column(nullable = false)
     @Builder.Default
     private Boolean isMilestoneHidden = false;
+
+    public void updateMilestoneHidden(Boolean hidden) {
+        this.isMilestoneHidden = hidden;
+    }
+
 }
