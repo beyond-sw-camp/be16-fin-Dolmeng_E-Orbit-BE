@@ -127,7 +127,7 @@ public class ProjectService {
                 .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
         // 2. dto 조립, 진행중,완료인 프로젝트만 보기
-        List<Project> projectlist = projectRepository.findAllByWorkspaceIdAndIsDeleteFalseAndProjectStatusNot(workspaceId, ProjectStatus.PROGRESS);
+        List<Project> projectlist = projectRepository.findAllByWorkspaceIdAndIsDeleteFalseAndProjectStatusNot(workspaceId, ProjectStatus.STORAGE);
         List<ProjectListDto> projectListDtoList = projectlist.stream().map(ProjectListDto::fromEntity).toList();
         return projectListDtoList;
     }

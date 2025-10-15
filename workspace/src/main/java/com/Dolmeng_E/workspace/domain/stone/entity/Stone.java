@@ -37,7 +37,7 @@ public class Stone extends BaseTimeEntity {
     // 스톤 담당자
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stone_manager_id")
-    private WorkspaceParticipant stoneParticipant;
+    private WorkspaceParticipant stoneManager;
 
     // 부모 스톤 (nullable 가능)
     @Column(name = "parent_stone_id")

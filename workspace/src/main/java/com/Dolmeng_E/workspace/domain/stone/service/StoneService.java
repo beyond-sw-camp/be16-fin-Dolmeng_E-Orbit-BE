@@ -76,7 +76,7 @@ public class StoneService {
                 .startTime(dto.getStartTime())
                 .endTime(dto.getEndTime())
                 .project(project)
-                .stoneParticipant(participant) //스톤의 담당자
+                .stoneManager(participant) //스톤의 담당자
                 .chatCreation(dto.getChatCreation() != null ? dto.getChatCreation() : false)
                 .taskCreation(false) // 최상위 스톤은 태스크 x
                 .milestone(dto.getMilestone() != null ? dto.getMilestone() : BigDecimal.ZERO) // 최초 마일스톤은 0퍼센트
@@ -143,7 +143,7 @@ public class StoneService {
                         .startTime(dto.getStartTime())
                         .endTime(dto.getEndTime())
                         .project(project)
-                        .stoneParticipant(participant) // 스톤 담당자
+                        .stoneManager(participant) // 스톤 담당자
                         .chatCreation(dto.getChatCreation() != null ? dto.getChatCreation() : false)
                         .parentStoneId(parentStone.getId()) // 상위 스톤 참조
                         .taskCreation(true) // 기본값 true
@@ -200,7 +200,7 @@ public class StoneService {
         // 4. 스톤 관련 권한 검증(프로젝트 담당자와 스톤 담당자만 참여자 추가 가능하도록 혹은 관리자)
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
-                    && !stone.getStoneParticipant().getId().equals(participant.getId())) {
+                    && !stone.getStoneManager().getId().equals(participant.getId())) {
                 throw new IllegalArgumentException("관리자나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
             }
         }
@@ -281,7 +281,7 @@ public class StoneService {
         // 4. 권한 검증 (프로젝트 담당자 or 스톤 담당자 or 관리자)
         if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(requester.getId())
-                    && !stone.getStoneParticipant().getId().equals(requester.getId())) {
+                    && !stone.getStoneManager().getId().equals(requester.getId())) {
                 throw new IllegalArgumentException("프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
             }
         }
@@ -332,7 +332,7 @@ public class StoneService {
         // 4. 권한 검증 (프로젝트 담당자 or 스톤 담당자만 가능)
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
-                    && !stone.getStoneParticipant().getId().equals(participant.getId())) {
+                    && !stone.getStoneManager().getId().equals(participant.getId())) {
                 throw new IllegalArgumentException("관리자이거나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
             }
         }
@@ -397,7 +397,7 @@ public class StoneService {
         // 4. 스톤 관련 권한 검증(프로젝트 담당자와 스톤 담당자만 참여자 추가 가능하도록)
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
-                    && !stone.getStoneParticipant().getId().equals(participant.getId())) {
+                    && !stone.getStoneManager().getId().equals(participant.getId())) {
                 throw new IllegalArgumentException("관리자이거나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
             }
         }
@@ -439,7 +439,7 @@ public class StoneService {
         // 4. 권한 검증 (관리자이거나 프로젝트 담당자 또는 기존 스톤 담당자만 가능)
         if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(requester.getId())
-                    && !stone.getStoneParticipant().getId().equals(requester.getId())) {
+                    && !stone.getStoneManager().getId().equals(requester.getId())) {
                 throw new IllegalArgumentException("관리자나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
             }
         }
@@ -454,7 +454,7 @@ public class StoneService {
         }
 
         // 6. 스톤 담당자 교체
-        stone.setStoneParticipant(newManager);
+        stone.setStoneManager(newManager);
 
         // 7. (선택) 새 담당자가 프로젝트 참여자가 아니라면 자동 등록
         boolean existsInProject = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, newManager);
