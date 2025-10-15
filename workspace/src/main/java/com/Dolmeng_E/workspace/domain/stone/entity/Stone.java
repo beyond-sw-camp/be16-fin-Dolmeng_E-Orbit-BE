@@ -36,7 +36,7 @@ public class Stone extends BaseTimeEntity {
     @JoinColumn(name = "project_id")
     private Project project;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stone_participant_id")
     private WorkspaceParticipant stoneParticipant;
 
