@@ -420,6 +420,56 @@ public class StoneService {
         stoneRepository.save(stone);
     }
 
+    // 스톤 담당자 수정
+    public void modifyStoneManager(String userId, StoneManagerModifyDto dto) {
+
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 요청 사용자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 권한 검증 (관리자이거나 프로젝트 담당자 또는 기존 스톤 담당자만 가능)
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            if (!project.getWorkspaceParticipant().getId().equals(requester.getId())
+                    && !stone.getStoneParticipant().getId().equals(requester.getId())) {
+                throw new IllegalArgumentException("관리자나 프로젝트 담당자 혹은 스톤 담당자가 아닙니다.");
+            }
+        }
+
+        // 5. 새 담당자 검증
+        WorkspaceParticipant newManager = workspaceParticipantRepository.findById(dto.getNewManagerId())
+                .orElseThrow(() -> new EntityNotFoundException("새 담당자 정보를 찾을 수 없습니다."));
+
+        // 같은 워크스페이스 소속인지 검증 (보안 강화)
+        if (!newManager.getWorkspace().getId().equals(workspace.getId())) {
+            throw new IllegalArgumentException("해당 담당자는 같은 워크스페이스 소속이 아닙니다.");
+        }
+
+        // 6. 스톤 담당자 교체
+        stone.setStoneParticipant(newManager);
+
+        // 7. (선택) 새 담당자가 프로젝트 참여자가 아니라면 자동 등록
+        boolean existsInProject = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, newManager);
+        if (!existsInProject) {
+            ProjectParticipant newProjectParticipant = ProjectParticipant.builder()
+                    .project(project)
+                    .workspaceParticipant(newManager)
+                    .build();
+            projectParticipantRepository.save(newProjectParticipant);
+        }
+
+        // 8. 변경된 스톤 저장
+        stoneRepository.save(stone);
+    }
+
     // 내 스톤 목록 조회
 
     // 스톤 삭제
