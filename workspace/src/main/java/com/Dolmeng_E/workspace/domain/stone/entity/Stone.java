@@ -91,4 +91,12 @@ public class Stone extends BaseTimeEntity {
         this.taskCount = (this.taskCount == null ? 1 : this.taskCount + 1);
     }
 
+    public void decrementTaskCount() {
+        if (this.taskCount == null || this.taskCount == 0) {
+            this.taskCount = 0;
+            return;
+        }
+        this.taskCount -= 1;
+    }
+
 }

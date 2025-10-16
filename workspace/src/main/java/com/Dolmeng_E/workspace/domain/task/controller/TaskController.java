@@ -44,6 +44,19 @@ public class TaskController {
     }
 
     // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
+    @DeleteMapping("/{taskId}")
+    public ResponseEntity<?> deleteTask(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String taskId
+    ) {
+        taskService.deleteTask(userId, taskId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("태스크 삭제 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
     // 태스크 완료 처리(완료시 스톤의 마일스톤 반영 필요)
 

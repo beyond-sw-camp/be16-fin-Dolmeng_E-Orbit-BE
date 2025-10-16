@@ -85,6 +85,7 @@ public class TaskService {
         return task.getId();
 
     }
+
     // 태스크 수정
     public String modifyTask(String userId, TaskModifyDto dto) {
 
@@ -126,6 +127,37 @@ public class TaskService {
     }
 
     // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
+    public void deleteTask(String userId, String taskId) {
+        // 1. 태스크 조회
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new EntityNotFoundException("태스크를 찾을 수 없습니다."));
+
+        Stone stone = task.getStone();
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 2. 요청자 조회
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자 정보를 찾을 수 없습니다."));
+
+        // 3. 권한검증 (관리자, 프로젝트 담당자, 스톤 담당자, 태스크 담당자 허용)
+        boolean isAdmin = requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN);
+        boolean isProjectManager = project.getWorkspaceParticipant().equals(requester);
+        boolean isStoneManager = stone.getStoneManager().equals(requester);
+        boolean isTaskManager = task.getTaskManager().equals(requester);
+
+        if (!isAdmin && !isProjectManager && !isStoneManager && !isTaskManager) {
+            throw new IllegalArgumentException("태스크 삭제 권한이 없습니다.");
+        }
+
+        // 4. 태스크 삭제(hard delete)
+        taskRepository.delete(task);
+
+        // 5. 스톤에서 task 수 감소
+        stone.decrementTaskCount();
+    }
+
 
     // 태스크 완료 처리(완료시 스톤의 마일스톤 반영 필요)
 }
