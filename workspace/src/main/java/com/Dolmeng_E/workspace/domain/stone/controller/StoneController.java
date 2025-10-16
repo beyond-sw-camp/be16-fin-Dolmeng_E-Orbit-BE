@@ -150,7 +150,7 @@ public class StoneController {
     ) {
         stoneService.completeStone(userId, stoneId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .statusMessage("스톤 정보 수정 완료")
+                .statusMessage("스톤 완료처리 성공")
                 .result(HttpStatus.OK)
                 .statusCode(HttpStatus.OK.value())
                 .build()
