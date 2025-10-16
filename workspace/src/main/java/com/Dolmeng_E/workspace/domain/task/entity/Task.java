@@ -1,5 +1,6 @@
-package com.Dolmeng_E.workspace.domain.stone.entity;
+package com.Dolmeng_E.workspace.domain.task.entity;
 
+import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;

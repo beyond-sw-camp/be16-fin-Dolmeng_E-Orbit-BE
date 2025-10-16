@@ -13,7 +13,6 @@ import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
 import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
-import com.Dolmeng_E.workspace.domain.stone.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
@@ -35,7 +34,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StoneService {
     private final ChildStoneListRepository childStoneListRepository;
-    private final TaskRepository taskRepository;
     private final StoneRepository stoneRepository;
     private final AccessCheckService accessCheckService;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
@@ -535,14 +533,6 @@ public void deleteStone(String userId, String stoneId) {
     stoneRepository.save(stone);
 }
 
-// 태스크 생성(생성시 스톤의 task수 반영 필요)
-
-
-    // 태스크 수정
-
-    // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
-
-    // 태스크 완료 처리(완료시 스톤의 마일스톤 반영 필요)
 
     // 마일스톤 진행률 변경
 

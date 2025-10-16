@@ -1,6 +1,6 @@
-package com.Dolmeng_E.workspace.domain.stone.repository;
+package com.Dolmeng_E.workspace.domain.task.repository;
 
-import com.Dolmeng_E.workspace.domain.stone.entity.Task;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
