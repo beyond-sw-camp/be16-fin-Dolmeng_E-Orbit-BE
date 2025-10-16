@@ -99,7 +99,7 @@ public class StoneController {
                 ,HttpStatus.OK);
     }
 
-    // 스톤 정보 수정(진행상태 변경 포함)
+    // 스톤 정보 수정
     @PatchMapping("")
     public ResponseEntity<?> modifyStone(@RequestHeader("X-User-Id") String userId,
                                          @RequestBody StoneModifyDto dto
@@ -143,23 +143,39 @@ public class StoneController {
                 HttpStatus.OK);
     }
 
+    // 스톤 완료처리
+    @PatchMapping("/done/{stoneId}")
+    public ResponseEntity<?> completeStone(@RequestHeader("X-User-Id") String userId,
+                                         @PathVariable String stoneId
+    ) {
+        stoneService.completeStone(userId, stoneId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤 완료처리 성공")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
-    // 내 마일스톤 목록 조회(삭제되지 않은 스톤 조회)
+    // 프로젝트 별 내 마일스톤 조회(isDelete = true 제외, stoneStatus Completed 제외)
+    @GetMapping("/milestone/{workspaceId}")
+    public ResponseEntity<?> milestoneList(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("프로젝트별 내 마일스톤 조회 성공")
+                .result(stoneService.milestoneList(userId, workspaceId))
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
     // 스톤 상세 정보 조회
 
     // 스톤 참여자 목록 조회
 
-    // 태스크 생성(생성시 스톤의 task수 반영 필요)
 
-    // 태스크 수정
-
-    // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
-
-    // 태스크 완료 처리(완료시 스톤의 마일스톤 반영 필요)
-
-    // 마일스톤 진행률 변경
-
-    // To-Do: 다 하면 프로젝트 쪽 로직 완성
+    //ToDo: 다 하면 프로젝트 쪽 로직 완성
 
 }

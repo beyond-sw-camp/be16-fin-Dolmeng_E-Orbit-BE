@@ -56,7 +56,7 @@ public class Stone extends BaseTimeEntity {
     private LocalDateTime endTime;
 
     // 마일스톤 (진척도)
-    @Column(name = "milestone", precision = 3, scale = 1, nullable = false)
+    @Column(name = "milestone", precision = 4, scale = 1, nullable = false)
     private BigDecimal milestone;
 
     // 채팅방 생성 여부
@@ -86,5 +86,33 @@ public class Stone extends BaseTimeEntity {
     @Column(name = "is_delete", nullable = false)
     @Builder.Default
     private Boolean isDelete = false;
+
+    public void incrementTaskCount() {
+        this.taskCount = (this.taskCount == null ? 1 : this.taskCount + 1);
+    }
+
+    public void decrementTaskCount() {
+        if (this.taskCount == null || this.taskCount == 0) {
+            this.taskCount = 0;
+            return;
+        }
+        this.taskCount -= 1;
+    }
+
+    // 완료된 태스크 수 증가
+    public void incrementCompletedCount() {
+        this.completedCount = (this.completedCount == null ? 1 : this.completedCount + 1);
+    }
+
+    // 마일스톤 계산 (완료된 태스크 / 전체 태스크 * 100)
+    public void updateMilestone() {
+        if (this.taskCount == null || this.taskCount == 0) {
+            this.milestone = BigDecimal.ZERO;
+            return;
+        }
+
+        BigDecimal ratio = BigDecimal.valueOf((double) this.completedCount / this.taskCount * 100);
+        this.milestone = ratio.setScale(1, BigDecimal.ROUND_HALF_UP); // 예: 62.5%
+    }
 
 }

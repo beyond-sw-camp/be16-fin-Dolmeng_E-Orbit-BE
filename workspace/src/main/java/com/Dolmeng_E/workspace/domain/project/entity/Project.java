@@ -1,6 +1,7 @@
 package com.Dolmeng_E.workspace.domain.project.entity;
 
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
+import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
@@ -13,6 +14,8 @@ import org.hibernate.annotations.GenericGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @NoArgsConstructor
@@ -41,6 +44,10 @@ public class Project extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_participant_id", nullable = false)
     private WorkspaceParticipant workspaceParticipant;
+
+    // fetch join용 양방향 리스트 추가
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Stone> stones = new ArrayList<>();
 
     @Column(name = "project_name", nullable = false)
     private String projectName;

@@ -3,6 +3,7 @@ package com.Dolmeng_E.workspace.domain.user_group.service;
 import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
 import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
+import com.Dolmeng_E.workspace.common.service.AccessCheckService;
 import com.Dolmeng_E.workspace.common.service.UserFeign;
 import com.Dolmeng_E.workspace.domain.user_group.dto.*;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroup;
@@ -37,6 +38,7 @@ public class UserGroupService {
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final UserGroupMappingRepository userGroupMappingRepository;
     private final UserFeign userFeign;
+    private final AccessCheckService accessCheckService;
 
     // 사용자 그룹 생성
     public String createUserGroup(String userId, UserGroupCreateDto dto) {
@@ -44,14 +46,15 @@ public class UserGroupService {
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
 
-        // 2️. 관리자 검증
+        // 2️. 관리자 혹은 사용자 그룹 권한 있는지 확인
         UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant admin = workspaceParticipantRepository
+        WorkspaceParticipant requester = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
-        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 그룹을 생성할 수 있습니다.");
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            // 관리자 아니면 권한 검증 (내부에서 예외 발생 시 catch 없이 자동 전파)
+            accessCheckService.validateAccess(requester, "ws_acc_list_4");
         }
 
         // 3️. 동일 워크스페이스 내 중복 그룹명 검증
@@ -81,15 +84,11 @@ public class UserGroupService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
 
-        // 2️. 관리자 검증
+        // 2️. 요청자 검증(사용자 그룹 목록 조회는 여러 서비스에서 필요하기 때문에 권한 x)
         UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant admin = workspaceParticipantRepository
+        WorkspaceParticipant requester = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
-
-        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 그룹을 생성할 수 있습니다.");
-        }
 
         // 3. 그룹 목록 조회 (페이지네이션)
         Page<UserGroup> groups = userGroupRepository.findByWorkspace(workspace, pageable);
@@ -112,14 +111,15 @@ public class UserGroupService {
 
         Workspace workspace = userGroup.getWorkspace();
 
-        // 2. 관리자 검증
+        // 2️. 관리자 혹은 사용자 그룹 권한 있는지 확인
         UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant admin = workspaceParticipantRepository
+        WorkspaceParticipant requester = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
-        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 그룹에 추가할 수 있습니다.");
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            // 관리자 아니면 권한 검증 (내부에서 예외 발생 시 catch 없이 자동 전파)
+            accessCheckService.validateAccess(requester, "ws_acc_list_4");
         }
 
         // 3. 유저 존재 검증 (Feign)
@@ -161,14 +161,15 @@ public class UserGroupService {
 
         Workspace workspace = userGroup.getWorkspace();
 
-        // 2. 관리자 검증
-        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant participant = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspace.getId(), requester.getUserId())
+        // 2️. 관리자 혹은 사용자 그룹 권한 있는지 확인
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
-        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 그룹 상세를 조회할 수 있습니다.");
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            // 관리자 아니면 권한 검증 (내부에서 예외 발생 시 catch 없이 자동 전파)
+            accessCheckService.validateAccess(requester, "ws_acc_list_4");
         }
 
         // 3. 그룹 내 매핑된 사용자 목록 (페이징)
@@ -221,7 +222,7 @@ public class UserGroupService {
     }
 
 
-    // 사용자 그룹에서 삭제
+    // 사용자를 그룹에서 삭제
     public void removeUsersFromGroup(String userId, String groupId, UserGroupRemoveUserDto dto) {
 
         // 1. 사용자 그룹 조회
@@ -230,14 +231,15 @@ public class UserGroupService {
 
         Workspace workspace = userGroup.getWorkspace();
 
-        // 2. 관리자 검증
-        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant admin = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspace.getId(), requester.getUserId())
+        // 2️. 관리자 혹은 사용자 그룹 권한 있는지 확인
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
-        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 그룹을 수정할 수 있습니다.");
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            // 관리자 아니면 권한 검증 (내부에서 예외 발생 시 catch 없이 자동 전파)
+            accessCheckService.validateAccess(requester, "ws_acc_list_4");
         }
 
         // 3. 요청 값 유효성 검사
@@ -292,14 +294,15 @@ public class UserGroupService {
 
         Workspace workspace = userGroup.getWorkspace();
 
-        // 2. 관리자 검증
-        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant admin = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspace.getId(), requester.getUserId())
+        // 2️. 관리자 혹은 사용자 그룹 권한 있는지 확인
+        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
-        if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 그룹을 삭제할 수 있습니다.");
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            // 관리자 아니면 권한 검증 (내부에서 예외 발생 시 catch 없이 자동 전파)
+            accessCheckService.validateAccess(requester, "ws_acc_list_4");
         }
 
         // 3. 그룹 내 매핑된 유저 삭제 (Cascade 대신 명시적으로)

@@ -13,21 +13,18 @@ import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
 import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
-import com.Dolmeng_E.workspace.domain.stone.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
+import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,13 +32,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StoneService {
     private final ChildStoneListRepository childStoneListRepository;
-    private final TaskRepository taskRepository;
     private final StoneRepository stoneRepository;
     private final AccessCheckService accessCheckService;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final ProjectRepository projectRepository;
     private final StoneParticipantRepository stoneParticipantRepository;
     private final ProjectParticipantRepository projectParticipantRepository;
+    private final WorkspaceRepository workspaceRepository;
 
 // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
@@ -412,9 +409,6 @@ public class StoneService {
         if (dto.getEndTime() != null) {
             stone.setEndTime(dto.getEndTime());
         }
-        if (dto.getStoneStatus() != null) {
-            stone.setStatus(dto.getStoneStatus());
-        }
 
         // 6. 수정된 스톤 저장
         stoneRepository.save(stone);
@@ -535,23 +529,96 @@ public void deleteStone(String userId, String stoneId) {
     stoneRepository.save(stone);
 }
 
+// 스톤 완료 처리
+    public void completeStone(String userId, String stoneId) {
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
 
-    // 내 스톤 목록 조회
+        // 2. 부모 스톤이 없는 경우 (최상위 스톤) 삭제 불가
+        if (stone.getParentStoneId() == null) {
+            throw new IllegalArgumentException("최상위 스톤은 완료 처리할 수 없습니다. (프로젝트 루트 스톤)");
+        }
 
-    // 스톤 목록? 스톤들 뿌리처럼 보이는 거
+        // 3. 스톤이 포함된 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 4. 요청 사용자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 5. 권한 검증 (ADMIN, 프로젝트 담당자, 스톤 담당자)
+        if (requester.getWorkspaceRole() != WorkspaceRole.ADMIN &&
+                !project.getWorkspaceParticipant().getId().equals(requester.getId()) &&
+                !stone.getStoneManager().getId().equals(requester.getId())) {
+            throw new IllegalArgumentException("관리자, 프로젝트 담당자, 혹은 스톤 담당자만 완료처리 가능합니다.");
+        }
+
+        // 6. 완료처리
+        if (stone.getStatus() == StoneStatus.COMPLETED) {
+            throw new IllegalStateException("이미 완료된 스톤입니다.");
+        }
+        // task가 100% 아니어도 완료하게 되면 100%로 맞춤(이 부분 의견 궁금합니다!)
+        stone.setMilestone(BigDecimal.valueOf(100.0));
+    }
+
+// 프로젝트 별 내 마일스톤 조회(isDelete = true 제외, stoneStatus Completed 제외)
+    public List<ProjectMilestoneResDto> milestoneList(String userId, String workspaceId) {
+
+        // 1. 워크스페이스, 사용자 검증
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스가 존재하지 않습니다."));
+
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 존재하지 않습니다."));
+
+        // 2. fetch join으로 프로젝트 + 스톤을 한 번에 로드
+        // 이전 구조는 for문을 통해 객체를 구해서 N + 1 이슈가 있었습니다.
+        List<ProjectParticipant> projectParticipants =
+                // 내가 속한 프로젝트와 그 안의 스톤들을 조회하는 쿼리문
+                projectParticipantRepository.findAllWithStonesByWorkspaceParticipant(participant);
+
+        // 3. DTO 변환
+
+        // 리턴용 리스트 생성
+        List<ProjectMilestoneResDto> result = new ArrayList<>();
+
+        for (ProjectParticipant pp : projectParticipants) {
+            Project project = pp.getProject();
+
+            // 프로젝트의 스톤 리스트 가져오기 (fetch join으로 이미 로드됨)
+            List<Stone> stones = project.getStones();
+
+            List<StoneParticipant> activeStoneParticipants =
+                    //내가 참여 중인 스톤들만 미리 캐싱하는 쿼리문
+                    stoneParticipantRepository.findAllActiveWithStoneByWorkspaceParticipant(participant);
+
+            List<MilestoneResDto> milestoneDtos = activeStoneParticipants.stream()
+                    .filter(sp -> !sp.getIsMilestoneHidden())
+                    .map(sp -> MilestoneResDto.fromEntity(sp.getStone()))
+                    .toList();
+
+            // 프로젝트별 마일스톤 응답 DTO 조립
+            ProjectMilestoneResDto dto = ProjectMilestoneResDto.builder()
+                    .projectId(project.getId())
+                    .projectName(project.getProjectName())
+                    .milestoneResDtoList(milestoneDtos)
+                    .build();
+
+            result.add(dto);
+        }
+
+        return result;
+    }
+
 
     // 스톤 상세 정보 조회
 
-    // 태스크 생성
+    // 스톤 참여자 목록 조회
 
-    // 태스크 수정
-
-    // 태스크 삭제
-
-    // 태스크 완료 처리
-
-    // 마일스톤 진행률 변경
-
-    // To-Do: 다 하면 프로젝트 쪽 로직 완성
+    //ToDo: 다 하면 프로젝트 쪽 로직 완성
 
 }
