@@ -76,11 +76,13 @@ public class Stone extends BaseTimeEntity {
 
     // 태스크 수
     @Column(name = "task_count")
-    private Integer taskCount;
+    @Builder.Default
+    private Integer taskCount = 0;
 
     // 완료된 태스크 수
     @Column(name = "completed_count")
-    private Integer completedCount;
+    @Builder.Default
+    private Integer completedCount = 0;
 
     // 스톤 삭제 여부
     @Column(name = "is_delete", nullable = false)

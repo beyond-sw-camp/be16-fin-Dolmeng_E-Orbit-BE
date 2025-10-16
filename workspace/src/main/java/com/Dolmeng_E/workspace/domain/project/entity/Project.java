@@ -79,10 +79,12 @@ public class Project extends BaseTimeEntity {
 
     // 전체 스톤 수
     @Column(name = "task_count")
+    @Builder.Default
     private Integer stoneCount = 0;
 
     // 완료된 스톤 수
     @Column(name = "completed_count")
+    @Builder.Default
     private Integer completedCount = 0;
 
     public void update(ProjectModifyDto dto) {
