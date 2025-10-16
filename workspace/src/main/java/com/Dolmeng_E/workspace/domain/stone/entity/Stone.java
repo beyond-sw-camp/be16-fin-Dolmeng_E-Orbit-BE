@@ -87,4 +87,8 @@ public class Stone extends BaseTimeEntity {
     @Builder.Default
     private Boolean isDelete = false;
 
+    public void incrementTaskCount() {
+        this.taskCount = (this.taskCount == null ? 1 : this.taskCount + 1);
+    }
+
 }

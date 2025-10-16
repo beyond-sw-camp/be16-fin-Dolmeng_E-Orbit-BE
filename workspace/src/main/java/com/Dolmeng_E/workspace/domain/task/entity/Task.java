@@ -37,8 +37,8 @@ public class Task extends BaseTimeEntity {
     private Stone stone;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "task_participant_id")
-    private WorkspaceParticipant taskParticipant;
+    @JoinColumn(name = "task_manager_id")
+    private WorkspaceParticipant taskManager;
 
     @Column(name = "task_name", nullable = false, length = 255)
     private String taskName;
