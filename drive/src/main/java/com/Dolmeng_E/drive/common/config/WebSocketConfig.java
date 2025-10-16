@@ -15,7 +15,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 클라이언트가 WebSocket 연결을 시작할 엔드포인트
         // 기존 /ws/editor 경로를 그대로 사용
         registry.addEndpoint("/ws/editor")
-                .setAllowedOrigins("*");
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 
     @Override

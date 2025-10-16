@@ -33,7 +33,9 @@ public class JwtAuthFilter implements GlobalFilter {
             "/user/password",
             "/health",
             "/connect/**",
-            "/drive/**"
+            "/drive/**",
+            "/documentLine/**",
+            "/ws/**"
     );
 
     private static final List<String> ADMIN_ONLY_PATH = List.of(

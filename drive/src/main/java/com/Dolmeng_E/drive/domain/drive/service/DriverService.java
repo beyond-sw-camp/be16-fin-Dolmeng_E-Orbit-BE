@@ -148,26 +148,12 @@ public class DriverService {
         if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
             throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
         }
-        Map<String, Object> defaultContent = Map.of(
-                "type", "doc",
-                "content", List.of(Map.of(
-                        "type", "paragraph"
-                ))
-        );
-        Document document = new Document();
-        try {
-            String contentJson = objectMapper.writeValueAsString(defaultContent);
-            document = Document.builder()
+        Document document = Document.builder()
                     .createdBy("회원ID")
                     .title(documentTitle)
                     .folder(folder)
-                    .content(contentJson)
                     .build();
-            documentRepository.save(document);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSON 변환 에러", e);
-        }
-        return document.getId();
+        return documentRepository.save(document).getId();
     }
 
     // 문서 삭제(소프트)
@@ -195,17 +181,17 @@ public class DriverService {
     }
 
     // 문서 업데이트
-    public void updateDocument(String documentId, Object content) {
-        Document document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다: " + documentId));
-
-        try {
-            // 객체를 JSON 문자열로 변환하여 저장 (직렬화)
-            String contentJson = objectMapper.writeValueAsString(content);
-            document.setContent(contentJson);
-            documentRepository.save(document);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSON 변환 에러");
-        }
-    }
+//    public void updateDocument(String documentId, Object content) {
+//        Document document = documentRepository.findById(documentId)
+//                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다: " + documentId));
+//
+//        try {
+//            // 객체를 JSON 문자열로 변환하여 저장 (직렬화)
+//            String contentJson = objectMapper.writeValueAsString(content);
+//            document.setContent(contentJson);
+//            documentRepository.save(document);
+//        } catch (JsonProcessingException e) {
+//            throw new RuntimeException("JSON 변환 에러");
+//        }
+//    }
 }
