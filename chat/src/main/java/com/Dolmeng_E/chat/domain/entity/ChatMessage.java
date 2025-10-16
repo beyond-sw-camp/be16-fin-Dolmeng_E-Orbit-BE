@@ -29,7 +29,7 @@ public class ChatMessage extends BaseTimeEntity {
 
     @Column(nullable = false)
     @Builder.Default
-//    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)
     private MessageType type = MessageType.TEXT;
 
     // todo - 나중에 User name 넣어서 반정규화
