@@ -4,7 +4,9 @@ import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
+import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,5 +18,17 @@ public interface StoneParticipantRepository extends JpaRepository<StoneParticipa
     Boolean existsByStoneAndWorkspaceParticipant(Stone stone, WorkspaceParticipant workspaceParticipant);
     Optional<StoneParticipant> findByStoneAndWorkspaceParticipant(Stone stone, WorkspaceParticipant workspaceParticipant);
     boolean existsByStone_ProjectAndWorkspaceParticipant(Project project, WorkspaceParticipant participant);
+
+    // n+1 을 해결하기 위한 쿼리문 - 내가 참여 중인 스톤들만 미리 캐싱
+    @Query("""
+    SELECT DISTINCT sp 
+    FROM StoneParticipant sp
+    JOIN FETCH sp.stone s
+    JOIN FETCH s.project p
+    WHERE sp.workspaceParticipant = :participant
+    AND s.isDelete = false
+    AND s.status <> com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus.COMPLETED
+    """)
+    List<StoneParticipant> findAllActiveWithStoneByWorkspaceParticipant(@Param("participant") WorkspaceParticipant participant);
 
 }

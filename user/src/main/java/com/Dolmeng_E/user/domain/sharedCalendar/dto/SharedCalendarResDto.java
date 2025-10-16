@@ -1,4 +1,4 @@
 package com.Dolmeng_E.user.domain.sharedCalendar.dto;
 
-public class SharedCalendarResponse {
+public class SharedCalendarResDto {
 }
