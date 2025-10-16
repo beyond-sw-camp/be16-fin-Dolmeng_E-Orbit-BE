@@ -1,6 +1,5 @@
 package com.Dolmeng_E.drive.domain.drive.service;
 
-import com.Dolmeng_E.drive.domain.drive.dto.DocumentLineCreateReqDto;
 import com.Dolmeng_E.drive.domain.drive.dto.DocumentLineResDto;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.DocumentLine;
@@ -15,33 +14,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class DocumentLineService {
     private final DocumentLineRepository documentLineRepository;
-    private final DocumentRepository documentRepository;
-
-    public Long createDocumentLine(DocumentLineCreateReqDto documentLineCreateReqDto) {
-        Document document = documentRepository.findById(documentLineCreateReqDto.getDocumentId())
-                .orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
-        System.out.println(documentLineCreateReqDto.toString());
-        // 1. DTO를 Entity로 변환합니다.
-        DocumentLine newDocumentLine = DocumentLine.builder()
-                .prevId(documentLineCreateReqDto.getPrevLineId())
-                .document(document)
-                .lineId(documentLineCreateReqDto.getLineId())
-                .content(documentLineCreateReqDto.getContent())
-                .build();
-
-        // 2. Repository를 통해 데이터베이스에 저장합니다.
-        return documentLineRepository.save(newDocumentLine).getId();
-
-        // 3. (다음 단계) 웹소켓을 통해 다른 사용자들에게 이 블록 생성 정보를 브로드캐스트합니다.
-        // webSocketService.broadcastBlockCreation(newBlock);
-    }
 
     // 문서에서 모든 라인 가져오기
     @Transactional(readOnly = true)

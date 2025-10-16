@@ -39,14 +39,14 @@ public class EditorWebSocketHandler extends TextWebSocketHandler {
         // documentId를 키로 사용하여 세션 집합을 가져오거나, 없으면 새로 생성
         Set<WebSocketSession> sessions = documentSessions.computeIfAbsent(documentId, k -> new CopyOnWriteArraySet<>());
 
-        if (editorMessage.getType() == EditorMessageDto.MessageType.JOIN) {
-            // JOIN 메시지인 경우, 현재 세션을 해당 문서의 세션 목록에 추가
-            sessions.add(session);
-            System.out.println("세션 " + session.getId() + "이(가) 문서 " + documentId + "에 참여했습니다.");
-        } else if (editorMessage.getType() == EditorMessageDto.MessageType.UPDATE) {
-            // UPDATE 메시지인 경우, 해당 문서의 다른 모든 세션에 메시지 브로드캐스팅
-            broadcast(documentId, session, message);
-        }
+//        if (editorMessage.getType() == EditorMessageDto.MessageType.JOIN) {
+//            // JOIN 메시지인 경우, 현재 세션을 해당 문서의 세션 목록에 추가
+//            sessions.add(session);
+//            System.out.println("세션 " + session.getId() + "이(가) 문서 " + documentId + "에 참여했습니다.");
+//        } else if (editorMessage.getType() == EditorMessageDto.MessageType.UPDATE) {
+//            // UPDATE 메시지인 경우, 해당 문서의 다른 모든 세션에 메시지 브로드캐스팅
+//            broadcast(documentId, session, message);
+//        }
     }
 
     @Override
