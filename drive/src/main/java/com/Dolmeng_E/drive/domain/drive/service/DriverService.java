@@ -166,32 +166,8 @@ public class DriverService {
     // 문서 조회
     public Object findDocument(String documentId){
         Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException(("해당 문서가 존재하지 않습니다.")));
-//        try {
-//            return DocumentResDto.builder()
-//                    .title(document.getTitle())
-//                    .content(objectMapper.readValue(document.getContent(), Object.class))
-//                    .build();
-//        } catch (JsonProcessingException e) {
-//            throw new RuntimeException("JSON 변환 에러");
-//        }
         return DocumentResDto.builder()
                 .title(document.getTitle())
-                .content(redisUtil.getData(documentId))
                 .build();
     }
-
-    // 문서 업데이트
-//    public void updateDocument(String documentId, Object content) {
-//        Document document = documentRepository.findById(documentId)
-//                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다: " + documentId));
-//
-//        try {
-//            // 객체를 JSON 문자열로 변환하여 저장 (직렬화)
-//            String contentJson = objectMapper.writeValueAsString(content);
-//            document.setContent(contentJson);
-//            documentRepository.save(document);
-//        } catch (JsonProcessingException e) {
-//            throw new RuntimeException("JSON 변환 에러");
-//        }
-//    }
 }

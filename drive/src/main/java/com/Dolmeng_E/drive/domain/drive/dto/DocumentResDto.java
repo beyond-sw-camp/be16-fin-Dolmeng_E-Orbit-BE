@@ -11,5 +11,4 @@ import lombok.NoArgsConstructor;
 @Builder
 public class DocumentResDto {
     private String title;
-    private Object content;
 }

@@ -14,7 +14,6 @@ public class EditorController {
 
     // Redis에 메시지를 발행하기 위한 RedisTemplate
     private final RedisTemplate<String, Object> redisTemplate;
-    private final DriverService driverService;
 
     // 클라이언트가 /app/editor/update 경로로 메시지를 보내면 이 메서드가 처리
     @MessageMapping("/editor/update")

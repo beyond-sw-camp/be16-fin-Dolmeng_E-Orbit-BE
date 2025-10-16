@@ -97,6 +97,7 @@ public class DriveController {
                 .build(), HttpStatus.OK);
     }
 
+    // 문서 조회
     @GetMapping("/document/{documentId}")
     public ResponseEntity<?> getDocument(@PathVariable String documentId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
