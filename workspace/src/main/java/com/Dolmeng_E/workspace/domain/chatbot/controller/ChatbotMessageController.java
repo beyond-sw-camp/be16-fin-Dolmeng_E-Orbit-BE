@@ -19,7 +19,7 @@ public class ChatbotMessageController {
     private final ChatbotMessageService chatbotMessageService;
 
     // 사용자가 챗봇에게 메시지 전송
-    @PostMapping("/user")
+    @PostMapping("/message")
     public ResponseEntity<?> sendMessage(@RequestHeader("X-User-Id") String userId, @RequestBody @Valid ChatbotMessageUserReqDto chatbotMessageUserReqDto) {
         String response = chatbotMessageService.sendMessage(userId, chatbotMessageUserReqDto);
         return new ResponseEntity<>(new CommonSuccessDto(response, HttpStatus.OK.value(), "챗봇에게 메시지 전송 성공"),  HttpStatus.OK);
@@ -30,5 +30,13 @@ public class ChatbotMessageController {
     public ResponseEntity<?> getUserMessageList(@RequestHeader("X-User-Id") String userId, @PathVariable String workspaceId) {
         List<ChatbotMessageListResDto> chatbotMessageListResDtoList = chatbotMessageService.getUserMessageList(userId, workspaceId);
         return new ResponseEntity<>(new CommonSuccessDto(chatbotMessageListResDtoList, HttpStatus.OK.value(), "챗봇과의 메시지 조회 성공"),  HttpStatus.OK);
+    }
+
+    // Agent전용
+    // 프로젝트 요약을 위한 정보 제공
+    @GetMapping("/project-info/{projectName}")
+    public ResponseEntity<?> getProjectInfo(@PathVariable String projectName) {
+        String projectInfo = chatbotMessageService.getProjectInfo(projectName);
+        return new ResponseEntity<>(new CommonSuccessDto(projectInfo, HttpStatus.OK.value(), "프로젝트 정보 조회 성공"),  HttpStatus.OK);
     }
 }

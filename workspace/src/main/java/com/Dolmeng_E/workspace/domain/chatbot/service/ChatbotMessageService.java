@@ -7,6 +7,8 @@ import com.Dolmeng_E.workspace.domain.chatbot.dto.N8nAgentReqDto;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessage;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessageType;
 import com.Dolmeng_E.workspace.domain.chatbot.repository.ChatbotMessageRepository;
+import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -27,6 +29,7 @@ public class ChatbotMessageService {
     private final ChatbotMessageRepository chatbotMessageRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final RestTemplateClient restTemplateClient;
+    private final ProjectRepository projectRepository;
 
     // 사용자가 챗봇에게 메시지 전송
     public String sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
@@ -78,4 +81,19 @@ public class ChatbotMessageService {
         return chatbotMessageList.stream().map(c -> ChatbotMessageListResDto.fromEntity(c)).toList();
     }
 
+    // Agent전용
+    // 프로젝트 요약을 위한 정보 제공
+    public String getProjectInfo(String projectName) {
+        // 프로젝트 가져와서 프로젝트 명, 목표, 설명, 진행도, 종료시간, 완료여부 반환
+        Project project = projectRepository.findByProjectName(projectName).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
+        String projectInfo = "";
+        projectInfo += "프로젝트명: " + project.getProjectName() + "\n";
+        projectInfo += "프로젝트 목표: " + project.getProjectObjective() + "\n";
+        projectInfo += "프로젝트 설명: " + project.getProjectDescription() + "\n";
+        projectInfo += "프로젝트명 진행도: " + project.getMilestone() + "\n";
+        projectInfo += "프로젝트명 기한 마감일: " + project.getEndTime() + "\n";
+        projectInfo += "프로젝트명 상태: " + project.getProjectStatus() + "\n";
+
+        return projectInfo;
+    }
 }
