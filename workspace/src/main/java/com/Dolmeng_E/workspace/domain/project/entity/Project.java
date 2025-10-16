@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +59,7 @@ public class Project extends BaseTimeEntity {
     @Column(name = "project_description")
     private String projectDescription;
 
-    @Column(precision = 3, scale = 1)
+    @Column(precision = 4, scale = 1)
     private BigDecimal milestone;
 
     @Column(name = "start_time", nullable = false)
@@ -76,6 +77,14 @@ public class Project extends BaseTimeEntity {
     @Builder.Default
     private Boolean isDelete = false;
 
+    // 전체 스톤 수
+    @Column(name = "task_count")
+    private Integer stoneCount = 0;
+
+    // 완료된 스톤 수
+    @Column(name = "completed_count")
+    private Integer completedCount = 0;
+
     public void update(ProjectModifyDto dto) {
         if (dto.getStartTime() != null) this.startTime = dto.getStartTime();
         if (dto.getEndTime() != null) this.endTime = dto.getEndTime();
@@ -91,5 +100,46 @@ public class Project extends BaseTimeEntity {
     public void deleteProject() {
         this.isDelete = true;
     }
+
+    public void updateMilestone() {
+        if (stoneCount == null || stoneCount == 0) {
+            this.milestone = BigDecimal.ZERO;
+            return;
+        }
+
+        BigDecimal completed = BigDecimal.valueOf(completedCount == null ? 0 : completedCount);
+        BigDecimal total = BigDecimal.valueOf(stoneCount);
+
+        // (완료 / 전체) * 100 → 소수점 1자리 반올림
+        this.milestone = completed
+                .divide(total, 3, RoundingMode.HALF_UP) // 내부 계산 정밀도 확보용 3자리
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(1, RoundingMode.HALF_UP);
+    }
+
+    public void incrementStoneCount() {
+        if (stoneCount == null) stoneCount = 0;
+        stoneCount++;
+        updateMilestone();
+    }
+
+    public void decrementStoneCount() {
+        if (stoneCount == null) stoneCount = 0;
+        stoneCount = Math.max(0, stoneCount - 1);
+        updateMilestone();
+    }
+
+    public void incrementCompletedCount() {
+        if (completedCount == null) completedCount = 0;
+        completedCount++;
+        updateMilestone();
+    }
+
+    public void decrementCompletedCount() {
+        if (completedCount == null) completedCount = 0;
+        completedCount = Math.max(0, completedCount - 1);
+        updateMilestone();
+    }
+
 
 }

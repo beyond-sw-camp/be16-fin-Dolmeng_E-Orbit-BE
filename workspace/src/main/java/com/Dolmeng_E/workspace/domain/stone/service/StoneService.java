@@ -176,6 +176,10 @@ public class StoneService {
             stoneParticipantRepository.saveAll(participantEntities);
         }
 
+        // 프로젝트 마일스톤 반영
+        project.incrementStoneCount();
+        projectRepository.save(project);
+
         return childStone.getId();
     }
 
@@ -464,70 +468,79 @@ public class StoneService {
         stoneRepository.save(stone);
     }
 
-// 스톤 삭제
-public void deleteStone(String userId, String stoneId) {
+    // 스톤 삭제
+    public void deleteStone(String userId, String stoneId) {
 
-    // 1. 스톤 조회
-    Stone stone = stoneRepository.findById(stoneId)
-            .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
 
-    // 2. 부모 스톤이 없는 경우 (최상위 스톤) 삭제 불가
-    if (stone.getParentStoneId() == null) {
-        throw new IllegalArgumentException("최상위 스톤은 삭제할 수 없습니다. (프로젝트 루트 스톤)");
-    }
+        // 2. 부모 스톤이 없는 경우 (최상위 스톤) 삭제 불가
+        if (stone.getParentStoneId() == null) {
+            throw new IllegalArgumentException("최상위 스톤은 삭제할 수 없습니다. (프로젝트 루트 스톤)");
+        }
 
-    // 3. 스톤이 포함된 프로젝트 및 워크스페이스 조회
-    Project project = stone.getProject();
-    Workspace workspace = project.getWorkspace();
+        // 3. 스톤이 포함된 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
 
-    // 4. 요청 사용자 검증
-    WorkspaceParticipant requester = workspaceParticipantRepository
-            .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
-            .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+        // 4. 요청 사용자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
-    // 5. 권한 검증 (ADMIN, 프로젝트 담당자, 스톤 담당자)
-    if (requester.getWorkspaceRole() != WorkspaceRole.ADMIN &&
-            !project.getWorkspaceParticipant().getId().equals(requester.getId()) &&
-            !stone.getStoneManager().getId().equals(requester.getId())) {
-        throw new IllegalArgumentException("관리자, 프로젝트 담당자, 혹은 스톤 담당자만 삭제 가능합니다.");
-    }
+        // 5. 권한 검증 (ADMIN, 프로젝트 담당자, 스톤 담당자)
+        if (requester.getWorkspaceRole() != WorkspaceRole.ADMIN &&
+                !project.getWorkspaceParticipant().getId().equals(requester.getId()) &&
+                !stone.getStoneManager().getId().equals(requester.getId())) {
+            throw new IllegalArgumentException("관리자, 프로젝트 담당자, 혹은 스톤 담당자만 삭제 가능합니다.");
+        }
 
-    // 6. 이미 삭제된 스톤인지 확인
-    if (Boolean.TRUE.equals(stone.getIsDelete())) {
-        throw new IllegalStateException("이미 삭제된 스톤입니다.");
-    }
+        // 6. 이미 삭제된 스톤인지 확인
+        if (Boolean.TRUE.equals(stone.getIsDelete())) {
+            throw new IllegalStateException("이미 삭제된 스톤입니다.");
+        }
 
-    // 7. 스톤 논리 삭제
-    stone.setIsDelete(true);
+        // 7. 프로젝트 마일스톤 반영
+        // 완료된 스톤이었다면 완료 카운트 감소
+        if (stone.getStatus() == StoneStatus.COMPLETED) {
+            project.decrementCompletedCount();
+        }
+        project.decrementStoneCount();
+        projectRepository.save(project);
 
-    // 8. 스톤 참여자 하드 삭제
-    List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(stone);
-    if (!stoneParticipants.isEmpty()) {
-        stoneParticipantRepository.deleteAll(stoneParticipants);
-    }
+        // 8. 스톤 논리 삭제
+        stone.setIsDelete(true);
+        stoneRepository.save(stone);
 
-    // 9. 프로젝트 참여자 조건부 삭제
-    for (StoneParticipant sp : stoneParticipants) {
-        WorkspaceParticipant wp = sp.getWorkspaceParticipant();
+        // 9. 스톤 참여자 하드 삭제
+        List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(stone);
+        if (!stoneParticipants.isEmpty()) {
+            stoneParticipantRepository.deleteAll(stoneParticipants);
+        }
 
-        // 해당 참여자가 이 프로젝트의 다른 스톤에도 속해 있는지 확인
-        boolean stillExists = stoneParticipantRepository.existsByStone_ProjectAndWorkspaceParticipant(project, wp);
+        // 10. 프로젝트 참여자 조건부 삭제
+        for (StoneParticipant sp : stoneParticipants) {
+            WorkspaceParticipant wp = sp.getWorkspaceParticipant();
 
-        // 다른 스톤에도 없으면 프로젝트 참여자에서도 제거
-        if (!stillExists) {
-            ProjectParticipant projectParticipant = projectParticipantRepository
-                    .findByProjectAndWorkspaceParticipant(project, wp)
-                    .orElse(null);
+            // 해당 참여자가 이 프로젝트의 다른 스톤에도 속해 있는지 확인
+            boolean stillExists = stoneParticipantRepository.existsByStone_ProjectAndWorkspaceParticipant(project, wp);
 
-            if (projectParticipant != null) {
-                projectParticipantRepository.delete(projectParticipant);
+            // 다른 스톤에도 없으면 프로젝트 참여자에서도 제거
+            if (!stillExists) {
+                ProjectParticipant projectParticipant = projectParticipantRepository
+                        .findByProjectAndWorkspaceParticipant(project, wp)
+                        .orElse(null);
+
+                if (projectParticipant != null) {
+                    projectParticipantRepository.delete(projectParticipant);
+                }
             }
         }
-    }
 
-    // 10. 변경 저장
-    stoneRepository.save(stone);
-}
+        // 11. 변경 저장
+        stoneRepository.save(stone);
+    }
 
 // 스톤 완료 처리
     public void completeStone(String userId, String stoneId) {
@@ -560,8 +573,21 @@ public void deleteStone(String userId, String stoneId) {
         if (stone.getStatus() == StoneStatus.COMPLETED) {
             throw new IllegalStateException("이미 완료된 스톤입니다.");
         }
-        // task가 100% 아니어도 완료하게 되면 100%로 맞춤(이 부분 의견 궁금합니다!)
+        // 7. 스톤 완료 처리 및 마일스톤 100%
+        stone.setStatus(StoneStatus.COMPLETED);
         stone.setMilestone(BigDecimal.valueOf(100.0));
+
+        // 8. 부모가 최상위 스톤인지 확인
+        Boolean isParentTop = findTopStone(stone);
+
+        if (isParentTop) {
+            // 부모가 최상위 스톤이면 프로젝트 진행률 갱신
+            project.incrementCompletedCount();
+            projectRepository.save(project);
+        }
+
+        // 9. 스톤 저장
+        stoneRepository.save(stone);
     }
 
 // 프로젝트 별 내 마일스톤 조회(isDelete = true 제외, stoneStatus Completed 제외)
@@ -620,5 +646,23 @@ public void deleteStone(String userId, String stoneId) {
     // 스톤 참여자 목록 조회
 
     //ToDo: 다 하면 프로젝트 쪽 로직 완성
+
+// 공통 메서드 : 부모가 최상위 스톤인지 파악하는 메서드
+public Boolean findTopStone(Stone stone) {
+
+    if (stone.getParentStoneId() == null) {
+        return false;
+    }
+
+    Optional<Stone> parentOpt = stoneRepository.findById(stone.getParentStoneId());
+
+    if (parentOpt.isEmpty()) {
+        return false;
+    }
+
+    Stone parent = parentOpt.get();
+
+    return parent.getParentStoneId() == null;
+}
 
 }
