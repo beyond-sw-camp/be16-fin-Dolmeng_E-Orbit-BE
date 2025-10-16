@@ -410,9 +410,6 @@ public class StoneService {
         if (dto.getEndTime() != null) {
             stone.setEndTime(dto.getEndTime());
         }
-        if (dto.getStoneStatus() != null) {
-            stone.setStatus(dto.getStoneStatus());
-        }
 
         // 6. 수정된 스톤 저장
         stoneRepository.save(stone);
@@ -533,6 +530,40 @@ public void deleteStone(String userId, String stoneId) {
     stoneRepository.save(stone);
 }
 
+// 스톤 완료 처리
+    public void completeStone(String userId, String stoneId) {
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 부모 스톤이 없는 경우 (최상위 스톤) 삭제 불가
+        if (stone.getParentStoneId() == null) {
+            throw new IllegalArgumentException("최상위 스톤은 완료 처리할 수 없습니다. (프로젝트 루트 스톤)");
+        }
+
+        // 3. 스톤이 포함된 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 4. 요청 사용자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 5. 권한 검증 (ADMIN, 프로젝트 담당자, 스톤 담당자)
+        if (requester.getWorkspaceRole() != WorkspaceRole.ADMIN &&
+                !project.getWorkspaceParticipant().getId().equals(requester.getId()) &&
+                !stone.getStoneManager().getId().equals(requester.getId())) {
+            throw new IllegalArgumentException("관리자, 프로젝트 담당자, 혹은 스톤 담당자만 완료처리 가능합니다.");
+        }
+
+        // 6. 완료처리
+        if (stone.getStatus() == StoneStatus.COMPLETED) {
+            throw new IllegalStateException("이미 완료된 스톤입니다.");
+        }
+        // task가 100% 아니어도 완료하게 되면 100%로 맞춤(이 부분 의견 궁금합니다!)
+        stone.setMilestone(BigDecimal.valueOf(100.0));
+    }
 
     // 마일스톤 진행률 변경
 

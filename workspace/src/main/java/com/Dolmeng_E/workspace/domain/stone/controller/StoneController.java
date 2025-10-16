@@ -99,7 +99,7 @@ public class StoneController {
                 ,HttpStatus.OK);
     }
 
-    // 스톤 정보 수정(진행상태 변경 포함)
+    // 스톤 정보 수정
     @PatchMapping("")
     public ResponseEntity<?> modifyStone(@RequestHeader("X-User-Id") String userId,
                                          @RequestBody StoneModifyDto dto
@@ -143,14 +143,19 @@ public class StoneController {
                 HttpStatus.OK);
     }
 
-
-    // 태스크 생성(생성시 스톤의 task수 반영 필요)
-
-    // 태스크 수정
-
-    // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
-
-    // 태스크 완료 처리(완료시 스톤의 마일스톤 반영 필요)
+    // 스톤 완료처리
+    @PatchMapping("/done/{stoneId}")
+    public ResponseEntity<?> completeStone(@RequestHeader("X-User-Id") String userId,
+                                         @PathVariable String stoneId
+    ) {
+        stoneService.completeStone(userId, stoneId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤 정보 수정 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
     // 마일스톤 진행률 변경
 
@@ -161,6 +166,6 @@ public class StoneController {
     // 스톤 참여자 목록 조회
 
 
-    // To-Do: 다 하면 프로젝트 쪽 로직 완성
+    //ToDo: 다 하면 프로젝트 쪽 로직 완성
 
 }

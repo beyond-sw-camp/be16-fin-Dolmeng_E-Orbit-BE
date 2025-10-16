@@ -59,6 +59,16 @@ public class TaskController {
     }
 
     // 태스크 완료 처리(완료시 스톤의 마일스톤 반영 필요)
+    @PatchMapping("/done/{taskId}")
+    public ResponseEntity<?> completeTask(@RequestHeader("X-User-Id") String userId,
+                                          @PathVariable String taskId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("태스크 완료 처리 성공")
+                .result("마일스톤: " + taskService.completeTask(userId, taskId) + "%")
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
 
 }
