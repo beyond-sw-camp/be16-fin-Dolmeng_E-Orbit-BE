@@ -1,12 +1,10 @@
-package com.Dolmeng_E.workspace.domain.stone.entity;
+package com.Dolmeng_E.workspace.domain.task.entity;
 
+import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
@@ -16,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Getter
 @Builder
+@Setter
 public class Task extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "task_seq_generator")
@@ -36,8 +35,8 @@ public class Task extends BaseTimeEntity {
     private Stone stone;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "task_participant_id")
-    private WorkspaceParticipant taskParticipant;
+    @JoinColumn(name = "task_manager_id")
+    private WorkspaceParticipant taskManager;
 
     @Column(name = "task_name", nullable = false, length = 255)
     private String taskName;
