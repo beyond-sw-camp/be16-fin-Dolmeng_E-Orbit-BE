@@ -13,6 +13,8 @@ import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
 import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
+import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
@@ -39,6 +41,7 @@ public class StoneService {
     private final StoneParticipantRepository stoneParticipantRepository;
     private final ProjectParticipantRepository projectParticipantRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final TaskRepository taskRepository;
 
 // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
@@ -641,7 +644,53 @@ public class StoneService {
     }
 
 
+// 스톤 상세 정보 조회
+
     // 스톤 상세 정보 조회
+    public StoneDetailResDto getStoneDetail(String userId, String stoneId) {
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 속한 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 요청 사용자 검증 (워크스페이스 소속 여부)
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 접근 권한 검증 (ADMIN, 프로젝트 담당자, 스톤 담당자, 스톤 참여자)
+        boolean isAuthorized =
+                participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN) ||
+                        project.getWorkspaceParticipant().getId().equals(participant.getId()) ||
+                        stone.getStoneManager().getId().equals(participant.getId()) ||
+                        stoneParticipantRepository.existsByStoneAndWorkspaceParticipant(stone, participant);
+
+        if (!isAuthorized) {
+            throw new IllegalArgumentException("해당 스톤에 접근할 권한이 없습니다.");
+        }
+
+        // 5. 스톤이 삭제된 경우 예외
+        if (Boolean.TRUE.equals(stone.getIsDelete())) {
+            throw new IllegalStateException("삭제된 스톤입니다.");
+        }
+
+        // 6. 태스크 목록 조회
+        List<Task> tasks = taskRepository.findAllByStone(stone);
+
+        // 7. DTO 변환
+        List<TaskResDto> taskResDtoList = tasks.stream()
+                .map(TaskResDto::fromEntity)
+                .toList();
+
+        // 8. 스톤 상세 DTO 조립 후 리턴
+        return StoneDetailResDto.fromEntity(stone, taskResDtoList);
+    }
+
+
+
 
     // 스톤 참여자 목록 조회
 

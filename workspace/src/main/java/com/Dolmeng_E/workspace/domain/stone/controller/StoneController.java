@@ -171,9 +171,20 @@ public class StoneController {
                 ,HttpStatus.OK);
     }
 
-//    // 스톤 상세 정보 조회
-//    @GetMapping("/{stoneId}")
-//    public
+    // 스톤 상세 정보 조회
+    @GetMapping("/{stoneId}")
+    public ResponseEntity<?> getStoneDetail(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String stoneId
+    ) {
+
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤 상세조회 성공")
+                .result(stoneService.getStoneDetail(userId, stoneId))
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
     // 스톤 참여자 목록 조회 - 스톤참여자 테이블 조회(Todo 간단해서 필요시 구현 예정)
 
