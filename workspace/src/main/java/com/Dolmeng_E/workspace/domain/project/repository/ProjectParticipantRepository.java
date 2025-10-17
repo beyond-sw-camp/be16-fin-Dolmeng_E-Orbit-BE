@@ -29,4 +29,16 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
     List<ProjectParticipant> findAllWithStonesByWorkspaceParticipant(
             @Param("participant") WorkspaceParticipant participant
     );
+
+    // stone이 없어도 조회 가능
+    @Query("SELECT DISTINCT p FROM ProjectParticipant p " +
+            "JOIN FETCH p.project pr " +
+            "LEFT JOIN FETCH pr.stones s " +
+            "WHERE p.workspaceParticipant = :participant " +
+            "AND pr.isDelete = false " +
+            "AND (s.isDelete = false OR s IS NULL) " +
+            "AND (s.status <> com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus.COMPLETED OR s IS NULL)")
+    List<ProjectParticipant> findAllWithOptionalStonesByWorkspaceParticipant(
+            @Param("participant") WorkspaceParticipant participant
+    );
 }

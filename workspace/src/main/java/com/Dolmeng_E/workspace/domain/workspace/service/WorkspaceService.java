@@ -176,6 +176,15 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         UserIdListDto userIdListDto = new UserIdListDto(dto.getUserIdList());
         UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
 
+        // 관리자는 워크스페이스 초대 안되게끔 제외 리스트 생성
+        List<UserInfoResDto> filteredUserList = userInfoListResDto.getUserInfoList().stream()
+                .filter(userInfo -> !userInfo.getUserId().equals(requester.getUserId()))
+                .toList();
+
+        if (filteredUserList.isEmpty()) {
+            throw new IllegalArgumentException("초대 가능한 사용자가 없습니다. (관리자 본인은 제외됩니다)");
+        }
+
         // 4. 신규 사용자 추가 (이름 매핑)
         AccessGroup commonAccessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId,"일반 유저 그룹")
                 .orElseThrow(()->new EntityNotFoundException("워크스페이스 ID 혹은 권한 그룹명에 맞는 정보가 없습니다."));

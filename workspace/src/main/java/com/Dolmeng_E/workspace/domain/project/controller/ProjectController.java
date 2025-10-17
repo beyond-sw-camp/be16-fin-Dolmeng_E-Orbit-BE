@@ -2,12 +2,15 @@ package com.Dolmeng_E.workspace.domain.project.controller;
 
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
+import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/project")
@@ -72,6 +75,24 @@ public class ProjectController {
                 .statusCode(HttpStatus.OK.value())
                 .build()
                 ,HttpStatus.OK);
+    }
+
+//    워크스페이스 전체 프로젝트별 마일스톤 조회
+    @GetMapping("/admin/{workspaceId}")
+    public ResponseEntity<?> getWorkspaceProjectProgress(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<ProjectProgressResDto> result = projectService.getWorkspaceProjectProgress(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusMessage("프로젝트 진행률 조회 완료")
+                        .result(result)
+                        .statusCode(HttpStatus.OK.value())
+                        .build(),
+                HttpStatus.OK
+        );
     }
 
 // 프로젝트가 프로젝트 캘린더에 노출 여부 설정(프로젝트 캘린더 조회용 API)

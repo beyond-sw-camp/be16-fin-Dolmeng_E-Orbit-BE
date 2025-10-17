@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, String> {
     List<Project> findAllByWorkspaceIdAndIsDeleteFalseAndProjectStatusNot(String workspaceId, ProjectStatus projectStatus);
+    List<Project> findAllByWorkspaceIdAndIsDeleteFalse(String workspaceId);
 }
