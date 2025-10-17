@@ -44,4 +44,11 @@ public class EditorController {
         // 3. (다음 단계) 웹소켓을 통해 다른 사용자들에게 이 블록 생성 정보를 브로드캐스트합니다.
         redisTemplate.convertAndSend("document-updates", message);
     }
+
+    @MessageMapping("/editor/delete")
+    public void handleDelete(@Payload EditorMessageDto message) {
+        documentLineService.deleteDocumentLine(message);
+        // 3. (다음 단계) 웹소켓을 통해 다른 사용자들에게 이 블록 생성 정보를 브로드캐스트합니다.
+        redisTemplate.convertAndSend("document-updates", message);
+    }
 }

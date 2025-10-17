@@ -85,4 +85,13 @@ public class DocumentLineService {
         // 2. Repository를 통해 데이터베이스에 저장합니다.
         documentLineRepository.save(newDocumentLine);
     }
+
+    public void deleteDocumentLine(EditorMessageDto message){
+        // 만약 뒷 라인이 있다면 앞단과 연결 시켜주기
+        Optional<DocumentLine> documentLine = documentLineRepository.findByPrevId(message.getLineId());
+        System.out.println(message.getPrevLineId());
+        documentLine.ifPresent(line -> line.updatePrevId(message.getPrevLineId()));
+        // 현재 라인 삭제
+        documentLineRepository.delete(documentLineRepository.findByLineId(message.getLineId()).orElseThrow(()->new EntityNotFoundException("해당 라인이 존재하지 않습니다.")));
+    }
 }
