@@ -1,6 +1,7 @@
 package com.Dolmeng_E.workspace.domain.stone.entity;
 
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
@@ -8,6 +9,8 @@ import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @NoArgsConstructor
@@ -88,6 +91,10 @@ public class Stone extends BaseTimeEntity {
     @Column(name = "is_delete", nullable = false)
     @Builder.Default
     private Boolean isDelete = false;
+
+    @OneToMany(mappedBy = "stone", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    List<Task> tasks = new ArrayList<>();
 
     public void incrementTaskCount() {
         this.taskCount = (this.taskCount == null ? 1 : this.taskCount + 1);

@@ -3,10 +3,15 @@ package com.Dolmeng_E.workspace.domain.chatbot.service;
 import com.Dolmeng_E.workspace.common.service.RestTemplateClient;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageListResDto;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageUserReqDto;
+import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotTaskListReqDto;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.N8nAgentReqDto;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessage;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessageType;
 import com.Dolmeng_E.workspace.domain.chatbot.repository.ChatbotMessageRepository;
+import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
+import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -15,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +33,8 @@ public class ChatbotMessageService {
     private final ChatbotMessageRepository chatbotMessageRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final RestTemplateClient restTemplateClient;
+    private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
 
     // 사용자가 챗봇에게 메시지 전송
     public String sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
@@ -49,6 +57,7 @@ public class ChatbotMessageService {
                 .content(reqDto.getContent())
                 .userId(userId)
                 .userName(participant.getUserName())
+                .today(String.valueOf(LocalDateTime.now()))
                 .build();
 
         // agent에게 요청 및 응답 받아오기
@@ -78,4 +87,40 @@ public class ChatbotMessageService {
         return chatbotMessageList.stream().map(c -> ChatbotMessageListResDto.fromEntity(c)).toList();
     }
 
+    // Agent전용
+    // 프로젝트 요약을 위한 정보 제공
+    public String getProjectInfo(String projectName) {
+        // 프로젝트 가져와서 프로젝트 명, 목표, 설명, 진행도, 종료시간, 완료여부 반환
+        Project project = projectRepository.findByProjectName(projectName).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
+        String projectInfo = "";
+        projectInfo += "프로젝트명: " + project.getProjectName() + "\n";
+        projectInfo += "프로젝트 목표: " + project.getProjectObjective() + "\n";
+        projectInfo += "프로젝트 설명: " + project.getProjectDescription() + "\n";
+        projectInfo += "프로젝트명 진행도: " + project.getMilestone() + "\n";
+        projectInfo += "프로젝트명 기한 마감일: " + project.getEndTime() + "\n";
+        projectInfo += "프로젝트명 상태: " + project.getProjectStatus() + "\n";
+
+        return projectInfo;
+    }
+
+    // 사용자가 할당 된 모든 task리스트 반환
+    public String getTaskList(ChatbotTaskListReqDto reqDto) {
+        LocalDateTime dtoEndTime = LocalDateTime.parse(reqDto.getEndTime());
+        String taskList = "";
+
+        // 워크스페이스 참여자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(reqDto.getWorkspaceId(), UUID.fromString(reqDto.getUserId()))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 참여자가 할당된 task 목록 가져오기, 필터링: 완료여부, 날짜
+        List<Task> tasks = taskRepository.findUnfinishedTasksBeforeDate(participant, dtoEndTime);
+
+        int taskIndex = 1;
+        for(Task task : tasks) {
+            taskList += taskIndex++ + ". " + task.getTaskName() + ", 만료기한: " + task.getEndTime() + "\n";
+        }
+
+        return taskList;
+    }
 }

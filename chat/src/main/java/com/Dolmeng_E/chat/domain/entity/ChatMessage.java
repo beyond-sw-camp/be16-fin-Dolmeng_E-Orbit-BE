@@ -25,6 +25,9 @@ public class ChatMessage extends BaseTimeEntity {
     private UUID userId;
 
     @Column(nullable = false)
+    private String userName;
+
+    @Column(nullable = false)
     private String content;
 
     @Column(nullable = false)

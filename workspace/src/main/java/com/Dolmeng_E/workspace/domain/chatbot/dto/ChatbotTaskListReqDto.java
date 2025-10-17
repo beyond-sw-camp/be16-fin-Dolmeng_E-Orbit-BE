@@ -5,16 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class N8nAgentReqDto {
-    private String userId;
-    private String userName;
+public class ChatbotTaskListReqDto {
     private String workspaceId;
-    private String content;
-    private String today;
+    private String userId;
+    private String endTime;
 }

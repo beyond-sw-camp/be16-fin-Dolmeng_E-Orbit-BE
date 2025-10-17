@@ -32,7 +32,10 @@ public class JwtAuthFilter implements GlobalFilter {
             "/user/password/authcode",
             "/user/password",
             "/health",
-            "/connect/**"
+            "/connect/**",
+            "/chatbot/project-info",
+            "/chatbot/task-list",
+            "/chatbot/unread-messages"
     );
 
     private static final List<String> ADMIN_ONLY_PATH = List.of(
