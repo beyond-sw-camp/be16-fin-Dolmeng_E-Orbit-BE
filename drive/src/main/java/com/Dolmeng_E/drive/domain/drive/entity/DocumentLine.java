@@ -22,10 +22,6 @@ public class DocumentLine extends BaseTimeEntity {
 
     private String prevId;
 
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private Type type = Type.paragraph;
-
     @Column(unique = true)
     private String lineId; // 프론트에서 적용해주는 uuid 형식의 id
 

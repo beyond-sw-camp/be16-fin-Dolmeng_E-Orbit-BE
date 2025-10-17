@@ -1,6 +1,5 @@
 package com.Dolmeng_E.drive.common.dto;
 
-import com.Dolmeng_E.drive.domain.drive.entity.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +15,7 @@ public class EditorMessageDto {
         UPDATE, // 라인 수정
         DELETE, // 라인 삭제
         CURSOR_UPDATE, // 커서 위치 업데이트
-        JOIN
+        JOIN // 문서 참여
     }
 
     private MessageType messageType;
@@ -26,5 +25,4 @@ public class EditorMessageDto {
     private String lineId;
     private String prevLineId;
     private String content;
-    private Type type;
 }
