@@ -1,10 +1,7 @@
 package com.Dolmeng_E.workspace.domain.chatbot.service;
 
 import com.Dolmeng_E.workspace.common.service.RestTemplateClient;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageListResDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageUserReqDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotTaskListReqDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.N8nAgentReqDto;
+import com.Dolmeng_E.workspace.domain.chatbot.dto.*;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessage;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessageType;
 import com.Dolmeng_E.workspace.domain.chatbot.repository.ChatbotMessageRepository;
@@ -28,7 +25,7 @@ import java.util.UUID;
 @Transactional
 @RequiredArgsConstructor
 public class ChatbotMessageService {
-    static final String AGENT_URL = "http://localhost:5678/webhook-test/chatbot-agent";
+    static final String AGENT_URL = "http://localhost:5678/webhook/chatbot-agent";
 
     private final ChatbotMessageRepository chatbotMessageRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
@@ -37,7 +34,7 @@ public class ChatbotMessageService {
     private final TaskRepository taskRepository;
 
     // 사용자가 챗봇에게 메시지 전송
-    public String sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
+    public N8nResDto sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
         // 워크스페이스 참여자 검증
         WorkspaceParticipant participant = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(reqDto.getWorkspaceId(), UUID.fromString(userId))
@@ -59,19 +56,21 @@ public class ChatbotMessageService {
                 .userName(participant.getUserName())
                 .today(String.valueOf(LocalDateTime.now()))
                 .build();
-
+        
         // agent에게 요청 및 응답 받아오기
-        ResponseEntity<String> response = restTemplateClient.post(AGENT_URL, n8nAgentReqDto, String.class);
+        ResponseEntity<N8nResDto> response =
+                restTemplateClient.post(AGENT_URL, n8nAgentReqDto, N8nResDto.class);
+        N8nResDto result = response.getBody();
 
         // agent의 응답을 답장으로 저장
         ChatbotMessage chatbotBotMessage = ChatbotMessage.builder()
-                .content(response.getBody())
+                .content(result.getText())
                 .type(ChatbotMessageType.BOT)
                 .workspaceParticipant(participant)
                 .build();
         chatbotMessageRepository.save(chatbotBotMessage);
 
-        return response.getBody();
+        return result;
     }
 
     // 사용자와 챗봇의 대화 조회

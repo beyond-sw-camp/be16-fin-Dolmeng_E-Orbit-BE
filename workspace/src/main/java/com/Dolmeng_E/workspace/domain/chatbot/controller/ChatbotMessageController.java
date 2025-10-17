@@ -3,6 +3,7 @@ package com.Dolmeng_E.workspace.domain.chatbot.controller;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageListResDto;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageUserReqDto;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotTaskListReqDto;
+import com.Dolmeng_E.workspace.domain.chatbot.dto.N8nResDto;
 import com.Dolmeng_E.workspace.domain.chatbot.service.ChatbotMessageService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
@@ -22,7 +23,7 @@ public class ChatbotMessageController {
     // 사용자가 챗봇에게 메시지 전송
     @PostMapping("/message")
     public ResponseEntity<?> sendMessage(@RequestHeader("X-User-Id") String userId, @RequestBody @Valid ChatbotMessageUserReqDto chatbotMessageUserReqDto) {
-        String response = chatbotMessageService.sendMessage(userId, chatbotMessageUserReqDto);
+        N8nResDto response = chatbotMessageService.sendMessage(userId, chatbotMessageUserReqDto);
         return new ResponseEntity<>(new CommonSuccessDto(response, HttpStatus.OK.value(), "챗봇에게 메시지 전송 성공"),  HttpStatus.OK);
     }
 
