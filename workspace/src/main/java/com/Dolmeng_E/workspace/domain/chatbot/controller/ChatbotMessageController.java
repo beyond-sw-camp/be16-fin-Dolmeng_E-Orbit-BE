@@ -2,7 +2,7 @@ package com.Dolmeng_E.workspace.domain.chatbot.controller;
 
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageListResDto;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageUserReqDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotTaskListReqDto;
+import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotInfoReqDto;
 import com.Dolmeng_E.workspace.domain.chatbot.dto.N8nResDto;
 import com.Dolmeng_E.workspace.domain.chatbot.service.ChatbotMessageService;
 import com.example.modulecommon.dto.CommonSuccessDto;
@@ -49,10 +49,17 @@ public class ChatbotMessageController {
         return new ResponseEntity<>(new CommonSuccessDto(projectInfo, HttpStatus.OK.value(), "프로젝트 정보 조회 성공"),  HttpStatus.OK);
     }
 
-    // 사용자가 할당 된 모든 task리스트 반환 (프로젝트 별 - 스톤 - 태스크 별)
+    // 사용자가 할당 된 모든 task리스트 반환
     @GetMapping("/task-list")
-    public ResponseEntity<?> getTaskList(@ModelAttribute ChatbotTaskListReqDto  chatbotTaskListReqDto) {
-        String taskList = chatbotMessageService.getTaskList(chatbotTaskListReqDto);
+    public ResponseEntity<?> getTaskList(@ModelAttribute ChatbotInfoReqDto chatbotInfoReqDto) {
+        String taskList = chatbotMessageService.getTaskList(chatbotInfoReqDto);
         return new ResponseEntity<>(new CommonSuccessDto(taskList, HttpStatus.OK.value(), "Task 목록 조회 성공"),  HttpStatus.OK);
+    }
+
+    // 사용자와 챗봇의 최근 메시지 목록 조회
+    @GetMapping("/history")
+    public ResponseEntity<?> getChatbotHistory(@ModelAttribute ChatbotInfoReqDto chatbotInfoReqDto) {
+        String chatbotHistory = chatbotMessageService.getChatbotHistory(chatbotInfoReqDto);
+        return new ResponseEntity<>(new CommonSuccessDto(chatbotHistory, HttpStatus.OK.value(), "chatbot message 목록 조회 성공"),  HttpStatus.OK);
     }
 }

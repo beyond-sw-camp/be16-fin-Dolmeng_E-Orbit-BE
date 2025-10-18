@@ -16,6 +16,9 @@ import com.example.modulecommon.dto.CommonSuccessDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -127,7 +130,7 @@ public class ChatbotMessageService {
     }
 
     // 사용자가 할당 된 모든 task리스트 반환
-    public String getTaskList(ChatbotTaskListReqDto reqDto) {
+    public String getTaskList(ChatbotInfoReqDto reqDto) {
         LocalDateTime dtoEndTime = LocalDateTime.parse(reqDto.getEndTime());
         String taskList = "";
 
@@ -145,5 +148,25 @@ public class ChatbotMessageService {
         }
 
         return taskList;
+    }
+
+    public String getChatbotHistory(ChatbotInfoReqDto reqDto) {
+        // 워크스페이스 참여자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(reqDto.getWorkspaceId(), UUID.fromString(reqDto.getUserId()))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 최근 메시지 20개만 가져오기
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<ChatbotMessage> recentMessages =
+                chatbotMessageRepository.findByWorkspaceParticipant(participant, pageable);
+
+        String history = "";
+        history += "사용자 요청: " + reqDto.getContent() + "\n\n";
+        history += "History: " + "\n";
+        for (ChatbotMessage chatbotMessage : recentMessages) {
+            history += chatbotMessage.getType() + ": " + chatbotMessage.getContent() + "\n";
+        }
+        return history;
     }
 }
