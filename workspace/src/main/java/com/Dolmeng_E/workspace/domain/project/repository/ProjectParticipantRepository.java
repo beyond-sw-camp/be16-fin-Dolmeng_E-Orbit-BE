@@ -41,4 +41,11 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
     List<ProjectParticipant> findAllWithOptionalStonesByWorkspaceParticipant(
             @Param("participant") WorkspaceParticipant participant
     );
+
+    @Query("SELECT p.project FROM ProjectParticipant p " +
+            "WHERE p.workspaceParticipant = :participant " +
+            "AND p.project.isDelete = false " +
+            "ORDER BY p.project.startTime DESC")
+    Optional<Project> findLatestProjectByParticipant(@Param("participant") WorkspaceParticipant participant);
+
 }

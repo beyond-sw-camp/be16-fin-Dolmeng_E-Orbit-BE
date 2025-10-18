@@ -43,9 +43,9 @@ public class ChatbotMessageController {
 
     // Agent전용
     // 프로젝트 요약을 위한 정보 제공
-    @GetMapping("/project-info/{projectName}")
-    public ResponseEntity<?> getProjectInfo(@PathVariable String projectName) {
-        String projectInfo = chatbotMessageService.getProjectInfo(projectName);
+    @GetMapping("/project-info")
+    public ResponseEntity<?> getProjectInfo(@ModelAttribute ChatbotInfoReqDto chatbotInfoReqDto) {
+        String projectInfo = chatbotMessageService.getProjectInfo(chatbotInfoReqDto);
         return new ResponseEntity<>(new CommonSuccessDto(projectInfo, HttpStatus.OK.value(), "프로젝트 정보 조회 성공"),  HttpStatus.OK);
     }
 

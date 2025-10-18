@@ -14,4 +14,5 @@ public class ChatbotInfoReqDto {
     private String userId;
     private String endTime;
     private String content;
+    private String projectName;
 }
