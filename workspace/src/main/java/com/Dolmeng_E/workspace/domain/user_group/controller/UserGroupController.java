@@ -52,7 +52,7 @@ public class UserGroupController {
     // 사용자 그룹에 추가
     @PostMapping("/{groupId}/grouping")
     public ResponseEntity<?> addUsersToGroup(
-            @RequestHeader("X-User_id") String userId,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String groupId,
             @RequestBody UserGroupAddUserDto dto
     ) {
@@ -70,7 +70,7 @@ public class UserGroupController {
     // 사용자 그룹 상세 조회
     @GetMapping("/{groupId}")
     public ResponseEntity<?> getUserGroupDetail(
-            @RequestHeader("X-User_id") String userId,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String groupId,
             @PageableDefault(size = 10) Pageable pageable
     ) {
@@ -88,7 +88,7 @@ public class UserGroupController {
     // 사용자 그룹에서 삭제
     @DeleteMapping("/{groupId}/users")
     public ResponseEntity<?> removeUsersFromGroup(
-            @RequestHeader("X-User_id") String userId,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String groupId,
             @RequestBody UserGroupRemoveUserDto dto
     ) {
@@ -104,7 +104,7 @@ public class UserGroupController {
     // 사용자 그룹 삭제
     @DeleteMapping("/{groupId}")
     public ResponseEntity<?> deleteUserGroup(
-            @RequestHeader("X-User_id") String userId,
+            @RequestHeader("X-User-Id") String userId,
             @PathVariable String groupId
     ) {
         userGroupService.deleteUserGroup(userId, groupId);
