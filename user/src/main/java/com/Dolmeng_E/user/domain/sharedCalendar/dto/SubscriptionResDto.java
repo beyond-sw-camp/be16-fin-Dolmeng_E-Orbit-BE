@@ -1,6 +1,7 @@
 package com.Dolmeng_E.user.domain.sharedCalendar.dto;
 
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarSubscription;
+import com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Getter;
@@ -48,7 +49,7 @@ public class SubscriptionResDto {
         private LocalDateTime startAt;
         private LocalDateTime endedAt;
 
-        public static SharedCalendarSubDto fromEntity(com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar calendar) {
+        public static SharedCalendarSubDto fromEntity(SharedCalendar calendar) {
             return SharedCalendarSubDto.builder()
                     .calendarId(calendar.getId())
                     .calendarName(calendar.getCalendarName())
