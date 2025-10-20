@@ -11,4 +11,8 @@ public interface CalendarSubscriptionRepository extends JpaRepository<CalendarSu
 
     @Query("SELECT s.targetUserId.id FROM CalendarSubscription s WHERE s.subscriberUserId.id = :userId")
     List<UUID> findTargetUserIdsBySubscriber(UUID userId);
+
+    // 중복 구독 검증
+    boolean existsBySubscriberUserId_IdAndTargetUserId_IdAndWorkspaceId(UUID subscriberId, UUID targetId, String workspaceId);
+
 }
