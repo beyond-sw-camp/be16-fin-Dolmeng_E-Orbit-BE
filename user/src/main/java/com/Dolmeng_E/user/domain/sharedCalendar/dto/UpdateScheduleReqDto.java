@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Getter
 public class UpdateScheduleReqDto {
     private String calendarName;
-    private LocalDateTime startAt;
+    private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private Boolean isShared;
 }

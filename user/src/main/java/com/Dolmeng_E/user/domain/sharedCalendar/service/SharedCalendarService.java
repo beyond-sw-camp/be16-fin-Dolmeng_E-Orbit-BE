@@ -3,6 +3,7 @@ package com.Dolmeng_E.user.domain.sharedCalendar.service;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.CreateScheduleReqDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.SharedCalendarResDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.UpdateScheduleReqDto;
+import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarType;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar;
 import com.Dolmeng_E.user.domain.sharedCalendar.repository.SharedCalendarRepository;
 import jakarta.transaction.Transactional;
@@ -26,11 +27,16 @@ public class SharedCalendarService {
         var user = validationService.validateUserAndWorkspace(userId, dto.getWorkspaceId());
 
         // 2. 일정 생성
+        CalendarType type = dto.getCalendarType() != null
+                ? dto.getCalendarType()
+                : CalendarType.SCHEDULE;
+
         SharedCalendar calendar = SharedCalendar.builder()
                 .userId(user)
                 .workspaceId(dto.getWorkspaceId())
+                .calendarType(type)
                 .calendarName(dto.getCalendarName())
-                .startAt(dto.getStartAt())
+                .startedAt(dto.getStartedAt())
                 .endedAt(dto.getEndedAt())
                 .isShared(dto.getIsShared())
                 .build();
@@ -63,7 +69,7 @@ public class SharedCalendarService {
             throw new IllegalArgumentException("본인 일정만 수정할 수 있습니다.");
 
         // 2. 일정 수정
-        calendar.update(dto.getCalendarName(), dto.getStartAt(), dto.getEndedAt(), dto.getIsShared());
+        calendar.update(dto.getCalendarName(), dto.getStartedAt(), dto.getEndedAt(), dto.getIsShared());
         return SharedCalendarResDto.fromEntity(calendar);
     }
 

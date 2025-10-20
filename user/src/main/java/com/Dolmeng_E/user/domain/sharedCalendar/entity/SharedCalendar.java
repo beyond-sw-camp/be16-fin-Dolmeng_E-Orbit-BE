@@ -41,14 +41,15 @@ public class SharedCalendar extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "calendar_type", nullable = false)
-    @Builder.Default
-    private CalendarType calendarType = SCHEDULE;
+//    @Builder.Default
+//    private CalendarType calendarType = SCHEDULE;
+    private CalendarType calendarType;
 
     @Column(name = "calendar_name", length = 20, nullable = false)
     private String calendarName;
 
     @Column(name = "start_at", nullable = false)
-    private LocalDateTime startAt;
+    private LocalDateTime startedAt;
 
     @Column(name = "ended_at", nullable = false)
     private LocalDateTime endedAt;
@@ -60,12 +61,13 @@ public class SharedCalendar extends BaseTimeEntity {
 
     // 일정 공유 여부
     @Column(name = "is_shared", nullable = false)
+    @Builder.Default
     private Boolean isShared = false;
 
 
     public void update(String name, LocalDateTime start, LocalDateTime end, Boolean isShared) {
         this.calendarName = name;
-        this.startAt = start;
+        this.startedAt = start;
         this.endedAt = end;
         this.isShared = isShared;
     }

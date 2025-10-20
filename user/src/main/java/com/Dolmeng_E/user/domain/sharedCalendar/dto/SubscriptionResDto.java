@@ -46,14 +46,14 @@ public class SubscriptionResDto {
     public static class SharedCalendarSubDto {
         private String calendarId;
         private String calendarName;
-        private LocalDateTime startAt;
+        private LocalDateTime startedAt;
         private LocalDateTime endedAt;
 
         public static SharedCalendarSubDto fromEntity(SharedCalendar calendar) {
             return SharedCalendarSubDto.builder()
                     .calendarId(calendar.getId())
                     .calendarName(calendar.getCalendarName())
-                    .startAt(calendar.getStartAt())
+                    .startedAt(calendar.getStartedAt())
                     .endedAt(calendar.getEndedAt())
                     .build();
         }
