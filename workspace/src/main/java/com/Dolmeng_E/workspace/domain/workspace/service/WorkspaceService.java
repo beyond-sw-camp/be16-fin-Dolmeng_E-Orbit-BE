@@ -2,6 +2,7 @@ package com.Dolmeng_E.workspace.domain.workspace.service;
 
 import com.Dolmeng_E.workspace.common.dto.*;
 import com.Dolmeng_E.workspace.common.service.UserFeign;
+import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupRepository;
 import com.Dolmeng_E.workspace.domain.access_group.service.AccessGroupService;
@@ -13,10 +14,12 @@ import com.Dolmeng_E.workspace.domain.stone.dto.MilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.user_group.dto.UserGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroup;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroupMapping;
 import com.Dolmeng_E.workspace.domain.user_group.repository.UserGroupMappingRepository;
 import com.Dolmeng_E.workspace.domain.user_group.repository.UserGroupRepository;
+import com.Dolmeng_E.workspace.domain.user_group.service.UserGroupService;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceInvite;
@@ -54,6 +57,7 @@ public class WorkspaceService {
     private final ProjectParticipantRepository projectParticipantRepository;
     private final UserGroupRepository userGroupRepository;
     private final UserGroupMappingRepository userGroupMappingRepository;
+    private final UserGroupService userGroupService;
 
 //    워크스페이스 생성
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
@@ -218,6 +222,17 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
                         .isDelete(false)
                         .build())
                 .toList();
+        //todo : 사용자그룹과 권한그룹 설정한 대로 추가 가능하게
+        // 로직 추가 : 사용자 그룹을 설정했을 경우
+        if(dto.getUserGroupId()!=null) {
+            userGroupService.addUsersToGroup(userId,dto.getUserGroupId()
+                    ,UserGroupAddUserDto.builder().userIdList(dto.getUserIdList()).build());
+        }
+        // 로직 추가 : 권한 그룹을 설정했을 경우
+        if(dto.getAccessGroupId()!=null) {
+            accessGroupService.addUserToAccessGroup(dto.getUserGroupId(),dto.getAccessGroupId()
+            , AccessGroupAddUserDto.builder().userIdList(dto.getUserIdList()).build());
+        }
 // Entity에 워크스페이스와 회원 id로 복합키를 설정하여 중복 제외했습니다.
         try {
             workspaceParticipantRepository.saveAll(newParticipants);
