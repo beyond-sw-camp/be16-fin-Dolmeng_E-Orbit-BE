@@ -43,6 +43,7 @@ public class ChatbotMessageService {
     private final TaskRepository taskRepository;
     private final ChatFeign chatFeign;
     private final ProjectParticipantRepository projectParticipantRepository;
+    private final SemanticMemoryService semanticMemoryService;
 
     // 사용자가 챗봇에게 메시지 전송
     public N8nResDto sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
@@ -80,6 +81,16 @@ public class ChatbotMessageService {
                 .workspaceParticipant(participant)
                 .build();
         chatbotMessageRepository.save(chatbotBotMessage);
+
+        // isSave가 true일 때만 저장
+        if(result.getIsSave()) {
+            // redis-stack에 임베딩 저장
+            // User
+            UUID uuidKey = UUID.randomUUID();
+            semanticMemoryService.saveToRedis(userId, reqDto.getWorkspaceId(), "USER", reqDto.getContent(), uuidKey);
+            // Bot
+            semanticMemoryService.saveToRedis(userId, reqDto.getWorkspaceId(), "BOT", result.getText(), uuidKey);
+        }
 
         return result;
     }

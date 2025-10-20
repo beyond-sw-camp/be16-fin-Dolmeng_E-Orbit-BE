@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class N8nResDto {
     private String text;
+    private Boolean isSave;
     private String calendarName;
     private String startedAt;
     private String endedAt;
