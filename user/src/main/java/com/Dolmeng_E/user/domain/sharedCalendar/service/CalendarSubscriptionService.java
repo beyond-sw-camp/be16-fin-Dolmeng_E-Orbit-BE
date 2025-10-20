@@ -148,7 +148,7 @@ public class CalendarSubscriptionService {
 
             // 구독 여부 검증
             if (!sub.getSubscriberUserId().getId().equals(userId))
-                throw new IllegalArgumentException("본인 구독만 삭제할 수 있습니다.");
+                throw new IllegalArgumentException("구독하지 않은 유저의 ID입니다.");
 
             // 구독 삭제
             calendarSubscriptionRepository.delete(sub);
