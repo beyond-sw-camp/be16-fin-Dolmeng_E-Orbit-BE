@@ -222,7 +222,8 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
 // Entity에 워크스페이스와 회원 id로 복합키를 설정하여 중복 제외했습니다.
         try {
             workspaceParticipantRepository.saveAll(newParticipants);
-        } catch (ConstraintViolationException e) {
+            workspaceParticipantRepository.flush(); // 즉시 insert 실행
+        } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("이미 워크스페이스에 존재하는 사용자가 포함되어 있습니다.");
         }
     }
