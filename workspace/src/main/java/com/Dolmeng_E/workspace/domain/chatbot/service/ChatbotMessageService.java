@@ -101,7 +101,7 @@ public class ChatbotMessageService {
         }
 
         // isSave가 true일 때만 질문/답 Semantic에 저장
-        if(result.getIsSave()) {
+        if(result.getIsSave() != null && result.getIsSave()) {
             // redis-stack에 임베딩 저장
             // User
             UUID uuidKey = UUID.randomUUID();
