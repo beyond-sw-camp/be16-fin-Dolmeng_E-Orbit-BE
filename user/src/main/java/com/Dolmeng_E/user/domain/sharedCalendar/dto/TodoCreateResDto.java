@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.domain.sharedCalendar.dto;
 
+import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarType;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar;
 import lombok.Builder;
 import lombok.Getter;
@@ -8,24 +9,25 @@ import java.time.LocalDateTime;
 
 @Getter
 @Builder
-public class SharedCalendarResDto {
+public class TodoCreateResDto {
     private String id;
     private String userId;
     private String workspaceId;
     private String calendarName;
+    // Todo: 일자 + 시간 설정 어떻게 구현할 것인지 생각해보기
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
-    private Boolean isShared;
+    private Boolean bookmark;
 
-    public static SharedCalendarResDto fromEntity(SharedCalendar cal) {
-        return SharedCalendarResDto.builder()
+    public static TodoCreateResDto fromEntity(SharedCalendar cal) {
+        return TodoCreateResDto.builder()
                 .id(cal.getId())
                 .userId(cal.getUserId().getId().toString())
                 .workspaceId(cal.getWorkspaceId())
                 .calendarName(cal.getCalendarName())
                 .startedAt(cal.getStartedAt())
                 .endedAt(cal.getEndedAt())
-                .isShared(cal.getIsShared())
+                .bookmark(cal.getBookmark())
                 .build();
     }
 }

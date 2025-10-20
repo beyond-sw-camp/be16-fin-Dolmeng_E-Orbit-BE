@@ -7,6 +7,8 @@ import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessage;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessageType;
 import com.Dolmeng_E.workspace.domain.chatbot.repository.ChatbotMessageRepository;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
+import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
@@ -16,6 +18,9 @@ import com.example.modulecommon.dto.CommonSuccessDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +42,7 @@ public class ChatbotMessageService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final ChatFeign chatFeign;
+    private final ProjectParticipantRepository projectParticipantRepository;
 
     // 사용자가 챗봇에게 메시지 전송
     public N8nResDto sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
@@ -112,9 +118,21 @@ public class ChatbotMessageService {
 
     // Agent전용
     // 프로젝트 요약을 위한 정보 제공
-    public String getProjectInfo(String projectName) {
+    public String getProjectInfo(ChatbotInfoReqDto reqDto) {
+        Project project = null;
+
         // 프로젝트 가져와서 프로젝트 명, 목표, 설명, 진행도, 종료시간, 완료여부 반환
-        Project project = projectRepository.findByProjectName(projectName).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
+        if(reqDto.getProjectName().equals("current")) {
+            // 워크스페이스 참여자 검증
+            WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository
+                    .findByWorkspaceIdAndUserId(reqDto.getWorkspaceId(), UUID.fromString(reqDto.getUserId()))
+                    .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+            project = projectParticipantRepository.findLatestProjectByParticipant(workspaceParticipant).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
+        } else {
+            project = projectRepository.findByProjectName(reqDto.getProjectName()).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
+        }
+
         String projectInfo = "";
         projectInfo += "프로젝트명: " + project.getProjectName() + "\n";
         projectInfo += "프로젝트 목표: " + project.getProjectObjective() + "\n";
@@ -127,7 +145,7 @@ public class ChatbotMessageService {
     }
 
     // 사용자가 할당 된 모든 task리스트 반환
-    public String getTaskList(ChatbotTaskListReqDto reqDto) {
+    public String getTaskList(ChatbotInfoReqDto reqDto) {
         LocalDateTime dtoEndTime = LocalDateTime.parse(reqDto.getEndTime());
         String taskList = "";
 
@@ -145,5 +163,25 @@ public class ChatbotMessageService {
         }
 
         return taskList;
+    }
+
+    public String getChatbotHistory(ChatbotInfoReqDto reqDto) {
+        // 워크스페이스 참여자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(reqDto.getWorkspaceId(), UUID.fromString(reqDto.getUserId()))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 최근 메시지 20개만 가져오기
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<ChatbotMessage> recentMessages =
+                chatbotMessageRepository.findByWorkspaceParticipant(participant, pageable);
+
+        String history = "";
+        history += "사용자 요청: " + reqDto.getContent() + "\n\n";
+        history += "History: " + "\n";
+        for (ChatbotMessage chatbotMessage : recentMessages) {
+            history += chatbotMessage.getType() + ": " + chatbotMessage.getContent() + "\n";
+        }
+        return history;
     }
 }

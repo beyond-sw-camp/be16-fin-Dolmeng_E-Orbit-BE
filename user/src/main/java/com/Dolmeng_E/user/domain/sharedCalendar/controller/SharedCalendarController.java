@@ -24,9 +24,10 @@ public class SharedCalendarController {
     }
 
     // 일정 조회
-    @GetMapping
-    public List<SharedCalendarResDto> getSchedules(@RequestHeader("X-User-Id") String userId) {
-        return sharedCalendarService.getSchedules(UUID.fromString(userId));
+    @GetMapping("/{workspaceId}")
+    public List<SharedCalendarResDto> getSchedules(@RequestHeader("X-User-Id") String userId,
+                                                   @PathVariable String workspaceId) {
+        return sharedCalendarService.getSchedules(UUID.fromString(userId), workspaceId);
     }
 
     // 일정 수정

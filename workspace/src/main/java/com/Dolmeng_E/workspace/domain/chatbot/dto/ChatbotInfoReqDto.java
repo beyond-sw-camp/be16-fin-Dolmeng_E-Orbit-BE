@@ -9,8 +9,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ChatbotTaskListReqDto {
+public class ChatbotInfoReqDto {
     private String workspaceId;
     private String userId;
     private String endTime;
+    private String content;
+    private String projectName;
 }

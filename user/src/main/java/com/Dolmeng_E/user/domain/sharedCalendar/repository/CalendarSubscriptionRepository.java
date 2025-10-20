@@ -9,6 +9,10 @@ import java.util.UUID;
 
 public interface CalendarSubscriptionRepository extends JpaRepository<CalendarSubscription, String> {
 
-    @Query("SELECT s.targetUserId.id FROM CalendarSubscription s WHERE s.subscriberUserId.id = :userId")
-    List<UUID> findTargetUserIdsBySubscriber(UUID userId);
+    // 구독유저 id와 워크스페이스 id 조회
+    List<CalendarSubscription> findBySubscriberUserId_IdAndWorkspaceId(UUID subscriberId, String workspaceId);
+
+    // 중복 구독 검증
+    boolean existsBySubscriberUserId_IdAndTargetUserId_IdAndWorkspaceId(UUID subscriberId, UUID targetId, String workspaceId);
+
 }
