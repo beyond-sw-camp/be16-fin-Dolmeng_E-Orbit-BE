@@ -27,35 +27,31 @@ public class CalendarSubscriptionService {
     private final UserRepository userRepository;
     private final WorkspaceFeign workspaceFeign;
     private final SharedCalendarRepository sharedCalendarRepository;
+    private final CalendarValidationService validationService;
 
     // 구독 추가
     public List<SubscriptionResDto> subscribeList(UUID subscriberId, SubscriptionCreateReqDto dto) {
-        User subscriber = userRepository.findById(subscriberId)
-                .orElseThrow(() -> new IllegalArgumentException("구독자 정보를 찾을 수 없습니다."));
-
-        if (!workspaceFeign.checkWorkspaceExists(dto.getWorkspaceId())) {
-            throw new IllegalArgumentException("존재하지 않는 워크스페이스입니다.");
-        }
-
-        if (!workspaceFeign.checkWorkspaceMembership(dto.getWorkspaceId(), subscriberId)) {
-            throw new IllegalArgumentException("구독자는 해당 워크스페이스에 속하지 않습니다.");
-        }
+        // 1. 구독자 + 워크스페이스 검증
+        User subscriber = validationService.validateUserAndWorkspace(subscriberId, dto.getWorkspaceId());
 
         List<SubscriptionResDto> result = new ArrayList<>();
 
+        // 2. 구독 대상 유저 반복 처리
         for (UUID targetId : dto.getTargetUserIdList()) {
-            User target = userRepository.findById(targetId)
-                    .orElseThrow(() -> new IllegalArgumentException("대상 유저를 찾을 수 없습니다."));
+            // 대상 유저 존재 여부 및 워크스페이스 멤버 검증
+            User target = validationService.validateUser(targetId);
+            validationService.validateMember(dto.getWorkspaceId(), targetId);
 
-            if (!workspaceFeign.checkWorkspaceMembership(dto.getWorkspaceId(), targetId)) {
-                throw new IllegalArgumentException("대상 유저가 워크스페이스에 속하지 않습니다.");
-            }
-
-            // 중복 구독 여부 검증
+            // 3. 중복 구독 여부 검증
             boolean alreadySubscribed = calendarSubscriptionRepository.existsBySubscriberUserId_IdAndTargetUserId_IdAndWorkspaceId(
                     subscriberId, targetId, dto.getWorkspaceId()
             );
 
+            if (alreadySubscribed) {
+                throw new IllegalArgumentException("이미 구독한 사용자입니다.");
+            }
+
+            // 4. 구독 생성 및 저장
             CalendarSubscription subscription = CalendarSubscription.builder()
                     .workspaceId(dto.getWorkspaceId())
                     .subscriberUserId(subscriber)
@@ -69,32 +65,30 @@ public class CalendarSubscriptionService {
         return result;
     }
 
-    // 구독 리스트 조회
-    public List<SubscriptionResDto> getSubscriptions(UUID userId) {
-        // 구독 리스트 조회
-        List<CalendarSubscription> list = calendarSubscriptionRepository.findAll().stream()
-                .filter(sub -> sub.getSubscriberUserId().getId().equals(userId))
-                .collect(Collectors.toList());
+    // 구독 일정 조회
+    public List<SubscriptionResDto> getSubscriptions(UUID userId, String workspaceId) {
 
-        // 첫 번째 구독 기준으로 워크스페이스 검증
-        String workspaceId = list.get(0).getWorkspaceId();
+        // 1️. 유저 + 워크스페이스 검증
+        validationService.validateUserAndWorkspace(userId, workspaceId);
 
-        if (!workspaceFeign.checkWorkspaceExists(workspaceId)) {
-            throw new IllegalArgumentException("존재하지 않는 워크스페이스입니다.");
+        // 2. 해당 워크스페이스의 구독 리스트만 조회
+        List<CalendarSubscription> list =
+                calendarSubscriptionRepository.findBySubscriberUserId_IdAndWorkspaceId(userId, workspaceId);
+
+        if (list.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        if (!workspaceFeign.checkWorkspaceMembership(workspaceId, userId)) {
-            throw new IllegalArgumentException("해당 유저는 워크스페이스에 속하지 않습니다.");
-        }
-        // 각 구독 대상의 공유 일정 목록 조회
+        // 3. 각 구독 대상의 공유 일정 조회
         List<SubscriptionResDto> result = new ArrayList<>();
 
         for (CalendarSubscription sub : list) {
+            // 구독 대상의 일정 중 같은 워크스페이스에 속한 일정만 가져오기
             List<SharedCalendar> sharedCalendars =
-                    sharedCalendarRepository.findSharedCalendarsByUserId(sub.getTargetUserId().getId());
+                    sharedCalendarRepository.findSharedCalendarsByUserIdAndWorkspaceId(
+                            sub.getTargetUserId().getId(), workspaceId
+                    );
 
-
-            // 일정 요약 DTO로 변환
             List<SubscriptionResDto.SharedCalendarSubDto> briefList = sharedCalendars.stream()
                     .map(SubscriptionResDto.SharedCalendarSubDto::fromEntity)
                     .collect(Collectors.toList());
@@ -146,18 +140,13 @@ public class CalendarSubscriptionService {
             CalendarSubscription sub = calendarSubscriptionRepository.findById(subId)
                     .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 구독입니다."));
 
-            // 워크스페이스 검증
             String workspaceId = sub.getWorkspaceId();
 
-            if (!workspaceFeign.checkWorkspaceExists(workspaceId)) {
-                throw new IllegalArgumentException("존재하지 않는 워크스페이스입니다.");
-            }
+            // 2. 워크스페이스 및 소속 검증
+            validationService.validateWorkspace(workspaceId);
+            validationService.validateMember(workspaceId, userId);
 
-            if (!workspaceFeign.checkWorkspaceMembership(workspaceId, userId)) {
-                throw new IllegalArgumentException("해당 유저는 워크스페이스에 속하지 않습니다.");
-            }
-
-            // 구독 검증
+            // 구독 여부 검증
             if (!sub.getSubscriberUserId().getId().equals(userId))
                 throw new IllegalArgumentException("본인 구독만 삭제할 수 있습니다.");
 
