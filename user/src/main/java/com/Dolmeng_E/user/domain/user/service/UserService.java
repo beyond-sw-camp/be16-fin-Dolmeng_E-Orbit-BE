@@ -264,4 +264,36 @@ public class UserService {
         String encodedPassword = passwordEncoder.encode(dto.getNewPassword());
         user.updatePassword(encodedPassword);
     }
+
+    // 회원 검색
+    public UserInfoListResDto searchUser(String userId, SearchDto dto) {
+
+        // 1. 요청자 검증
+        userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+
+        // 2. 검색 키워드
+        String keyword = dto.getSearchKeyword();
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어를 입력해주세요.");
+        }
+
+        // 3. 이메일 또는 이름에 키워드가 포함된 유저 검색
+        List<User> matchedUsers = userRepository.findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(keyword, keyword);
+
+        // 4. DTO 변환
+        List<UserInfoResDto> userInfoList = matchedUsers.stream()
+                .map(user -> UserInfoResDto.builder()
+                        .userId(user.getId())
+                        .userName(user.getName())
+                        .userEmail(user.getEmail())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .build())
+                .toList();
+
+        // 5. 결과 반환
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
+    }
 }

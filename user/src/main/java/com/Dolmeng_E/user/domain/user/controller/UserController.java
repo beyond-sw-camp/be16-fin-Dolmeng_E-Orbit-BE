@@ -163,4 +163,23 @@ public class UserController {
         userService.updatePassword(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "비밀번호 수정 성공"), HttpStatus.OK);
     }
+
+    // 회원 검색
+    @PostMapping("/search")
+    public ResponseEntity<?> searchUser(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody @Valid SearchDto dto
+    ) {
+        UserInfoListResDto userInfoListResDto = userService.searchUser(userId, dto);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(userInfoListResDto)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("회원 검색 성공")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
 }
