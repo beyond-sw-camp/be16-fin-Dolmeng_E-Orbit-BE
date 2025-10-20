@@ -5,6 +5,7 @@ import com.Dolmeng_E.workspace.common.dto.WorkspaceNameDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
+import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
+import java.util.UUID;
 
 
 @RestController
@@ -162,11 +164,28 @@ public class WorkspaceController {
                 HttpStatus.OK);
     }
 
-    //    workspace 정보 반환 api
+    // workspace 정보 반환
     @PostMapping("/return")
     public WorkspaceInfoResDto fetchWorkspaceInfo(@RequestHeader("X-User-Id")String userId, @RequestBody WorkspaceNameDto workspaceName) {
         WorkspaceInfoResDto workspaceInfoResDto =  workspaceService.fetchWorkspaceInfo(userId, workspaceName);
         return workspaceInfoResDto;
+    }
+
+    // workspace 존재 여부 확인
+    @GetMapping("/{workspaceId}/exists")
+    public ResponseEntity<Boolean> checkWorkspaceExists(@PathVariable String workspaceId) {
+        boolean exists = workspaceService.existsById(workspaceId);
+        return ResponseEntity.ok(exists);
+    }
+
+    // 워크스페이스 멤버 여부 검증
+    @GetMapping("/{workspaceId}/participants/{userId}/exists")
+    public ResponseEntity<Boolean> checkWorkspaceMember(
+            @PathVariable String workspaceId,
+            @PathVariable UUID userId
+    ) {
+        boolean exists = workspaceService.checkWorkspaceMember(workspaceId, userId);
+        return ResponseEntity.ok(exists);
     }
 
 

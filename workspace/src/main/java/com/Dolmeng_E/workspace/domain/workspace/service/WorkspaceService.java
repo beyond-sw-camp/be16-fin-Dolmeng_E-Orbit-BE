@@ -359,7 +359,7 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         participants.forEach(p -> p.deleteParticipant());
     }
 
-//    워크스페이스 정보 반환 api
+    // 워크스페이스 정보 반환
     public WorkspaceInfoResDto fetchWorkspaceInfo (String userId, WorkspaceNameDto workspaceName) {
         Workspace workspace = workspaceRepository.findByUserIdAndWorkspaceName(UUID.fromString(userId), workspaceName.getWorkspaceName());
 
@@ -367,6 +367,18 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
                 .workspaceId(workspace.getId())
                 .workspaceName(workspace.getWorkspaceName())
                 .build();
+    }
+
+    // 워크스페이스 존재 여부 확인
+    @Transactional(readOnly = true)
+    public boolean existsById(String workspaceId) {
+        return workspaceRepository.existsById(workspaceId);
+    }
+
+    // 워크스페이스 멤버 여부 확인
+    @Transactional(readOnly = true)
+    public boolean checkWorkspaceMember(String workspaceId, UUID userId) {
+        return workspaceParticipantRepository.existsByWorkspaceIdAndUserId(workspaceId, userId);
     }
 
 //    워크스페이스 전체 프로젝트별 마일스톤 조회

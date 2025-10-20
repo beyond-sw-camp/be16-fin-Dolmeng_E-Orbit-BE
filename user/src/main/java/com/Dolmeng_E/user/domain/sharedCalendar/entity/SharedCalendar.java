@@ -39,7 +39,9 @@ public class SharedCalendar extends BaseTimeEntity {
     @Column(length = 255, nullable = false)
     private String workspaceId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "calendar_type", nullable = false)
+    @Builder.Default
     private CalendarType calendarType = SCHEDULE;
 
     @Column(name = "calendar_name", length = 20, nullable = false)
@@ -53,6 +55,7 @@ public class SharedCalendar extends BaseTimeEntity {
 
     // todo 즐겨찾기 여부
     @Column(nullable = false)
+    @Builder.Default
     private Boolean bookmark = false;
 
     // 일정 공유 여부

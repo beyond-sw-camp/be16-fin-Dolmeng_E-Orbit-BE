@@ -26,4 +26,7 @@ public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceP
     long countByWorkspaceIdAndIsDeleteFalse(String workspaceId);
 
     List<WorkspaceParticipant> findAllByWorkspaceId(String workspaceId);
+
+    // 워크스페이스 멤버 검증 여부
+    boolean existsByWorkspaceIdAndUserId(String workspaceId, UUID userId);
 }
