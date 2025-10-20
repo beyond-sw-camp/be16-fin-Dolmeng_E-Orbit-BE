@@ -13,7 +13,7 @@ public class SharedCalendarResDto {
     private String userId;
     private String workspaceId;
     private String calendarName;
-    private LocalDateTime startAt;
+    private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private Boolean isShared;
 
@@ -23,7 +23,7 @@ public class SharedCalendarResDto {
                 .userId(cal.getUserId().getId().toString())
                 .workspaceId(cal.getWorkspaceId())
                 .calendarName(cal.getCalendarName())
-                .startAt(cal.getStartAt())
+                .startedAt(cal.getStartedAt())
                 .endedAt(cal.getEndedAt())
                 .isShared(cal.getIsShared())
                 .build();
