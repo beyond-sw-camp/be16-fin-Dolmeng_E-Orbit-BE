@@ -20,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/workspace")
 @RequiredArgsConstructor
+@ControllerAdvice
 public class WorkspaceController {
     private final WorkspaceService workspaceService;
 

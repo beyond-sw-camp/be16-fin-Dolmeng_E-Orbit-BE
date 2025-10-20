@@ -29,6 +29,8 @@ import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -173,6 +175,7 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         workspace.updateWorkspaceName(dto.getWorkspaceName());
     }
 
+    // todo 중복유저 추가 x, dto list에 관리자 들어있으면 허용됨
 //    워크스페이스 회원 초대
     public void addParticipants(String userId, String workspaceId, WorkspaceAddUserDto dto) {
 
@@ -216,8 +219,12 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
                         .isDelete(false)
                         .build())
                 .toList();
-
+// Entity에 워크스페이스와 회원 id로 복합키를 설정하여 중복 제외했습니다.
+        try {
             workspaceParticipantRepository.saveAll(newParticipants);
+        } catch (ConstraintViolationException e) {
+            throw new IllegalArgumentException("이미 워크스페이스에 존재하는 사용자가 포함되어 있습니다.");
+        }
     }
 
 

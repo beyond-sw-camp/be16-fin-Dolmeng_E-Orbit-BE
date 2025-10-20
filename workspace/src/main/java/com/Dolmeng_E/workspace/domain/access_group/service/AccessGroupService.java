@@ -173,6 +173,15 @@ public class AccessGroupService {
                     dto.getAccessGroupName()
             ).orElseThrow(() -> new EntityNotFoundException("수정 대상 권한 그룹을 찾을 수 없습니다."));
 
+            // 기본 그룹은 수정 불가
+            if (targetGroup.getAccessGroupName().equals(DEFAULT_GROUP_NAME)) {
+                throw new IllegalArgumentException("기본 권한그룹은 삭제할 수 없습니다.");
+            }
+            // 관리자 그룹은 수정 불가
+            if (targetGroup.getAccessGroupName().equals(ADMIN_GROUP_NAME)) {
+                throw new IllegalArgumentException("관리자 권한그룹은 삭제할 수 없습니다.");
+            }
+
             // 2. AccessType 목록 가져오기
             AccessType[] types = AccessType.values();
             List<Boolean> accessValues = dto.getAccessList();
@@ -212,6 +221,70 @@ public class AccessGroupService {
 
 
     }
+
+    // 권한그룹 조회
+    @Transactional(readOnly = true)
+    public AccessGroupResDto accessGroup(String userId, String accessGroupId) {
+
+        // 1️. 권한 그룹 조회
+        AccessGroup accessGroup = accessGroupRepository.findById(accessGroupId)
+                .orElseThrow(() -> new EntityNotFoundException("권한그룹이 존재하지 않습니다."));
+
+        Workspace workspace = accessGroup.getWorkspace();
+
+        // 2️. 요청자 유효성 검증 (워크스페이스 참여자 확인)
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자가 아닙니다.");
+        }
+
+        // 3️. 해당 그룹의 AccessDetail 목록 조회
+        List<AccessDetail> details = accessDetailRepository.findByAccessGroup(accessGroup);
+
+        // 4️. 권한별 boolean 세팅
+        boolean inviteUser = false;
+        boolean projectCreate = false;
+        boolean stoneCreate = false;
+        boolean userGroupCreate = false;
+        boolean projectFileView = false;
+        boolean stoneFileView = false;
+        boolean workspaceFileView = false;
+
+        // 7개 코딩해 둔 권한 목록에서 for문으로 테스트
+        for (AccessDetail d : details) {
+            // false라면 다음 권한으로 넘어갑니다.
+            if (!d.getIsAccess()) continue;
+            switch (d.getAccessList().getAccessType()) {
+                case INVITE_USER -> inviteUser = true;
+                case PROJECT_CREATE -> projectCreate = true;
+                case STONE_CREATE -> stoneCreate = true;
+                case USER_GROUP_CREATE -> userGroupCreate = true;
+                case PROJECT_FILE_VIEW -> projectFileView = true;
+                case STONE_FILE_VIEW -> stoneFileView = true;
+                case WORKSPACE_FILE_VIEW -> workspaceFileView = true;
+            }
+        }
+
+        // 5️. DTO 조립
+        return AccessGroupResDto.builder()
+                .accessGroupId(accessGroup.getId())
+                .accessGroupName(accessGroup.getAccessGroupName())
+                .inviteUser(inviteUser)
+                .projectCreate(projectCreate)
+                .stoneCreate(stoneCreate)
+                .userGroupCreate(userGroupCreate)
+                .projectFileView(projectFileView)
+                .stoneFileView(stoneFileView)
+                .workspaceFileView(workspaceFileView)
+                .build();
+    }
+
+
+
+
 
     //    권한그룹 리스트 조회
 
@@ -429,7 +502,7 @@ public class AccessGroupService {
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
         if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 권한그룹을 수정할 수 있습니다.");
+            throw new IllegalArgumentException("관리자만 권한그룹을 삭제할 수 있습니다.");
         }
 
         // 3. 기본 그룹 조회

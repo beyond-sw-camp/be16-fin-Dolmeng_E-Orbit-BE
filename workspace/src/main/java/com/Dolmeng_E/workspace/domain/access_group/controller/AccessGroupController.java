@@ -6,6 +6,7 @@ import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -68,10 +69,27 @@ public class AccessGroupController {
                 .build()
                 ,HttpStatus.OK);
     }
+
+//    권한그룹 조회(현재 설정 값)
+    @GetMapping("/{accessGroupId}")
+    public ResponseEntity<?> accessGroup(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String accessGroupId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("권한 그룹 조회 완료")
+                .result(accessGroupService.accessGroup(userId, accessGroupId))
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
+
 //    권한그룹 리스트 조회
+    // 생성시간 기준 정렬(완료)
     @GetMapping("/group-list/{workspaceId}")
-        public ResponseEntity<?> accessGroupList(@PageableDefault(page = 0, size = 10) Pageable pageable,
-                                                 @RequestHeader("X-User-Id") String userId, @PathVariable String workspaceId) {
+        public ResponseEntity<?> accessGroupList(
+            @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable,
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("권한 그룹 리스트 조회 완료")
                 .result(accessGroupService.accessGroupList(pageable, userId, workspaceId))
