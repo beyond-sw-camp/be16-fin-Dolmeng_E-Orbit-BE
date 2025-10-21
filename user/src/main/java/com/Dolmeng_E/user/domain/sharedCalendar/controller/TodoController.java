@@ -47,7 +47,8 @@ public class TodoController {
     @PutMapping("/completion/{todoId}")
     public TodoCreateResDto completedTodo(@RequestHeader("X-User-Id") String userId,
                                           @PathVariable String todoId,
-                                          @RequestBody completedTodoReqDto dto) {
+                                          @RequestBody(required = false) CompletedTodoReqDto dto) {
+        if (dto == null) dto = new CompletedTodoReqDto();
         return todoService.completedTodo(todoId, UUID.fromString(userId), dto);
     }
 
@@ -55,7 +56,8 @@ public class TodoController {
     @PutMapping("/incompletion/{todoId}")
     public TodoCreateResDto incompletedTodo(@RequestHeader("X-User-Id") String userId,
                                              @PathVariable String todoId,
-                                             @RequestBody incompletedTodoReqDto dto) {
+                                            @RequestBody(required = false) IncompletedTodoReqDto dto) {
+        if (dto == null) dto = new IncompletedTodoReqDto();
         return todoService.incompletedTodo(todoId, UUID.fromString(userId), dto);
     }
 }
