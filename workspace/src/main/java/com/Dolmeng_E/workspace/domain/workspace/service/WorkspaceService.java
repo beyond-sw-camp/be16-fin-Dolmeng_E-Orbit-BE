@@ -57,7 +57,6 @@ public class WorkspaceService {
     private final ProjectParticipantRepository projectParticipantRepository;
     private final UserGroupRepository userGroupRepository;
     private final UserGroupMappingRepository userGroupMappingRepository;
-    private final UserGroupService userGroupService;
 
 //    워크스페이스 생성
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
@@ -222,17 +221,7 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
                         .isDelete(false)
                         .build())
                 .toList();
-        //todo : 사용자그룹과 권한그룹 설정한 대로 추가 가능하게
-        // 로직 추가 : 사용자 그룹을 설정했을 경우
-        if(dto.getUserGroupId()!=null) {
-            userGroupService.addUsersToGroup(userId,dto.getUserGroupId()
-                    ,UserGroupAddUserDto.builder().userIdList(dto.getUserIdList()).build());
-        }
-        // 로직 추가 : 권한 그룹을 설정했을 경우
-        if(dto.getAccessGroupId()!=null) {
-            accessGroupService.addUserToAccessGroup(dto.getUserGroupId(),dto.getAccessGroupId()
-            , AccessGroupAddUserDto.builder().userIdList(dto.getUserIdList()).build());
-        }
+
 // Entity에 워크스페이스와 회원 id로 복합키를 설정하여 중복 제외했습니다.
         try {
             workspaceParticipantRepository.saveAll(newParticipants);
@@ -600,6 +589,41 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
 
         // 6. 최종 결과 반환
         return result;
+    }
+
+    // 워크스페이스에 존재하지 않는 회원 목록 조회
+    public UserInfoListResDto searchParticipants(String userId, SearchDto dto) {
+
+        // 1. 워크스페이스 유효성 검증
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
+
+        // 2️. 현재 워크스페이스 참가자 목록 추출
+        List<UUID> participantUserIds = workspaceParticipantRepository.findByWorkspaceId(workspace.getId())
+                .stream()
+                .map(WorkspaceParticipant::getUserId)
+                .toList();
+
+        // 3️. user-service에 userIdList 제외한 유저목록 요청
+        UserIdListDto excludedIdsDto = UserIdListDto.builder()
+                .userIdList(participantUserIds)
+                .build();
+
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUsersNotInWorkspace(excludedIdsDto);
+
+        // 4️. 키워드 검색 (optional)
+        if (dto.getSearchKeyword() != null && !dto.getSearchKeyword().isBlank()) {
+            List<UserInfoResDto> filtered = userInfoListResDto.getUserInfoList().stream()
+                    .filter(user -> user.getUserName().contains(dto.getSearchKeyword()))
+                    .toList();
+
+            return UserInfoListResDto.builder()
+                    .userInfoList(filtered)
+                    .build();
+        }
+
+        // 5️. 그대로 반환
+        return userInfoListResDto;
     }
 
 }

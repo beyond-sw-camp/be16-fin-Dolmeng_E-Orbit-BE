@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -292,6 +293,21 @@ public class UserService {
                 .toList();
 
         // 5. 결과 반환
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
+    }
+
+    // 아직 초대되지 않은 사용자 목록 반환 API
+    public UserInfoListResDto getUsersNotInIds(List<UUID> excludedIds) {
+        List<User> users = excludedIds == null || excludedIds.isEmpty()
+                ? userRepository.findAll()
+                : userRepository.findAllNotInIds(excludedIds);
+
+        List<UserInfoResDto> userInfoList = users.stream()
+                .map(UserInfoResDto::fromEntity)
+                .collect(Collectors.toList());
+
         return UserInfoListResDto.builder()
                 .userInfoList(userInfoList)
                 .build();

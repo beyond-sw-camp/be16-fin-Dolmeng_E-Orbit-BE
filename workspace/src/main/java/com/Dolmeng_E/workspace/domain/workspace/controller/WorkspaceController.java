@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
+import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.workspace.common.dto.WorkspaceInfoResDto;
 import com.Dolmeng_E.workspace.common.dto.WorkspaceNameDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
@@ -8,6 +9,7 @@ import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -235,6 +237,24 @@ public class WorkspaceController {
                         .statusMessage("사용자 그룹별 프로젝트 현황 조회 완료")
                         .result(workspaceService.getUserGroupProjectProgress(userId, workspaceId))
                         .statusCode(HttpStatus.OK.value())
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 워크스페이스에 존재하지 않는 회원 목록 조회
+    @PostMapping("/participants/search")
+    public ResponseEntity<?> searchParticipants(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody @Valid SearchDto dto
+    ) {
+        UserInfoListResDto userInfoListResDto = workspaceService.searchParticipants(userId, dto);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(userInfoListResDto)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("존재하지 않는 회원 검색 성공")
                         .build(),
                 HttpStatus.OK
         );

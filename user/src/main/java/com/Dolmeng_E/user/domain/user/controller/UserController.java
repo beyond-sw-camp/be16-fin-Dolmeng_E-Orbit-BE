@@ -182,4 +182,10 @@ public class UserController {
         );
     }
 
+    // 아직 초대되지 않은 사용자 목록 반환 API
+    @PostMapping("/not-in-workspace")
+    public UserInfoListResDto getUsersNotInWorkspace(@RequestBody UserIdListDto dto) {
+        return userService.getUsersNotInIds(dto.getUserIdList());
+    }
+
 }
