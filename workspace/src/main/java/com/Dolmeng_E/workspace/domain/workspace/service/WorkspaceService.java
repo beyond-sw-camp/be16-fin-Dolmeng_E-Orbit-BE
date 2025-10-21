@@ -591,7 +591,7 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         return result;
     }
 
-    // 워크스페이스에 존재하지 않는 회원 목록 조회
+    // 워크스페이스에 존재하지 않는 회원 목록에서 검색
     public UserInfoListResDto searchParticipants(String userId, SearchDto dto) {
 
         // 1. 워크스페이스 유효성 검증
@@ -625,5 +625,46 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         // 5️. 그대로 반환
         return userInfoListResDto;
     }
+
+    // 워크스페이스 내 참여자 검색
+    @Transactional(readOnly = true)
+    public UserInfoListResDto searchWorkspaceParticipants(String userId, SearchDto dto) {
+
+        // 1. 워크스페이스 유효성 검증
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
+
+        // 2. 요청자 유효성 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository.findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
+
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자만 사용자 추가 가능");
+        }
+
+        // 3. 워크스페이스 참여자 목록 조회 (삭제 안된 사용자만)
+        List<WorkspaceParticipant> participants =
+                workspaceParticipantRepository.findByWorkspaceIdAndIsDeleteFalse(dto.getWorkspaceId());
+
+        // 4. 키워드 필터링 (없으면 전체)
+        String keyword = dto.getSearchKeyword();
+        List<WorkspaceParticipant> filteredParticipants = (keyword == null || keyword.isBlank())
+                ? participants
+                : participants.stream()
+                .filter(p -> p.getUserName().contains(keyword))
+                .toList();
+
+        // 5. DTO 변환
+        List<UserInfoResDto> userInfoList = filteredParticipants.stream()
+                .map(p -> UserInfoResDto.builder()
+                        .userId(p.getUserId())
+                        .userName(p.getUserName())
+                        .build())
+                .toList();
+
+        // 6. 반환
+        return UserInfoListResDto.builder().userInfoList(userInfoList).build();
+    }
+
 
 }

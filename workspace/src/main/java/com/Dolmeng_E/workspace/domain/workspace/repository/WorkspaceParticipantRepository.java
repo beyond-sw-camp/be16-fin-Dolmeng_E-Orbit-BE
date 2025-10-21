@@ -35,4 +35,6 @@ public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceP
 
     Page<WorkspaceParticipant> findAllByWorkspaceId(String workspaceId, Pageable pageable);
 
+    List<WorkspaceParticipant> findByWorkspaceIdAndIsDeleteFalse(String workspaceId);
+
 }

@@ -1,15 +1,11 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
-import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.workspace.common.dto.WorkspaceInfoResDto;
 import com.Dolmeng_E.workspace.common.dto.WorkspaceNameDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
-import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
-import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -242,23 +238,39 @@ public class WorkspaceController {
         );
     }
 
-    // 워크스페이스에 존재하지 않는 회원 목록 조회
-    @PostMapping("/participants/search")
-    public ResponseEntity<?> searchParticipants(
+    // 워크스페이스에 존재하지 않는 회원 목록에서 검색
+    @PostMapping("/participants/search-outside")
+    public ResponseEntity<?> searchUsersNotInWorkspace(
             @RequestHeader("X-User-Id") String userId,
-            @RequestBody @Valid SearchDto dto
+            @RequestBody SearchDto dto
     ) {
-        UserInfoListResDto userInfoListResDto = workspaceService.searchParticipants(userId, dto);
-
         return new ResponseEntity<>(
                 CommonSuccessDto.builder()
-                        .result(userInfoListResDto)
                         .statusCode(HttpStatus.OK.value())
-                        .statusMessage("존재하지 않는 회원 검색 성공")
+                        .statusMessage("워크스페이스 외부 사용자 검색 성공")
+                        .result(workspaceService.searchParticipants(userId, dto))
                         .build(),
                 HttpStatus.OK
         );
     }
+
+    // 워크스페이스 내 참여자 검색
+    @PostMapping("/participants/search")
+    public ResponseEntity<?> searchWorkspaceParticipants(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody SearchDto dto
+    ) {
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 내부 사용자 검색 성공")
+                        .result(workspaceService.searchWorkspaceParticipants(userId, dto))
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
 
 
 }
