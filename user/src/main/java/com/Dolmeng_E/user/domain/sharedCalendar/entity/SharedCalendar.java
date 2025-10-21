@@ -71,6 +71,8 @@ public class SharedCalendar extends BaseTimeEntity {
     private Boolean isShared = false;
 
 
+
+    // 일정 정보 업데이트
     public void updateSchedule(String name, LocalDateTime start, LocalDateTime end, Boolean isShared) {
         this.calendarName = name;
         this.startedAt = start;
@@ -78,6 +80,7 @@ public class SharedCalendar extends BaseTimeEntity {
         this.isShared = isShared;
     }
 
+    // todo 정보 업데이트
     public void updateTodo(String name, LocalDate date, Boolean bookmark) {
         this.calendarName = name;
 
@@ -88,5 +91,15 @@ public class SharedCalendar extends BaseTimeEntity {
         if (bookmark != null) {
             this.bookmark = bookmark;
         }
+    }
+
+    // todo 완료 업데이트
+    public void completedTodo() {
+        this.isCompleted = true;
+    }
+
+    // todo 미완료 업데이트
+    public void incompletedTodo() {
+        this.isCompleted = false;
     }
 }
