@@ -82,6 +82,19 @@ public class TodoService {
     }
 
     // todo 삭제
+    public void deleteTodo(String todoId, UUID userId) {
+        // 1. 검증
+        var todo = sharedCalendarRepository.findById(todoId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않은 todo입니다."));
+
+        validationService.validateUserAndWorkspace(userId, todo.getWorkspaceId());
+
+        if (!todo.getUserId().getId().equals(userId))
+            throw new IllegalArgumentException("본인 todo만 삭제할 수 있습니다.");
+
+        // 2. todo 삭제
+        sharedCalendarRepository.delete(todo);
+    }
 
 
     // todo 완료 처리

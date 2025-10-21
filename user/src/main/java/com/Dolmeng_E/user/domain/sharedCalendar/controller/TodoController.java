@@ -38,8 +38,12 @@ public class TodoController {
         return todoService.updateTodo(todoId, UUID.fromString(userId), dto);
     }
 
-
     // todo 삭제
+    @DeleteMapping("/{todoId}")
+    public void deleteTodo(@RequestHeader("X-User-Id") String userId,
+                      @PathVariable String todoId) {
+        todoService.deleteTodo(todoId, UUID.fromString(userId));
+    }
 
 
     // todo 완료 처리
