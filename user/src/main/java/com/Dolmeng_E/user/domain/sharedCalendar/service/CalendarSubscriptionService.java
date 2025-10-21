@@ -5,6 +5,7 @@ import com.Dolmeng_E.user.domain.sharedCalendar.dto.SubscriptionCreateReqDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.SubscriptionDeleteReqDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.SubscriptionResDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarSubscription;
+import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarType;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar;
 import com.Dolmeng_E.user.domain.sharedCalendar.repository.CalendarSubscriptionRepository;
 import com.Dolmeng_E.user.domain.sharedCalendar.repository.SharedCalendarRepository;
@@ -85,8 +86,8 @@ public class CalendarSubscriptionService {
         for (CalendarSubscription sub : list) {
             // 구독 대상의 일정 중 같은 워크스페이스에 속한 일정만 가져오기
             List<SharedCalendar> sharedCalendars =
-                    sharedCalendarRepository.findSharedCalendarsByUserIdAndWorkspaceId(
-                            sub.getTargetUserId().getId(), workspaceId
+                    sharedCalendarRepository.findSharedCalendarsByUserIdAndWorkspaceIdAndCalendarType(
+                            sub.getTargetUserId().getId(), workspaceId, CalendarType.SCHEDULE
                     );
 
             List<SubscriptionResDto.SharedCalendarSubDto> briefList = sharedCalendars.stream()
