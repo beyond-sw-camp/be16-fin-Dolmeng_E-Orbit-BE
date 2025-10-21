@@ -69,7 +69,7 @@ public class SharedCalendarService {
             throw new IllegalArgumentException("본인 일정만 수정할 수 있습니다.");
 
         // 2. 일정 수정
-        calendar.update(dto.getCalendarName(), dto.getStartedAt(), dto.getEndedAt(), dto.getIsShared());
+        calendar.updateSchedule(dto.getCalendarName(), dto.getStartedAt(), dto.getEndedAt(), dto.getIsShared());
         return SharedCalendarResDto.fromEntity(calendar);
     }
 
