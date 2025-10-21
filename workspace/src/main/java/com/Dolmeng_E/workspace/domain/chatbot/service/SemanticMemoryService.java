@@ -7,8 +7,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.params.ScanParams;
-import redis.clients.jedis.resps.ScanResult;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -63,10 +61,18 @@ public class SemanticMemoryService {
         // 키 네임스페이스 구조: chatmem:USER:{workspaceId}:{userId}:{UUID}
         String key = String.format("chatmem:%s:%s:%s:%s", role, workspaceId, userId, uuidKey);
 
+        // TAG 값 정규화: '-', '_', 공백 등 제거
+        String safeUserId = normalizeTag(userId);
+        String safeWorkspaceId = normalizeTag(workspaceId);
+        String safeRole = normalizeTag(role);
+
         Map<byte[], byte[]> map = new HashMap<>();
-        map.put("role".getBytes(StandardCharsets.UTF_8), role.getBytes(StandardCharsets.UTF_8));
+        map.put("role".getBytes(StandardCharsets.UTF_8), safeRole.getBytes(StandardCharsets.UTF_8));
+        map.put("workspaceId".getBytes(StandardCharsets.UTF_8), safeWorkspaceId.getBytes(StandardCharsets.UTF_8));
+        map.put("userId".getBytes(StandardCharsets.UTF_8), safeUserId.getBytes(StandardCharsets.UTF_8));
         map.put("text".getBytes(StandardCharsets.UTF_8), text.getBytes(StandardCharsets.UTF_8));
-        map.put("ts".getBytes(StandardCharsets.UTF_8), String.valueOf(Instant.now().toEpochMilli()).getBytes(StandardCharsets.UTF_8));
+        map.put("ts".getBytes(StandardCharsets.UTF_8),
+                String.valueOf(Instant.now().toEpochMilli()).getBytes(StandardCharsets.UTF_8));
         map.put("embedding".getBytes(StandardCharsets.UTF_8), binary);
 
         jedis.hset(key.getBytes(StandardCharsets.UTF_8), map);
@@ -75,73 +81,62 @@ public class SemanticMemoryService {
         log.info("SemanticMemoryService - saveToRedis() - Saved -> " + key);
     }
 
-
     // --- 3. workspace, user로 필터링 후 유사도가 가장 좋은 질문의 답 반환 ---
-    public String findBotReplyByKeyFilter(String workspaceId, String userId, String query) {
-        float[] queryEmbedding = createEmbedding(query);
+    public String findBotReplyWithKnn(String workspaceId, String userId, String query) {
+        // 1) 쿼리 벡터
+        float[] emb = createEmbedding(query);
+        byte[] vec = floatArrayToBytes(emb);
 
-        // 1. 유저 prefix 키 범위
-        String prefix = String.format("chatmem:USER:%s:%s:", workspaceId, userId);
+        // 2) TAG 정규화 (저장 시에도 동일 규칙으로 넣었어야 함)
+        String ws = normalizeTag(workspaceId);
+        String uid = normalizeTag(userId);
 
-        // 2. prefix로 키 스캔
-        List<String> keys = new ArrayList<>();
-        String cursor = "0";
-        do {
-            ScanResult<String> res = jedis.scan(cursor, new ScanParams().match(prefix + "*").count(100));
-            cursor = res.getCursor();
-            keys.addAll(res.getResult());
-        } while (!cursor.equals("0"));
+        // 3) 하이브리드 KNN 쿼리
+        String q = String.format(
+                "(@role:{USER} @workspaceId:{%s} @userId:{%s})=>[KNN 1 @embedding $vec AS score]",
+                ws, uid
+        );
 
-        if (keys.isEmpty()) return null;
+        Object result = jedis.sendCommand(
+                (redis.clients.jedis.commands.ProtocolCommand) () -> "FT.SEARCH".getBytes(),
+                "chatmem_idx".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                q.getBytes(java.nio.charset.StandardCharsets.UTF_8),
 
-        // 3. 각 키별 임베딩 불러와 유사도 계산
-        String bestKey = null;
-        double bestScore = Double.MAX_VALUE; // 코사인 거리: 작을수록 유사
-        for (String key : keys) {
-            byte[] embBytes = jedis.hget(key.getBytes(StandardCharsets.UTF_8), "embedding".getBytes(StandardCharsets.UTF_8));
-            if (embBytes == null) continue;
+                // PARAMS (name, value 쌍의 갯수)
+                "PARAMS".getBytes(), "2".getBytes(),
+                "vec".getBytes(), vec,
 
-            float[] emb = bytesToFloatArray(embBytes);
-            double score = cosineDistance(queryEmbedding, emb);
-            if (score < bestScore) {
-                bestScore = score;
-                bestKey = key;
-            }
+                // 정렬/반환/다이얼렉트/리밋
+                "SORTBY".getBytes(), "score".getBytes(),
+                "RETURN".getBytes(), "3".getBytes(),
+                "text".getBytes(), "score".getBytes(), "ts".getBytes(),
+                "DIALECT".getBytes(), "2".getBytes(),
+                "LIMIT".getBytes(), "0".getBytes(), "1".getBytes()
+        );
+
+        if (!(result instanceof java.util.List<?> list) || list.size() < 3) return null;
+
+        String matchedKey = new String((byte[]) list.get(1), java.nio.charset.StandardCharsets.UTF_8);
+        java.util.List<?> fields = (java.util.List<?>) list.get(2);
+
+        String botReplyKey = matchedKey.replace("chatmem:USER:", "chatmem:BOT:");
+        String scoreStr = null;
+        for (int i = 0; i < fields.size(); i += 2) {
+            String f = new String((byte[]) fields.get(i), java.nio.charset.StandardCharsets.UTF_8);
+            String v = new String((byte[]) fields.get(i + 1), java.nio.charset.StandardCharsets.UTF_8);
+            if ("score".equals(f)) scoreStr = v;
         }
+        double score = (scoreStr != null) ? Double.parseDouble(scoreStr) : Double.POSITIVE_INFINITY;
 
-        if (bestKey == null) return null;
-
-        // 4. 같은 UUID로 BOT 키 생성
-        String uuid = bestKey.substring(bestKey.lastIndexOf(":") + 1);
-        String botKey = bestKey.replace("USER", "BOT").replace(uuid, uuid);
-
-        // 5. BOT 텍스트 가져오기
-        String botReply = jedis.hget(botKey, "text");
-        log.info("SemanticMemoryService - findBotReplyByKeyFilter() - bestScore: " + bestScore + ", Bot reply: " + botReply);
-
-        // 6. 유사도가 0.25 이하일 때만 답장 반환
-        if(bestScore <= 0.25) {
-            return botReply;
-        } else {
-            return null;
+        if (score <= 0.25) {
+            log.info("SemanticMemoryService - findBotReplyWithKnn() - 유사도 0.25 통과 score -> " + score);
+            return jedis.hget(botReplyKey, "text");
         }
+        return null;
     }
 
-    private static double cosineDistance(float[] a, float[] b) {
-        double dot = 0.0, normA = 0.0, normB = 0.0;
-        for (int i = 0; i < a.length; i++) {
-            dot += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-        return 1.0 - (dot / (Math.sqrt(normA) * Math.sqrt(normB)));
-    }
-
-    private static float[] bytesToFloatArray(byte[] bytes) {
-        ByteBuffer bb = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
-        float[] arr = new float[bytes.length / 4];
-        for (int i = 0; i < arr.length; i++) arr[i] = bb.getFloat();
-        return arr;
+    private String normalizeTag(String v) {
+        return v == null ? "" : v.replaceAll("[-_\\s]", "");
     }
 
     // --- 유틸 ---

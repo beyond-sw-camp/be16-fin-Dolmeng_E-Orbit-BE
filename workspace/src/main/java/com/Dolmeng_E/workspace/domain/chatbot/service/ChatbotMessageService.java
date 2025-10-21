@@ -61,7 +61,7 @@ public class ChatbotMessageService {
         chatbotMessageRepository.save(chatbotUserMessage);
 
         // SemanticMemory 유사도 검사
-        String semanticMessage = semanticMemoryService.findBotReplyByKeyFilter(reqDto.getWorkspaceId(), userId, reqDto.getContent());
+        String semanticMessage = semanticMemoryService.findBotReplyWithKnn(reqDto.getWorkspaceId(), userId, reqDto.getContent());
         N8nResDto result;
         if(semanticMessage != null) {
             result = N8nResDto.builder()
