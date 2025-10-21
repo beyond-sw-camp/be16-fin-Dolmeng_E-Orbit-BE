@@ -5,11 +5,13 @@ import com.Dolmeng_E.user.common.dto.UserIdListDto;
 import com.Dolmeng_E.user.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.user.common.dto.UserInfoResDto;
 import com.Dolmeng_E.user.common.service.S3Uploader;
+import com.Dolmeng_E.user.common.service.UserSignupOrchestrationService;
 import com.Dolmeng_E.user.domain.user.dto.*;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -34,9 +36,16 @@ public class UserService {
     private final GoogleService googleService;
     private final MailService mailService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final UserSignupOrchestrationService userSignupOrchestrationService;
 
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, S3Uploader s3Uploader, JwtTokenProvider jwtTokenProvider, KakaoService kakaoService, GoogleService googleService, MailService mailService, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder, S3Uploader s3Uploader,
+                       JwtTokenProvider jwtTokenProvider,
+                       KakaoService kakaoService, GoogleService googleService,
+                       MailService mailService, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate,
+                       UserSignupOrchestrationService userSignupOrchestrationService
+                       ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.s3Uploader = s3Uploader;
@@ -45,6 +54,7 @@ public class UserService {
         this.googleService = googleService;
         this.mailService = mailService;
         this.redisTemplate = redisTemplate;
+        this.userSignupOrchestrationService = userSignupOrchestrationService;
     }
 
     // 회원가입 API 구현3 - 계정 생성
@@ -59,6 +69,11 @@ public class UserService {
 
         User user = dto.toEntity(encodedPassword, profileImgaeUrl);
         userRepository.save(user);
+
+        // 회원가입 시 워크스페이스 생성 메세지 발송
+        userSignupOrchestrationService.publishSignupEvent(user);
+
+
     }
 
     // 로그인 API

@@ -21,10 +21,7 @@ import com.Dolmeng_E.workspace.domain.user_group.repository.UserGroupMappingRepo
 import com.Dolmeng_E.workspace.domain.user_group.repository.UserGroupRepository;
 import com.Dolmeng_E.workspace.domain.user_group.service.UserGroupService;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
-import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
-import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceInvite;
-import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
-import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
+import com.Dolmeng_E.workspace.domain.workspace.entity.*;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceInviteRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
@@ -58,7 +55,7 @@ public class WorkspaceService {
     private final UserGroupRepository userGroupRepository;
     private final UserGroupMappingRepository userGroupMappingRepository;
 
-//    워크스페이스 생성
+//    워크스페이스 생성(PRO,ENTERPRISE)
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
 
 
@@ -90,7 +87,39 @@ public class WorkspaceService {
         return workspace.getId();
     }
 
-//    회원가입 시 워크스페이스 생성
+//    개인 워크스페이스 생성(회원가입 시 생성용, 컨트롤러 x)
+    public void createPersonalWorkspace(PersonalWorkspaceCreateDto dto) {
+        // 1. 워크스페이스 생성
+        Workspace workspace = dto.toEntity();
+        workspace.settingMaxStorage(WorkspaceTemplates.PERSONAL);
+        workspaceRepository.save(workspace);
+
+        // 2. 워크스페이스 관리자 권한그룹 생성
+        String adminAccessGroupId = accessGroupService.createAdminGroupForWorkspace(workspace.getId());
+
+        // 보상 트랜잭션용 에러!
+        if(true) {
+            throw new IllegalArgumentException("보상트랜잭션용 에러");
+        }
+
+        // 3. 워크스페이스 일반 사용자 권한그룹 생성
+        accessGroupService.createDefaultUserAccessGroup(workspace.getId());
+
+        // 4. 워크스페이스 참여자에 추가
+        AccessGroup adminAccessGroup = accessGroupRepository.findById(adminAccessGroupId)
+                .orElseThrow(()->new EntityNotFoundException("해당 관리자 그룹 없습니다."));
+        workspaceParticipantRepository.save(
+                WorkspaceParticipant.builder()
+                        .workspaceRole(WorkspaceRole.ADMIN)
+                        .accessGroup(adminAccessGroup)
+                        .userId(dto.getUserId())
+                        .isDelete(false)
+                        .workspace(workspace)
+                        .userName(dto.getUserName())
+                        .build()
+        );
+    }
+
 
 //    워크스페이스 목록 조회
 @Transactional(readOnly = true)

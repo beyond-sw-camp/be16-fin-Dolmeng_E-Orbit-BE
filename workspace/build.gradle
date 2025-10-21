@@ -58,6 +58,9 @@ dependencies {
     // Jedis (Redis 클라이언트)
     implementation 'redis.clients:jedis:5.1.0'
 
+	// kafka
+	implementation 'org.springframework.kafka:spring-kafka'
+
 }
 
 dependencyManagement{
