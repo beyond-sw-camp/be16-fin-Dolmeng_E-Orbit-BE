@@ -5,7 +5,7 @@ import com.Dolmeng_E.user.domain.sharedCalendar.dto.TodoCreateResDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.service.TodoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,10 +23,18 @@ public class TodoController {
     }
 
     // todo 리스트 조회
+    @GetMapping("/{workspaceId}")
+    public List<TodoCreateResDto> getTodo(@RequestHeader("X-User-Id") String userId,
+                                          @PathVariable String workspaceId) {
+        return todoService.getTodo(UUID.fromString(userId), workspaceId);
+    }
 
 
     // todo 수정
 
 
     // todo 삭제
+
+
+    // todo 완료 처리
 }
