@@ -13,4 +13,6 @@ import java.util.UUID;
 @Builder
 public class WorkspaceAddUserDto {
     private List<UUID> userIdList;
+    private String accessGroupId;
+    private String userGroupId;
 }

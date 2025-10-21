@@ -37,15 +37,15 @@ public class UserController {
 
     // 유저 ID, 이름, 이메일 반환 API
     @GetMapping("/return")
-    public UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Email")String userEmail) {
-        UserInfoResDto userInfoResDto = userService.fetchUserInfo(userEmail);
+    public UserInfoResDto fetchUserInfo(@RequestHeader("X-User-Id")String userId) {
+        UserInfoResDto userInfoResDto = userService.fetchUserInfo(userId);
         return userInfoResDto;
     }
 
     // 유저 ID, 이름, 이메일, 유저 프로필url 반환 API
     @GetMapping("/return/by-id")
     UserInfoResDto fetchUserInfoById(@RequestHeader("X-User-Id")String userId) {
-        UserInfoResDto userInfoResDto = userService.fetchUserInfoById(UUID.fromString(userId));
+        UserInfoResDto userInfoResDto = userService.fetchUserInfoById(userId);
         return userInfoResDto;
     }
 
@@ -53,6 +53,13 @@ public class UserController {
     @PostMapping("/return/users")
     UserInfoListResDto fetchUserListInfo(@RequestBody UserIdListDto userIdListDto) {
         UserInfoListResDto userInfoListResDto = userService.fetchUserListInfo(userIdListDto);
+        return userInfoListResDto;
+    }
+
+    // 모든 유저 정보 list 반환 API
+    @GetMapping("/return/all-users")
+    UserInfoListResDto fetchAllUserListInfo(@RequestHeader("X-User-Id")String userId) {
+        UserInfoListResDto userInfoListResDto = userService.fetchAllUserListInfo(userId);
         return userInfoListResDto;
     }
 
@@ -93,7 +100,7 @@ public class UserController {
     }
 
     // 회원가입 API 구현3 - 회원가입 완료(프로필 사진, 이름, 전화번호, 비밀번호)
-    @PostMapping
+    @PostMapping("/new-user")
     public ResponseEntity<?> create(@ModelAttribute @Valid UserCreateReqDto dto) {
         userService.create(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.CREATED.value(), "회원가입 성공"), HttpStatus.CREATED);
@@ -156,4 +163,29 @@ public class UserController {
         userService.updatePassword(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getEmail(), HttpStatus.OK.value(), "비밀번호 수정 성공"), HttpStatus.OK);
     }
+
+    // 회원 검색
+    @PostMapping("/search")
+    public ResponseEntity<?> searchUser(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody @Valid SearchDto dto
+    ) {
+        UserInfoListResDto userInfoListResDto = userService.searchUser(userId, dto);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(userInfoListResDto)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("회원 검색 성공")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 아직 초대되지 않은 사용자 목록 반환 API
+    @PostMapping("/not-in-workspace")
+    public UserInfoListResDto getUsersNotInWorkspace(@RequestBody UserIdListDto dto) {
+        return userService.getUsersNotInIds(dto.getUserIdList());
+    }
+
 }
