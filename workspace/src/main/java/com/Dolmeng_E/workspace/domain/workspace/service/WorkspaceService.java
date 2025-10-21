@@ -178,7 +178,7 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         workspace.updateWorkspaceName(dto.getWorkspaceName());
     }
 
-//    워크스페이스 회원 초대
+    //    워크스페이스 회원 초대
     public void addParticipants(String userId, String workspaceId, WorkspaceAddUserDto dto) {
 
         // 1. 워크스페이스 확인
@@ -209,20 +209,38 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         }
 
         // 4. 신규 사용자 추가 (이름 매핑)
-        AccessGroup commonAccessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId,"일반 유저 그룹")
-                .orElseThrow(()->new EntityNotFoundException("워크스페이스 ID 혹은 권한 그룹명에 맞는 정보가 없습니다."));
-        List<WorkspaceParticipant> newParticipants = userInfoListResDto.getUserInfoList().stream()
-                .map(userInfo -> WorkspaceParticipant.builder()
-                        .workspace(workspace)
-                        .workspaceRole(WorkspaceRole.COMMON)
-                        .userId(userInfo.getUserId())
-                        .accessGroup(commonAccessGroup)
-                        .userName(userInfo.getUserName())
-                        .isDelete(false)
-                        .build())
-                .toList();
+        AccessGroup commonAccessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId, "일반 유저 그룹")
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 ID 혹은 권한 그룹명에 맞는 정보가 없습니다."));
 
-// Entity에 워크스페이스와 회원 id로 복합키를 설정하여 중복 제외했습니다.
+        List<WorkspaceParticipant> newParticipants = new ArrayList<>();
+
+        // 로직추가: 이미 삭제(isDelete=true)된 사용자는 복귀 처리
+        for (UserInfoResDto userInfo : filteredUserList) {
+            Optional<WorkspaceParticipant> existing = workspaceParticipantRepository
+                    .findByWorkspaceIdAndUserId(workspaceId, userInfo.getUserId());
+
+            if (existing.isPresent()) {
+                WorkspaceParticipant participant = existing.get();
+                if (participant.isDelete()) {
+                    participant.restoreParticipant(); // 엔티티에 isDelete=false로 바꾸는 메서드가 있다고 가정
+                } else {
+                    // 이미 활성화된 유저라면 건너뜀
+                    continue;
+                }
+            } else {
+                newParticipants.add(
+                        WorkspaceParticipant.builder()
+                                .workspace(workspace)
+                                .workspaceRole(WorkspaceRole.COMMON)
+                                .userId(userInfo.getUserId())
+                                .accessGroup(commonAccessGroup)
+                                .userName(userInfo.getUserName())
+                                .isDelete(false)
+                                .build()
+                );
+            }
+        }
+
         try {
             workspaceParticipantRepository.saveAll(newParticipants);
             workspaceParticipantRepository.flush(); // 즉시 insert 실행
@@ -232,7 +250,8 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
     }
 
 
-//    워크스페이스 이메일 회원 초대 (To-Do : 로직 반드시 수정 할 것, X-User-Id 로 바뀌어서 그에 맞게!)
+
+//    워크스페이스 이메일 회원 초대 (ToDo : 로직 반드시 수정 할 것, X-User-Id 로 바뀌어서 그에 맞게!)
     public void inviteUsers(String userId, String workspaceId, WorkspaceInviteDto dto) throws AccessDeniedException {
         // 1. 워크스페이스 확인
         Workspace workspace = workspaceRepository.findById(workspaceId)
@@ -343,6 +362,7 @@ public List<WorkspaceListResDto> getWorkspaceList(String userId) {
         }
     }
 
+    // 워크스페이스 삭제
     public void deleteWorkspace(String userId, String workspaceId) {
         // 1. 유저 정보 검증 (Feign)
         UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);

@@ -70,4 +70,10 @@ public class WorkspaceParticipant extends BaseTimeEntity {
     public void deleteParticipant() {
         this.isDelete = true;
     }
+
+    public void restoreParticipant() {
+        this.isDelete = false;
+    }
+
+
 }
