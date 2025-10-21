@@ -52,6 +52,12 @@ dependencies {
 	// 메일 기능 사용을 위한 의존성
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+    // WebClient (Spring WebFlux)
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Jedis (Redis 클라이언트)
+    implementation 'redis.clients:jedis:5.1.0'
+
 }
 
 dependencyManagement{
