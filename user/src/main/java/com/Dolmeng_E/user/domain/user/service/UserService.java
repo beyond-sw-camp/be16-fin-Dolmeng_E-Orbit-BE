@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -68,8 +69,8 @@ public class UserService {
     }
 
     // 유저 ID, 이름, email, 유저 프로필 url 반환 API
-    public UserInfoResDto fetchUserInfo(String userEmail) {
-        User user = userRepository.findByEmail(userEmail).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
+    public UserInfoResDto fetchUserInfo(String userId) {
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
         return UserInfoResDto.builder()
                 .userId(user.getId())
                 .userName(user.getName())
@@ -78,8 +79,8 @@ public class UserService {
                 .build();
 
     }
-    public UserInfoResDto fetchUserInfoById(UUID userId) {
-        User user = userRepository.findById(userId).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
+    public UserInfoResDto fetchUserInfoById(String userId) {
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
         return UserInfoResDto.builder()
                 .userId(user.getId())
                 .userName(user.getName())
@@ -104,6 +105,32 @@ public class UserService {
                     .build();
             userInfoList.add(userInfo);
         }
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
+    }
+
+    // 모든 유저 정보 list 반환 API
+    public UserInfoListResDto fetchAllUserListInfo(String userId) {
+
+        // 1. 요청자 검증
+        User requester = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+
+        // 2. 전체 유저 조회
+        List<User> allUserList = userRepository.findAll();
+
+        // 3. DTO 변환
+        List<UserInfoResDto> userInfoList = allUserList.stream()
+                .map(user -> UserInfoResDto.builder()
+                        .userId(user.getId())
+                        .userName(user.getName())
+                        .userEmail(user.getEmail())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .build())
+                .toList();
+
+        // 4. 반환
         return UserInfoListResDto.builder()
                 .userInfoList(userInfoList)
                 .build();
@@ -237,5 +264,52 @@ public class UserService {
         User user = userRepository.findByEmail(dto.getEmail()).orElseThrow(()->new EntityNotFoundException("없는 회원입니다."));
         String encodedPassword = passwordEncoder.encode(dto.getNewPassword());
         user.updatePassword(encodedPassword);
+    }
+
+    // 회원 검색
+    public UserInfoListResDto searchUser(String userId, SearchDto dto) {
+
+        // 1. 요청자 검증
+        userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
+
+        // 2. 검색 키워드
+        String keyword = dto.getSearchKeyword();
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("검색어를 입력해주세요.");
+        }
+
+        // 3. 이메일 또는 이름에 키워드가 포함된 유저 검색
+        List<User> matchedUsers = userRepository.findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(keyword, keyword);
+
+        // 4. DTO 변환
+        List<UserInfoResDto> userInfoList = matchedUsers.stream()
+                .map(user -> UserInfoResDto.builder()
+                        .userId(user.getId())
+                        .userName(user.getName())
+                        .userEmail(user.getEmail())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .build())
+                .toList();
+
+        // 5. 결과 반환
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
+    }
+
+    // 아직 초대되지 않은 사용자 목록 반환 API
+    public UserInfoListResDto getUsersNotInIds(List<UUID> excludedIds) {
+        List<User> users = excludedIds == null || excludedIds.isEmpty()
+                ? userRepository.findAll()
+                : userRepository.findAllNotInIds(excludedIds);
+
+        List<UserInfoResDto> userInfoList = users.stream()
+                .map(UserInfoResDto::fromEntity)
+                .collect(Collectors.toList());
+
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
     }
 }

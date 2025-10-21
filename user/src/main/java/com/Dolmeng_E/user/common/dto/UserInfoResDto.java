@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.common.dto;
 
+import com.Dolmeng_E.user.domain.user.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,4 +17,13 @@ public class UserInfoResDto {
     private String userName;
     private String userEmail;
     private String profileImageUrl;
+
+    public static UserInfoResDto fromEntity(User user) {
+        return UserInfoResDto.builder()
+                .userId(user.getId())
+                .userName(user.getName())
+                .userEmail(user.getEmail())
+                .profileImageUrl(user.getProfileImageUrl())
+                .build();
+    }
 }

@@ -3,9 +3,7 @@ package com.Dolmeng_E.workspace.domain.workspace.controller;
 import com.Dolmeng_E.workspace.common.dto.WorkspaceInfoResDto;
 import com.Dolmeng_E.workspace.common.dto.WorkspaceNameDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
-import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
-import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
@@ -124,15 +122,15 @@ public class WorkspaceController {
             @RequestHeader("X-User-Id") String userId,
             @PathVariable String workspaceId
     ) {
-        List<WorkspaceParticipantResDto> participants = workspaceService.getWorkspaceParticipants(userId, workspaceId);
 
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("워크스페이스 참여자 목록 조회 성공")
-                .result(participants)
+                .result(workspaceService.getWorkspaceParticipants(userId, workspaceId))
                 .build(),
                 HttpStatus.OK);
     }
+
 
 //    워크스페이스 회원 삭제
     @DeleteMapping("/{workspaceId}/participants")
@@ -239,6 +237,40 @@ public class WorkspaceController {
                 HttpStatus.OK
         );
     }
+
+    // 워크스페이스에 존재하지 않는 회원 목록에서 검색
+    @PostMapping("/participants/search-outside")
+    public ResponseEntity<?> searchUsersNotInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody SearchDto dto
+    ) {
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 외부 사용자 검색 성공")
+                        .result(workspaceService.searchParticipants(userId, dto))
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 워크스페이스 내 참여자 검색
+    @PostMapping("/participants/search")
+    public ResponseEntity<?> searchWorkspaceParticipants(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody SearchDto dto
+    ) {
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 내부 사용자 검색 성공")
+                        .result(workspaceService.searchWorkspaceParticipants(userId, dto))
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
 
 
 }
