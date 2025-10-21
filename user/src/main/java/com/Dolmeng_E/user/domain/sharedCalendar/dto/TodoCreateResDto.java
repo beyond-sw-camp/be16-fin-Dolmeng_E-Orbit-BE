@@ -12,7 +12,6 @@ public class TodoCreateResDto {
     private String userId;
     private String workspaceId;
     private String calendarName;
-    // Todo: 일자 + 시간 설정 어떻게 구현할 것인지 생각해보기
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private Boolean bookmark;
