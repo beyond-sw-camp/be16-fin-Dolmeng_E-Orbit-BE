@@ -250,6 +250,9 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
 
+        // 개인워크스페이스에는 안되게 방어코드
+        validateNotPersonalWorkspace(workspace);
+
         // 2. 요청자 권한 확인
         UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
@@ -496,6 +499,9 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
 
+        // 개인워크스페이스에는 안되게 방어코드
+        validateNotPersonalWorkspace(workspace);
+
         // 2. 요청자 검증
         WorkspaceParticipant requester = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
@@ -533,6 +539,9 @@ public class WorkspaceService {
         // 1. 워크스페이스 검증
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스가 존재하지 않습니다."));
+
+        // 개인워크스페이스에는 안되게 방어코드
+        validateNotPersonalWorkspace(workspace);
 
         // 2. 사용자 검증
         WorkspaceParticipant participant = workspaceParticipantRepository
@@ -619,6 +628,9 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스가 존재하지 않습니다."));
 
+        // 개인워크스페이스에는 안되게 방어코드
+        validateNotPersonalWorkspace(workspace);
+
         // 2. 요청자 검증
         WorkspaceParticipant requester = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
@@ -692,6 +704,9 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
 
+        // 개인워크스페이스에는 안되게 방어코드
+        validateNotPersonalWorkspace(workspace);
+
         // 2️. 현재 워크스페이스 참가자 목록 추출
         List<UUID> participantUserIds = workspaceParticipantRepository.findByWorkspaceId(workspace.getId())
                 .stream()
@@ -728,6 +743,9 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
 
+        // 개인워크스페이스에는 안되게 방어코드
+        validateNotPersonalWorkspace(workspace);
+
         // 2. 요청자 유효성 검증
         WorkspaceParticipant requester = workspaceParticipantRepository.findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
@@ -758,6 +776,12 @@ public class WorkspaceService {
 
         // 6. 반환
         return UserInfoListResDto.builder().userInfoList(userInfoList).build();
+    }
+
+    public void validateNotPersonalWorkspace(Workspace workspace) {
+        if (workspace.getWorkspaceTemplates() == WorkspaceTemplates.PERSONAL) {
+            throw new IllegalArgumentException("개인 워크스페이스에서는 이 작업을 수행할 수 없습니다.");
+        }
     }
 
 
