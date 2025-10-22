@@ -7,8 +7,10 @@ import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarType.SCHEDULE;
 
@@ -42,14 +44,12 @@ public class SharedCalendar extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "calendar_type", nullable = false)
-//    @Builder.Default
-//    private CalendarType calendarType = SCHEDULE;
     private CalendarType calendarType;
 
-    @Column(name = "calendar_name", length = 20, nullable = false)
+    @Column(name = "calendar_name", length = 50, nullable = false)
     private String calendarName;
 
-    @Column(name = "start_at", nullable = false)
+    @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
 
     @Column(name = "ended_at", nullable = false)
@@ -70,14 +70,55 @@ public class SharedCalendar extends BaseTimeEntity {
     @Builder.Default
     private Boolean isShared = false;
 
+    // 일정 반복 주기
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private RepeatCycle repeatCycle = RepeatCycle.NONE;
 
+    // 일정 반복 종료일 (없으면 무한반복 x)
+    private LocalDateTime repeatEndAt;
 
-    // 일정 정보 업데이트
-    public void updateSchedule(String name, LocalDateTime start, LocalDateTime end, Boolean isShared) {
+    // 반복 그룹 식별자
+    @Column(nullable = false, length = 36)
+    private String repeatGroupId;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.repeatGroupId == null) {
+            this.repeatGroupId = UUID.randomUUID().toString();
+        }
+    }
+
+    // 일정 업데이트 (반복정보 포함)
+    public void updateSchedule(String name, LocalDateTime start, LocalDateTime end,
+                               Boolean isShared, RepeatCycle repeatCycle, LocalDateTime repeatEndAt) {
         this.calendarName = name;
         this.startedAt = start;
         this.endedAt = end;
         this.isShared = isShared;
+        if (repeatCycle != null) this.repeatCycle = repeatCycle;
+        this.repeatEndAt = repeatEndAt;
+    }
+
+    // 반복 일정 복제 후 날짜 변경
+    public SharedCalendar copyWithNewDate(LocalDateTime newStart) {
+        Duration duration = Duration.between(this.startedAt, this.endedAt);
+        return SharedCalendar.builder()
+                .id(this.id)
+                .userId(this.userId)
+                .workspaceId(this.workspaceId)
+                .calendarType(this.calendarType)
+                .calendarName(this.calendarName)
+                .startedAt(newStart)
+                .endedAt(newStart.plus(duration))
+                .repeatCycle(this.repeatCycle)
+                .repeatEndAt(this.repeatEndAt)
+                .isShared(this.isShared)
+                .bookmark(this.bookmark)
+                .isCompleted(this.isCompleted)
+                .repeatGroupId(this.repeatGroupId)
+                .build();
     }
 
     // todo 정보 업데이트
