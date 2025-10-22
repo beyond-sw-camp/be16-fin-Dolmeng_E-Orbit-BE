@@ -2,6 +2,7 @@ package com.Dolmeng_E.drive.domain.drive.service;
 
 import com.Dolmeng_E.drive.common.dto.EditorBatchMessageDto;
 import com.Dolmeng_E.drive.domain.drive.dto.DocumentLineResDto;
+import com.Dolmeng_E.drive.domain.drive.dto.OnlineUserResDto;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.DocumentLine;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentLineRepository;
@@ -74,6 +75,18 @@ public class DocumentLineService {
             }
         }
         return sortedLineList;
+    }
+
+    @Transactional(readOnly = true)
+    public List<OnlineUserResDto> findAllOnlineUsersByDocumentId(String documentId){
+        List<OnlineUserResDto> onlineUserResDtoList = new ArrayList<>();
+        Set<String> getOnlineUsers = setOperations.members("online:"+documentId);
+        for (String user : getOnlineUsers) {
+            onlineUserResDtoList.add(OnlineUserResDto.builder()
+                    .userId(user)
+                    .build());
+        }
+        return onlineUserResDtoList;
     }
 
     public void updateDocumentLine(String lineId, String content){

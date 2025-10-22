@@ -22,4 +22,14 @@ public class DocumentLineController {
                 .statusMessage("문서의 모든 라인 조회 성공")
                 .build(), HttpStatus.OK);
     }
+    
+    // 온라인 사용자 목록 조회
+    @GetMapping("/document/{documentId}/online-users")
+    public ResponseEntity<?> getOnlineUsersByDocumentId(@PathVariable String documentId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(documentLineService.findAllOnlineUsersByDocumentId(documentId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서의 모든 온라인 사용자 목록 조회 성공")
+                .build(), HttpStatus.OK);
+    }
 }
