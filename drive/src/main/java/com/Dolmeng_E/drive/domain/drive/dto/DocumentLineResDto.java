@@ -14,4 +14,5 @@ public class DocumentLineResDto {
     private String lineId;
     private String content;
     private String prevId;
+    private String lockedBy;
 }

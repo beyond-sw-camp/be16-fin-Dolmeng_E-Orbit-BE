@@ -1,6 +1,5 @@
 package com.Dolmeng_E.drive.domain.drive.service;
 
-import com.Dolmeng_E.drive.common.service.RedisUtil;
 import com.Dolmeng_E.drive.common.service.S3Uploader;
 import com.Dolmeng_E.drive.domain.drive.dto.DocumentResDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderContentsDto;
@@ -12,7 +11,6 @@ import com.Dolmeng_E.drive.domain.drive.entity.Folder;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FolderRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +20,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @Transactional
@@ -33,8 +30,6 @@ public class DriverService {
     private final S3Uploader s3Uploader;
     private final FileRepository fileRepository;
     private final DocumentRepository documentRepository;
-    private final ObjectMapper objectMapper;
-    private final RedisUtil redisUtil;
 
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto){

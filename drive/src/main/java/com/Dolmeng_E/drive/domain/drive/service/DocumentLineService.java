@@ -6,9 +6,12 @@ import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.DocumentLine;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentLineRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.core.convert.ConversionService;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,11 +19,22 @@ import java.util.*;
 
 @Service
 @Transactional
-@RequiredArgsConstructor
 public class DocumentLineService {
     private final DocumentLineRepository documentLineRepository;
     private final DocumentRepository documentRepository;
-    private final ConversionService conversionService;
+    private final HashOperations<String, String, String> hashOperations;
+    private final SetOperations<String, String> setOperations;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RedisTemplate<String, String> redisTemplate;
+
+    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate, RedisTemplate<String, String> redisTemplate1) {
+        this.documentLineRepository = documentLineRepository;
+        this.documentRepository = documentRepository;
+        this.hashOperations = redisTemplate.opsForHash();
+        this.setOperations = redisTemplate.opsForSet();
+        this.redisTemplate = redisTemplate;
+    }
+
 
     // 문서에서 모든 라인 가져오기
     @Transactional(readOnly = true)
@@ -54,6 +68,7 @@ public class DocumentLineService {
                         .content(currentLine.getContent())
                         .id(currentLine.getId())
                         .prevId(currentLine.getPrevId() != null ? currentLine.getPrevId() : null)
+                        .lockedBy(hashOperations.get("lock:"+documentId, currentLine.getLineId()))
                         .build());
                 currentLine = sequenceMap.get(currentLine.getLineId());
             }
@@ -91,14 +106,12 @@ public class DocumentLineService {
     public void deleteDocumentLine(String lineId, String prevId){
         // 만약 뒷 라인이 있다면 앞단과 연결 시켜주기
         Optional<DocumentLine> documentLine = documentLineRepository.findByPrevId(lineId);
-        System.out.println(lineId);
         documentLine.ifPresent(line -> line.updatePrevId(prevId));
         // 현재 라인 삭제
         documentLineRepository.delete(documentLineRepository.findByLineId(lineId).orElseThrow(()->new EntityNotFoundException("해당 라인이 존재하지 않습니다.")));
     }
 
     public void batchUpdateDocumentLine(EditorBatchMessageDto messages){
-        System.out.println(messages.toString());
         String documentId = messages.getDocumentId();
         String senderId = messages.getSenderId();
         for(EditorBatchMessageDto.Changes changes : messages.getChangesList()){
@@ -110,5 +123,50 @@ public class DocumentLineService {
                 createDocumentLine(changes.getLineId(), changes.getPrevLineId(), changes.getContent(), documentId);
             }
         }
+    }
+
+    public Boolean LockDocumentLine(EditorBatchMessageDto message){
+        String key = message.getDocumentId();
+        Map<String, String> contentMap = null;
+        try {
+            contentMap = objectMapper.readValue(message.getContent(), Map.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        String lineId = contentMap.get("lineId");
+
+        if (Boolean.TRUE.equals(hashOperations.putIfAbsent("lock:"+key, lineId, message.getSenderId()))) {
+            setOperations.add("user_lock:"+key+message.getSenderId(), lineId);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void unLockDocumentLine(EditorBatchMessageDto message){
+        String key = message.getDocumentId();
+
+        for(EditorBatchMessageDto.Changes changes : message.getChangesList()){
+            hashOperations.delete("lock:" + key, changes.getLineId());
+        }
+        redisTemplate.delete("user_lock:" + key + message.getSenderId());
+    }
+
+    public void unLockDocumentLineByUser(String documentId, String userId){
+        Set<String> getlineIds = setOperations.members("user_lock:"+documentId+userId);
+        if(getlineIds == null){return ;}
+        for(String lineId : getlineIds){
+            hashOperations.delete("lock:"+documentId, lineId);
+        }
+        redisTemplate.delete("user_lock:"+documentId+userId);
+    }
+
+    public void joinUser(String documentId, String userId){
+        setOperations.add("online:"+documentId, userId);
+    }
+
+    public void leaveUser(String documentId, String userId){
+        unLockDocumentLineByUser(documentId, userId);
+        setOperations.remove("online:"+documentId, userId);
     }
 }

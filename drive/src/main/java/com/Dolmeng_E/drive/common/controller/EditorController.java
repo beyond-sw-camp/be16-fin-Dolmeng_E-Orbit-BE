@@ -2,11 +2,14 @@ package com.Dolmeng_E.drive.common.controller;
 
 import com.Dolmeng_E.drive.common.dto.EditorBatchMessageDto;
 import com.Dolmeng_E.drive.domain.drive.service.DocumentLineService;
+import com.Dolmeng_E.drive.domain.drive.service.DriverService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
+
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
@@ -25,7 +28,31 @@ public class EditorController {
     @MessageMapping("/editor/batch-update")
     public void handleBatchUpdate(@Payload EditorBatchMessageDto message) {
         documentLineService.batchUpdateDocumentLine(message);
-        // 3. (다음 단계) 웹소켓을 통해 다른 사용자들에게 이 블록 생성 정보를 브로드캐스트합니다.
+        redisTemplate.convertAndSend("document-updates", message);
+    }
+
+    @MessageMapping("/editor/lock-line")
+    public void handleLock(@Payload EditorBatchMessageDto message) {
+        if(documentLineService.LockDocumentLine(message)){
+            redisTemplate.convertAndSend("document-updates", message);
+        };
+    }
+
+    @MessageMapping("/editor/unlock-line")
+    public void handleUnLock(@Payload EditorBatchMessageDto message) {
+        documentLineService.unLockDocumentLine(message);
+        redisTemplate.convertAndSend("document-updates", message);
+    }
+
+    @MessageMapping("/editor/leave")
+    public void handleLeaveUser(@Payload EditorBatchMessageDto message) {
+        documentLineService.leaveUser(message.getDocumentId(), message.getSenderId());
+        redisTemplate.convertAndSend("document-updates", message);
+    }
+
+    @MessageMapping("/editor/join")
+    public void handleJoinUser(@Payload EditorBatchMessageDto message) {
+        documentLineService.joinUser(message.getDocumentId(), message.getSenderId());
         redisTemplate.convertAndSend("document-updates", message);
     }
 }
