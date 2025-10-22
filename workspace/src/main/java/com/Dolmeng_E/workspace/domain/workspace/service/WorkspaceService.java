@@ -21,21 +21,20 @@ import com.Dolmeng_E.workspace.domain.user_group.repository.UserGroupMappingRepo
 import com.Dolmeng_E.workspace.domain.user_group.repository.UserGroupRepository;
 import com.Dolmeng_E.workspace.domain.user_group.service.UserGroupService;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
-import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
-import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceInvite;
-import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
-import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
+import com.Dolmeng_E.workspace.domain.workspace.entity.*;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceInviteRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.nio.file.AccessDeniedException;
@@ -46,6 +45,7 @@ import org.springframework.data.domain.Pageable;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
@@ -58,7 +58,7 @@ public class WorkspaceService {
     private final UserGroupRepository userGroupRepository;
     private final UserGroupMappingRepository userGroupMappingRepository;
 
-//    워크스페이스 생성
+//    워크스페이스 생성(PRO,ENTERPRISE)
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
 
 
@@ -90,7 +90,72 @@ public class WorkspaceService {
         return workspace.getId();
     }
 
-//    회원가입 시 워크스페이스 생성
+
+//  회원생성시 받은 메세지를 받아 dto를 조립하여 createPersonalWorkspace() 를 실행하는 메서드(보상트랜잭션 분기처리용)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public boolean tryCreatePersonalWorkspace(UserSignupEventDto event) {
+        try {
+            PersonalWorkspaceCreateDto dto = PersonalWorkspaceCreateDto.builder()
+                    .workspaceName(event.getUserName() + "의 워크스페이스")
+                    .userId(UUID.fromString(event.getUserId()))
+                    .workspaceTemplates(WorkspaceTemplates.PERSONAL)
+                    .userName(event.getUserName())
+                    .build();
+
+            createPersonalWorkspace(dto);
+            return true;
+
+        } catch (Exception e) {
+            log.error("워크스페이스 생성 실패: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    // 개인 워크스페이스 생성 (회원가입 시 자동 생성용, 컨트롤러 호출 X)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void createPersonalWorkspace(PersonalWorkspaceCreateDto dto) {
+        try {
+            // 1. 워크스페이스 생성
+            Workspace workspace = dto.toEntity();
+            workspace.settingMaxStorage(WorkspaceTemplates.PERSONAL);
+            workspaceRepository.save(workspace);
+
+            // 2. 워크스페이스 관리자 권한그룹 생성
+            String adminAccessGroupId = accessGroupService.createAdminGroupForWorkspace(workspace.getId());
+
+//            // 보상 트랜잭션 테스트용 예외 발생 지점
+//            if (true) {
+//                throw new IllegalArgumentException("보상트랜잭션용 에러 (테스트)");
+//            }
+
+            // 3. 워크스페이스 일반 사용자 권한그룹 생성
+            accessGroupService.createDefaultUserAccessGroup(workspace.getId());
+
+            // 4. 워크스페이스 참여자 추가
+            AccessGroup adminAccessGroup = accessGroupRepository.findById(adminAccessGroupId)
+                    .orElseThrow(() -> new EntityNotFoundException("해당 관리자 그룹이 없습니다."));
+            workspaceParticipantRepository.save(
+                    WorkspaceParticipant.builder()
+                            .workspaceRole(WorkspaceRole.ADMIN)
+                            .accessGroup(adminAccessGroup)
+                            .userId(dto.getUserId())
+                            .isDelete(false)
+                            .workspace(workspace)
+                            .userName(dto.getUserName())
+                            .build()
+            );
+
+            log.info("개인 워크스페이스 생성 완료: {}", workspace.getWorkspaceName());
+
+        } catch (Exception e) {
+            // 이 catch 블록에서 잡힌 예외를 다시 던져야
+            // UserSignupConsumer의 try-catch에서 감지 가능함
+            log.error("워크스페이스 생성 중 오류 발생: {}", e.getMessage());
+            throw new RuntimeException("워크스페이스 생성 실패", e);
+        }
+    }
+
+
 
 //    워크스페이스 목록 조회
 @Transactional(readOnly = true)
