@@ -1,6 +1,7 @@
 package com.Dolmeng_E.user.domain.sharedCalendar.repository;
 
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarType;
+import com.Dolmeng_E.user.domain.sharedCalendar.entity.RepeatCycle;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,6 +35,9 @@ public interface SharedCalendarRepository extends JpaRepository<SharedCalendar, 
             @Param("workspaceId") String workspaceId,
             @Param("calendarType") CalendarType calendarType
     );
+
+    // 반복 그룹으로 일정 조회
+    List<SharedCalendar> findByRepeatGroupId(String repeatGroupId);
 
     // todo 조회용
     @Query("SELECT c FROM SharedCalendar c " +

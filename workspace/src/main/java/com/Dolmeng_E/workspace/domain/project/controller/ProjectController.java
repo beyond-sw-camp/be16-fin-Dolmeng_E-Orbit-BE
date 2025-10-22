@@ -61,8 +61,6 @@ public class ProjectController {
                 ,HttpStatus.OK);
     }
 
-// 프로젝트 상세 조회(To-Do: 스톤, 태스트 생성 완료 후 프로젝트 구조 조회 API 구현 필요)
-
 // 프로젝트 삭제
     @DeleteMapping("/{projectId}")
     public ResponseEntity<?> deleteProject(@RequestHeader("X-User-Id") String userId,
@@ -78,7 +76,7 @@ public class ProjectController {
     }
 
 
-// 프로젝트가 프로젝트 캘린더에 노출 여부 설정(프로젝트 캘린더 조회용 API)
+// 프로젝트가 프로젝트 캘린더에 노출 여부 설정(프로젝트 캘린더 조회용 API) - jiki
 
 // 내 프로젝트 목록 조회
 
