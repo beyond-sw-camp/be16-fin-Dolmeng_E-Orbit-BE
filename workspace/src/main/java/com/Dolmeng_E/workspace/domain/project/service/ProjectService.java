@@ -58,9 +58,9 @@ public class ProjectService {
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
         // 2. 권한 검증 (공통 메서드)
-        // 커스터마이징 필요한 부분 ex. 프로젝트 관련 -> ws_acc_list_2 , 스톤 관련 -> ws_acc_list_3 등등
+        // 커스터마이징 필요한 부분 ex. 프로젝트 관련 -> ws_acc_list_1 , 스톤 관련 -> ws_acc_list_2 등등
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            accessCheckService.validateAccess(participant, "ws_acc_list_2");
+            accessCheckService.validateAccess(participant, "ws_acc_list_1");
         }
 
         // 3. 워크스페이스 담당자 객체 생성
@@ -107,7 +107,7 @@ public class ProjectService {
         // 3. 권한 검증: 담당자 or 권한그룹 or 관리자
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-                accessCheckService.validateAccess(participant, "ws_acc_list_2");
+                accessCheckService.validateAccess(participant, "ws_acc_list_1");
             }
         }
 
@@ -158,7 +158,7 @@ public class ProjectService {
         // 3. 권한 검증: 관리자 or 프로젝트 담당자 or 권한그룹
         if (participant.getWorkspaceRole() != WorkspaceRole.ADMIN &&
                 !project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-            accessCheckService.validateAccess(participant, "ws_acc_list_2");
+            accessCheckService.validateAccess(participant, "ws_acc_list_1");
         }
 
         // 4. 이미 삭제된 프로젝트인지 확인

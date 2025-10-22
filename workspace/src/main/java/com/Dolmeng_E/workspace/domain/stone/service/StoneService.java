@@ -105,7 +105,7 @@ public class StoneService {
         // 4. 권한 검증 (프로젝트 담당자이거나, 스톤 생성 권한이 있어야 함, 혹은 관리자)
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-                accessCheckService.validateAccess(participant, "ws_acc_list_3");
+                accessCheckService.validateAccess(participant, "ws_acc_list_2");
             }
         }
 
