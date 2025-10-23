@@ -6,7 +6,6 @@ import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupReposit
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectListDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
@@ -27,11 +26,9 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import static com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole.ADMIN;
 
 @Service
 @Transactional
@@ -59,7 +56,7 @@ public class ProjectService {
 
         // 2. 권한 검증 (공통 메서드)
         // 커스터마이징 필요한 부분 ex. 프로젝트 관련 -> ws_acc_list_1 , 스톤 관련 -> ws_acc_list_2 등등
-        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+        if (!participant.getWorkspaceRole().equals(ADMIN)) {
             accessCheckService.validateAccess(participant, "ws_acc_list_1");
         }
 
@@ -105,7 +102,7 @@ public class ProjectService {
                 .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
 
         // 3. 권한 검증: 담당자 or 권한그룹 or 관리자
-        if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+        if (!participant.getWorkspaceRole().equals(ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())) {
                 accessCheckService.validateAccess(participant, "ws_acc_list_1");
             }
@@ -129,15 +126,35 @@ public class ProjectService {
 
 // 프로젝트 목록 조회(사이드 바 프로젝트 목록)
     public List<ProjectListDto> getProjectList(String userId, String workspaceId) {
-        // 1. 참여자 검증
-        WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
-                .orElseThrow(()->new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+        UUID uuid = UUID.fromString(userId);
 
-        // 2. dto 조립, 진행중,완료인 프로젝트만 보기
-        List<Project> projectlist = projectRepository.findAllByWorkspaceIdAndIsDeleteFalseAndProjectStatusNot(workspaceId, ProjectStatus.STORAGE);
-        List<ProjectListDto> projectListDtoList = projectlist.stream().map(ProjectListDto::fromEntity).toList();
-        return projectListDtoList;
+        // 1️. 워크스페이스 참여자 검증
+        WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, uuid)
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 2️. ADMIN 여부 확인
+        boolean isAdmin = workspaceParticipant.getWorkspaceRole() == WorkspaceRole.ADMIN;
+
+        List<Project> projects;
+
+        if (isAdmin) {
+            // 2-1. ADMIN은 워크스페이스 내 모든 프로젝트 조회 (삭제X, STORAGE 제외)
+            projects = projectRepository
+                    .findAllByWorkspaceIdAndIsDeleteFalseAndProjectStatusNot(workspaceId, ProjectStatus.STORAGE);
+        } else {
+            // 2-2. 일반 참여자는 본인이 포함된 프로젝트만 조회 (삭제X, STORAGE 제외)
+            projects = projectParticipantRepository
+                    .findProjectsByUserInWorkspace(uuid, workspaceId)
+                    .stream()
+                    .filter(project -> !project.getIsDelete() && project.getProjectStatus() != ProjectStatus.STORAGE)
+                    .toList();
+        }
+
+        // 3. DTO 변환
+        return projects.stream()
+                .map(ProjectListDto::fromEntity)
+                .toList();
     }
 
 
@@ -154,7 +171,7 @@ public class ProjectService {
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
         // 3. 권한 검증: 관리자 or 프로젝트 담당자 or 권한그룹
-        if (participant.getWorkspaceRole() != WorkspaceRole.ADMIN &&
+        if (participant.getWorkspaceRole() != ADMIN &&
                 !project.getWorkspaceParticipant().getId().equals(participant.getId())) {
             accessCheckService.validateAccess(participant, "ws_acc_list_1");
         }

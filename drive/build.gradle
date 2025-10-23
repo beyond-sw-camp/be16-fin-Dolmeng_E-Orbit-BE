@@ -46,9 +46,12 @@ dependencies {
 	//    circuit 브레이커 도입시
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 
-	implementation "com.example:module-common:1.1.2"
+	implementation "com.example:module-common:1.1.5"
 
 	implementation 'software.amazon.awssdk:s3:2.17.58'
+
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 
 }

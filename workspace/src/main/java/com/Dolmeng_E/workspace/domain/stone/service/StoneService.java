@@ -209,7 +209,25 @@ public class StoneService {
             }
         }
 
-        // 5. 프로젝트 참여자에 추가
+        // 5. 중복참여자 검증
+        List<String> duplicateNames = new ArrayList<>();
+
+        if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
+            for (String wsPtId : dto.getStoneParticipantList()) {
+                WorkspaceParticipant wsPt = workspaceParticipantRepository.findById(wsPtId)
+                        .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자를 찾을 수 없습니다."));
+
+                if (stoneParticipantRepository.existsByStoneAndWorkspaceParticipant(stone, wsPt)) {
+                    duplicateNames.add(wsPt.getUserName());
+                }
+            }
+
+            if (!duplicateNames.isEmpty()) {
+                throw new IllegalArgumentException(String.join(", ", duplicateNames) + "은/는 이미 존재하는 참여자입니다.");
+            }
+        }
+
+        // 6. 프로젝트 참여자에 추가
         if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
             for (String wpId : dto.getStoneParticipantList()) {
 
@@ -231,12 +249,12 @@ public class StoneService {
             }
         }
 
-        // 6. 기존 참여자 조회
+        // 7. 기존 참여자 조회
         List<StoneParticipant> existingParticipants = stoneParticipantRepository.findAllByStone(stone);
         // true일 경우 기존값 존재, false의 경우 기존값 없다는 뜻
         boolean hasExisting = !existingParticipants.isEmpty();
 
-        // 7. 스톤에 참여자가 없거나, 중복되지 않은 경우 새로 저장
+        // 8. 스톤에 참여자가 없거나, 중복되지 않은 경우 새로 저장
         if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
             // dto에 넣어놓은 id 리스트
             Set<String> participantIds = dto.getStoneParticipantList();

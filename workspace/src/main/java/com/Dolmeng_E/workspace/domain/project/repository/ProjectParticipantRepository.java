@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface ProjectParticipantRepository extends JpaRepository<ProjectParticipant,String> {
@@ -49,4 +50,18 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
     Optional<Project> findLatestProjectByParticipant(@Param("participant") WorkspaceParticipant participant);
 
     List<ProjectParticipant> findAllByWorkspaceParticipantIn(List<WorkspaceParticipant> participants);
+
+    @Query("""
+    SELECT DISTINCT p.project
+    FROM ProjectParticipant p
+    JOIN p.workspaceParticipant wp
+    WHERE wp.workspace.id = :workspaceId
+      AND wp.userId = :userId
+      AND p.project.isDelete = false
+      AND p.project.projectStatus <> com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus.STORAGE
+    """)
+    List<Project> findProjectsByUserInWorkspace(
+            @Param("userId") UUID userId,
+            @Param("workspaceId") String workspaceId
+    );
 }

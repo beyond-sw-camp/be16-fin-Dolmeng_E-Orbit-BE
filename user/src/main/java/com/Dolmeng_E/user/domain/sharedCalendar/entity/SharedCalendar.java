@@ -76,7 +76,7 @@ public class SharedCalendar extends BaseTimeEntity {
     @Builder.Default
     private RepeatCycle repeatCycle = RepeatCycle.NONE;
 
-    // 일정 반복 종료일 (없으면 무한반복 x)
+    // 일정 반복 종료일 (없으면 반복일정으로 처리 x)
     private LocalDateTime repeatEndAt;
 
     // 반복 그룹 식별자

@@ -65,25 +65,25 @@ public class Project extends BaseTimeEntity {
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time")
+    @Column(name = "end_time", nullable = false)
     private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "project_status")
+    @Column(name = "project_status", nullable = false)
     @Builder.Default
     private ProjectStatus projectStatus = ProjectStatus.PROGRESS; // PROGRESS,COMPLETED,STORAGE
 
-    @Column(name = "is_delete")
+    @Column(name = "is_delete", nullable = false)
     @Builder.Default
     private Boolean isDelete = false;
 
     // 전체 스톤 수
-    @Column(name = "task_count")
+    @Column(name = "stone_count", nullable = false)
     @Builder.Default
     private Integer stoneCount = 0;
 
     // 완료된 스톤 수
-    @Column(name = "completed_count")
+    @Column(name = "completed_count", nullable = false)
     @Builder.Default
     private Integer completedCount = 0;
 
@@ -93,6 +93,8 @@ public class Project extends BaseTimeEntity {
         if (dto.getProjectObjective() != null) this.projectObjective = dto.getProjectObjective();
         if (dto.getProjectDescription() != null) this.projectDescription = dto.getProjectDescription();
         if (dto.getProjectStatus() != null) this.projectDescription = dto.getProjectDescription();
+        if (dto.getProjectName() != null) this.projectName = dto.getProjectName();
+        if (dto.getProjectStatus() != null) this.projectStatus = dto.getProjectStatus();
     }
 
     public void changeManager(WorkspaceParticipant newManager) {
