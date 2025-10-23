@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class ProjectModifyDto {
     private String workspaceId;
     private String projectId;
+    private String projectName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String projectObjective;
@@ -25,6 +26,7 @@ public class ProjectModifyDto {
         return Project.builder()
                 .workspace(workspace)
                 .workspaceParticipant(workspaceParticipant)
+                .projectName(this.projectName)
                 .startTime(this.startTime)
                 .endTime(this.endTime)
                 .projectObjective(this.projectObjective)
