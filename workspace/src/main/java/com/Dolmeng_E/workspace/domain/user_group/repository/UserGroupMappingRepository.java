@@ -20,4 +20,6 @@ public interface UserGroupMappingRepository extends JpaRepository<UserGroupMappi
     List<UserGroupMapping> findAllByUserGroup(UserGroup userGroup);
 
     void deleteAllByUserGroup(UserGroup userGroup);
+
+    boolean existsByUserGroup(UserGroup userGroup);
 }

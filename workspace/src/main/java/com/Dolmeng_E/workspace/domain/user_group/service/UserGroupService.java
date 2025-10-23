@@ -342,12 +342,30 @@ public class UserGroupService {
         Page<UserGroup> groups = userGroupRepository
                 .findByWorkspaceAndUserGroupNameContainingIgnoreCase(workspace, keyword, pageable);
 
-        // 6. DTO 변환
-        return groups.map(group -> UserGroupSearchRestDto.builder()
-                .userGroupName(group.getUserGroupName())
-                .groupName(group.getUserGroupName()) // dto 구조 맞추기용
-                .createdAt(group.getCreatedAt())
-                .userGroupParticipantsCount(userGroupMappingRepository.countByUserGroup(group))
-                .build());
+        // 6. 필터링 추가
+        // 이미 그룹에 속한 워크스페이스 참여자가 있는 그룹은 제외
+        List<UserGroup> filtered = groups.getContent().stream()
+                .filter(group -> !userGroupMappingRepository.existsByUserGroup(group))
+                .toList();
+
+        // 7. DTO 변환
+        List<UserGroupSearchRestDto> dtoList = filtered.stream()
+                .map(group -> UserGroupSearchRestDto.builder()
+                        .userGroupName(group.getUserGroupName())
+                        .groupName(group.getUserGroupName())
+                        .createdAt(group.getCreatedAt())
+                        .userGroupParticipantsCount(
+                                userGroupMappingRepository.countByUserGroup(group)
+                        )
+                        .build())
+                .toList();
+
+        Page<UserGroupSearchRestDto> result = new PageImpl<>(
+                dtoList,
+                pageable,
+                dtoList.size()
+        );
+
+        return result;
     }
 }
