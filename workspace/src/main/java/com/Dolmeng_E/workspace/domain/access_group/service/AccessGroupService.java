@@ -245,23 +245,19 @@ public class AccessGroupService {
         List<AccessDetail> details = accessDetailRepository.findByAccessGroup(accessGroup);
 
         // 4️. 권한별 boolean 세팅
-        boolean inviteUser = false;
         boolean projectCreate = false;
         boolean stoneCreate = false;
-        boolean userGroupCreate = false;
         boolean projectFileView = false;
         boolean stoneFileView = false;
         boolean workspaceFileView = false;
 
-        // 7개 코딩해 둔 권한 목록에서 for문으로 테스트
+        // 5개 코딩해 둔 권한 목록에서 for문으로 테스트
         for (AccessDetail d : details) {
             // false라면 다음 권한으로 넘어갑니다.
             if (!d.getIsAccess()) continue;
             switch (d.getAccessList().getAccessType()) {
-                case INVITE_USER -> inviteUser = true;
                 case PROJECT_CREATE -> projectCreate = true;
                 case STONE_CREATE -> stoneCreate = true;
-                case USER_GROUP_CREATE -> userGroupCreate = true;
                 case PROJECT_FILE_VIEW -> projectFileView = true;
                 case STONE_FILE_VIEW -> stoneFileView = true;
                 case WORKSPACE_FILE_VIEW -> workspaceFileView = true;
@@ -272,10 +268,8 @@ public class AccessGroupService {
         return AccessGroupResDto.builder()
                 .accessGroupId(accessGroup.getId())
                 .accessGroupName(accessGroup.getAccessGroupName())
-                .inviteUser(inviteUser)
                 .projectCreate(projectCreate)
                 .stoneCreate(stoneCreate)
-                .userGroupCreate(userGroupCreate)
                 .projectFileView(projectFileView)
                 .stoneFileView(stoneFileView)
                 .workspaceFileView(workspaceFileView)
