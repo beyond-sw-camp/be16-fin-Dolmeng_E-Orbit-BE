@@ -116,4 +116,20 @@ public class UserGroupController {
                 , HttpStatus.OK);
     }
 
+    // 사용자 그룹 그룹명으로 검색
+    @PostMapping("/search")
+    public ResponseEntity<?> SearchByGroupName(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody UserGroupSearchDto userGroupSearchDto,
+            @PageableDefault(size = 8, sort = "createdAt") Pageable pageable
+    ) {
+        Page<UserGroupSearchRestDto> dto = userGroupService.SearchByGroupName(userId, userGroupSearchDto, pageable);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("사용자 그룹 조회 완료")
+                .result(dto)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                , HttpStatus.OK);
+    }
+
 }

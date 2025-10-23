@@ -14,4 +14,11 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, String> {
     boolean existsByWorkspaceAndUserGroupName(Workspace workspace, String userGroupName);
     Page<UserGroup> findByWorkspace(Workspace workspace, Pageable pageable);
     List<UserGroup> findByWorkspace(Workspace workspace);
+
+    // 워크스페이스에서 사용자 그룹 이름을 포함한 정보 조회
+    Page<UserGroup> findByWorkspaceAndUserGroupNameContainingIgnoreCase(
+            Workspace workspace,
+            String userGroupName,
+            Pageable pageable
+    );
 }

@@ -10,10 +10,8 @@ public class AccessGroupResDto {
     private String accessGroupName;
 
     // 권한 여부만 필드로 존재
-    private boolean inviteUser;
     private boolean projectCreate;
     private boolean stoneCreate;
-    private boolean userGroupCreate;
     private boolean projectFileView;
     private boolean stoneFileView;
     private boolean workspaceFileView;

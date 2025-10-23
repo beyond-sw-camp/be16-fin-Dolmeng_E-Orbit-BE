@@ -311,4 +311,43 @@ public class UserGroupService {
         // 4. 그룹 삭제
         userGroupRepository.delete(userGroup);
     }
+
+
+    // 사용자 그룹 그룹명으로 검색
+    @Transactional(readOnly = true)
+    public Page<UserGroupSearchRestDto> SearchByGroupName(String userId, UserGroupSearchDto dto, Pageable pageable) {
+
+        // 1. 워크스페이스 조회
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
+
+        // 2. 요청자 검증
+        UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), userInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
+
+        // 3. 권한 검증
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자 권한이 필요합니다.");
+        }
+
+        // 4. 검색어 검증
+        String keyword = dto.getGroupName();
+        if (keyword == null || keyword.isBlank()) {
+            throw new IllegalArgumentException("검색어가 비어있습니다.");
+        }
+
+        // 5. 그룹명 부분 일치 검색 (대소문자 구분 없음)
+        Page<UserGroup> groups = userGroupRepository
+                .findByWorkspaceAndUserGroupNameContainingIgnoreCase(workspace, keyword, pageable);
+
+        // 6. DTO 변환
+        return groups.map(group -> UserGroupSearchRestDto.builder()
+                .userGroupName(group.getUserGroupName())
+                .groupName(group.getUserGroupName()) // dto 구조 맞추기용
+                .createdAt(group.getCreatedAt())
+                .userGroupParticipantsCount(userGroupMappingRepository.countByUserGroup(group))
+                .build());
+    }
 }

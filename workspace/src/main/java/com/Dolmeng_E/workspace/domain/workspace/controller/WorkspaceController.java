@@ -65,7 +65,7 @@ public class WorkspaceController {
                     HttpStatus.OK);
         }
 
-//    워크스페이스 변경(To-do: 관리자 그룹, 일반사용자 그룹은 이름 바꾸지 못하게)
+//    워크스페이스 변경
     @PatchMapping("/{workspaceId}/name")
     public ResponseEntity<?> updateWorkspaceName(
             @RequestHeader("X-User-Id") String userId,
@@ -149,6 +149,7 @@ public class WorkspaceController {
                 HttpStatus.OK);
     }
 
+    // 워크스페이스 삭제
     @DeleteMapping("/{workspaceId}")
     public ResponseEntity<?> deleteWorkspace(@RequestHeader("X-User-Id") String userId,
                                              @PathVariable String workspaceId
@@ -156,7 +157,7 @@ public class WorkspaceController {
         workspaceService.deleteWorkspace(userId,workspaceId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
-                .statusMessage("워크스페이스 회원 삭제 성공")
+                .statusMessage("워크스페이스 삭제 성공")
                 .result(HttpStatus.OK)
                 .build(),
                 HttpStatus.OK);
