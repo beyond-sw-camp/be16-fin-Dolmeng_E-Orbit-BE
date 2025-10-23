@@ -812,6 +812,82 @@ public class WorkspaceService {
                 .build();
     }
 
+    // 워크스페이스 내 사용자 그룹이 없는 참여자 검색(사용자 그룹 추가시 활용)
+    @Transactional(readOnly = true)
+    public UserInfoListResDto searchWorkspaceParticipantsNotInUserGroup(String userId, SearchDto dto) {
+
+        // 1. 워크스페이스 유효성 검증
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
+
+        // 개인 워크스페이스 방어
+        validateNotPersonalWorkspace(workspace);
+
+        // 2. 요청자 권한 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
+
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자만 사용자 조회가 가능합니다.");
+        }
+
+        // 3. 워크스페이스 참여자 목록 조회 (삭제된 사용자 제외)
+        List<WorkspaceParticipant> participants =
+                workspaceParticipantRepository.findByWorkspaceIdAndIsDeleteFalse(dto.getWorkspaceId());
+
+        if (participants.isEmpty()) {
+            return UserInfoListResDto.builder()
+                    .userInfoList(Collections.emptyList())
+                    .build();
+        }
+
+        // 4. 사용자 그룹에 이미 속한 참여자 제외
+        List<WorkspaceParticipant> filteredParticipants = participants.stream()
+                .filter(p -> !userGroupMappingRepository.existsByWorkspaceParticipant(p))
+                .toList();
+
+        if (filteredParticipants.isEmpty()) {
+            return UserInfoListResDto.builder()
+                    .userInfoList(Collections.emptyList())
+                    .build();
+        }
+
+        // 5. 참가자 userId 리스트 생성
+        List<UUID> participantUserIds = filteredParticipants.stream()
+                .map(WorkspaceParticipant::getUserId)
+                .toList();
+
+        // 6. user-service에서 상세 정보 가져오기 (Feign)
+        UserIdListDto userIdListDto = new UserIdListDto(participantUserIds);
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+
+        // 7. 워크스페이스 참가자와 user-service의 정보 병합
+        Map<UUID, UserInfoResDto> userInfoMap = userInfoListResDto.getUserInfoList().stream()
+                .collect(Collectors.toMap(UserInfoResDto::getUserId, u -> u));
+
+        // 8. 키워드 필터링 및 병합
+        String keyword = dto.getSearchKeyword();
+        List<UserInfoResDto> filteredList = filteredParticipants.stream()
+                .filter(p -> keyword == null || keyword.isBlank() || p.getUserName().contains(keyword))
+                .map(p -> {
+                    UserInfoResDto info = userInfoMap.get(p.getUserId());
+                    return UserInfoResDto.builder()
+                            .userId(p.getUserId())
+                            .userName(p.getUserName())
+                            .userEmail(info != null ? info.getUserEmail() : null)
+                            .profileImageUrl(info != null ? info.getProfileImageUrl() : null)
+                            .build();
+                })
+                .toList();
+
+        // 9. 결과 반환
+        return UserInfoListResDto.builder()
+                .userInfoList(filteredList)
+                .build();
+    }
+
+
 
     public void validateNotPersonalWorkspace(Workspace workspace) {
         if (workspace.getWorkspaceTemplates() == WorkspaceTemplates.PERSONAL) {
