@@ -116,10 +116,11 @@ public class DocumentLineService {
         documentLineRepository.save(newDocumentLine);
     }
 
-    public void deleteDocumentLine(String lineId, String prevId){
+    public void deleteDocumentLine(String lineId){
+        DocumentLine reqDocumentLine = documentLineRepository.findByLineId(lineId).orElseThrow(()->new EntityNotFoundException(lineId));
         // 만약 뒷 라인이 있다면 앞단과 연결 시켜주기
         Optional<DocumentLine> documentLine = documentLineRepository.findByPrevId(lineId);
-        documentLine.ifPresent(line -> line.updatePrevId(prevId));
+        documentLine.ifPresent(line -> line.updatePrevId(reqDocumentLine.getPrevId()));
         // 현재 라인 삭제
         documentLineRepository.delete(documentLineRepository.findByLineId(lineId).orElseThrow(()->new EntityNotFoundException("해당 라인이 존재하지 않습니다.")));
     }
@@ -131,7 +132,7 @@ public class DocumentLineService {
             if(changes.getType().equals("UPDATE")){
                 updateDocumentLine(changes.getLineId(), changes.getContent());
             }else if(changes.getType().equals("DELETE")){
-                deleteDocumentLine(changes.getLineId(), changes.getPrevLineId());
+                deleteDocumentLine(changes.getLineId());
             }else if(changes.getType().equals("CREATE")){
                 createDocumentLine(changes.getLineId(), changes.getPrevLineId(), changes.getContent(), documentId);
             }
