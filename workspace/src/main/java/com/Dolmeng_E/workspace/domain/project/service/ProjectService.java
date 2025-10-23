@@ -6,9 +6,11 @@ import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupReposit
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectListDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
+import com.Dolmeng_E.workspace.domain.project.dto.ProjectSettingDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
+import com.Dolmeng_E.workspace.domain.stone.dto.StoneSettingDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
@@ -209,7 +211,32 @@ public class ProjectService {
     }
 
 
-// 프로젝트가 프로젝트 캘린더에 노출 여부 설정(프로젝트 캘린더 조회용 API)
+    // 프로젝트 캘린더에 스톤 노출 여부 설정(프로젝트 캘린더 조회용 API)
+    public void settingProject(String userId, ProjectSettingDto dto) {
+
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(dto.getStoneId())
+                .orElseThrow(()->new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 포함된 프로젝트 객체 생성
+        Project project = stone.getProject();
+
+        // 3. 참여자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 스톤 참여자 조회
+        StoneParticipant stoneParticipant = stoneParticipantRepository
+                .findByStoneAndWorkspaceParticipant(stone, participant)
+                .orElseThrow(() -> new EntityNotFoundException("스톤참여자 정보가 없습니다."));
+
+        // 5. isProjectHidden 값 설정
+        stoneParticipant.updateProjectHidden(dto.getIsProjectHidden());
+
+        // 6. 변경사항 저장
+        stoneParticipantRepository.save(stoneParticipant);
+    }
 
 // 내 프로젝트 목록 조회
 

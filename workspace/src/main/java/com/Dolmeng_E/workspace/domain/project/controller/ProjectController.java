@@ -3,7 +3,9 @@ package com.Dolmeng_E.workspace.domain.project.controller;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
+import com.Dolmeng_E.workspace.domain.project.dto.ProjectSettingDto;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
+import com.Dolmeng_E.workspace.domain.stone.dto.StoneSettingDto;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -76,7 +78,18 @@ public class ProjectController {
     }
 
 
-// 프로젝트가 프로젝트 캘린더에 노출 여부 설정(프로젝트 캘린더 조회용 API) - jiki
+    // 프로젝트 캘린더에 스톤 노출 여부 설정(프로젝트 캘린더 조회용 API)
+    @PatchMapping("/setting")
+    public ResponseEntity<?> settingProject(@RequestHeader("X-User-Id") String userId,
+                                          @RequestBody ProjectSettingDto dto) {
+        projectService.settingProject(userId, dto);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("프로젝트 캘린더에 스톤 노출여부 설정 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
 // 내 프로젝트 목록 조회
 

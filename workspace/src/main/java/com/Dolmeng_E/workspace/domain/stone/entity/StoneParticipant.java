@@ -53,4 +53,8 @@ public class StoneParticipant extends BaseTimeEntity {
         this.isMilestoneHidden = hidden;
     }
 
+    public void updateProjectHidden(Boolean hidden) {
+        this.isProjectHidden = hidden;
+    }
+
 }
