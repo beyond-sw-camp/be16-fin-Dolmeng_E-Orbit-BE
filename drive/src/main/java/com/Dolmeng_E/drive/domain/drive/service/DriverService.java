@@ -1,5 +1,7 @@
 package com.Dolmeng_E.drive.domain.drive.service;
 
+import com.Dolmeng_E.drive.common.service.S3Uploader;
+import com.Dolmeng_E.drive.domain.drive.dto.DocumentResDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderContentsDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderSaveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderUpdateNameDto;
@@ -9,12 +11,11 @@ import com.Dolmeng_E.drive.domain.drive.entity.Folder;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FolderRepository;
-import com.example.modulecommon.service.S3Uploader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -143,10 +144,10 @@ public class DriverService {
             throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
         }
         Document document = Document.builder()
-                .createdBy("회원ID")
-                .title(documentTitle)
-                .folder(folder)
-                .build();
+                    .createdBy("회원ID")
+                    .title(documentTitle)
+                    .folder(folder)
+                    .build();
         return documentRepository.save(document).getId();
     }
 
@@ -155,5 +156,13 @@ public class DriverService {
         Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
         document.updateIsDelete();
         return document.getTitle();
+    }
+
+    // 문서 조회
+    public Object findDocument(String documentId){
+        Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException(("해당 문서가 존재하지 않습니다.")));
+        return DocumentResDto.builder()
+                .title(document.getTitle())
+                .build();
     }
 }

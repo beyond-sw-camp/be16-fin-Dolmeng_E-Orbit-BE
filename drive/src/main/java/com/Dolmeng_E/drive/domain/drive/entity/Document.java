@@ -32,10 +32,6 @@ public class Document extends BaseTimeEntity {
     @Column(nullable = false)
     private String title;
 
-    @Lob // 내용이 매우 길 수 있음을 나타냄
-    @Column(columnDefinition = "TEXT")
-    private String content;
-
     @Column(nullable = false)
     private String createdBy;
 

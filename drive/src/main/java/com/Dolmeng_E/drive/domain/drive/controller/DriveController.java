@@ -96,4 +96,14 @@ public class DriveController {
                 .statusMessage("문서 삭제 성공")
                 .build(), HttpStatus.OK);
     }
+
+    // 문서 조회
+    @GetMapping("/document/{documentId}")
+    public ResponseEntity<?> getDocument(@PathVariable String documentId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.findDocument(documentId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 조회 성공")
+                .build(), HttpStatus.OK);
+    }
 }
