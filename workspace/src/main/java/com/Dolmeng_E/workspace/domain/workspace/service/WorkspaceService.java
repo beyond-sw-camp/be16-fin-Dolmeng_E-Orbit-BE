@@ -294,7 +294,12 @@ public class WorkspaceService {
                 }
 
                 // 2️. 존재하지만 삭제된 경우 → 복귀 처리
+                // 추가 : 삭제 시 권한그룹을 없앴기 때문에 다시 일반 권한그룹으로 추가
                 existing.restoreParticipant();
+                AccessGroup accessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId,"일반 유저 그룹")
+                        .orElseThrow(()->new EntityNotFoundException("권한그룹이 존재하지 않습니다."));
+                existing.setAccessGroup(accessGroup);
+                workspaceParticipantRepository.save(existing);
                 continue;
             }
 
@@ -405,7 +410,8 @@ public class WorkspaceService {
     }
 
 
-//    워크스페이스 회원 삭제
+    //    워크스페이스 회원 삭제
+    @Transactional
     public void deleteWorkspaceParticipants(String userId, String workspaceId, WorkspaceDeleteUserDto dto) {
         // 1. 관리자 확인
         UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
@@ -418,7 +424,7 @@ public class WorkspaceService {
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스에 존재하지 않습니다."));
 
         if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new EntityNotFoundException("관리자만 회원 삭제가 가능합니다.");
+            throw new IllegalArgumentException("관리자만 회원 삭제가 가능합니다.");
         }
 
         // 2. 자기 자신 포함 방지
@@ -426,12 +432,19 @@ public class WorkspaceService {
             throw new IllegalArgumentException("관리자는 자기 자신을 삭제할 수 없습니다.");
         }
 
-        // 3. 유저 리스트 순회하면서 논리 삭제 처리
+        // 3. 유저 리스트 순회하면서 논리 삭제 및 그룹 해제 처리
         for (UUID targetUserId : dto.getUserIdList()) {
             WorkspaceParticipant target = workspaceParticipantRepository
                     .findByWorkspaceIdAndUserId(workspaceId, targetUserId)
                     .orElseThrow(() -> new EntityNotFoundException("삭제 대상 사용자를 찾을 수 없습니다."));
 
+            // 사용자 그룹 매핑(UserGroupMapping) 삭제
+            userGroupMappingRepository.deleteByWorkspaceParticipant(target);
+
+            // 권한그룹 연결 해제
+            target.setAccessGroup(null);
+
+            // 논리 삭제 처리
             if (!target.isDelete()) {
                 target.deleteParticipant();
                 workspaceParticipantRepository.save(target);

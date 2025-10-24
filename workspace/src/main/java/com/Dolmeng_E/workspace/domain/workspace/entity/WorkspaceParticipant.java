@@ -45,7 +45,6 @@ public class WorkspaceParticipant extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "access_group_id")
-    @NotNull
     private AccessGroup accessGroup;
 
     @NotNull
