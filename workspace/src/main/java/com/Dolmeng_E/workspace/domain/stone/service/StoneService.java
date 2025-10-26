@@ -109,7 +109,13 @@ public class StoneService {
             }
         }
 
-        // 5. 스톤 참여자들 중 프로젝트 참여자에 아직 등록되지 않은 경우 자동 등록
+        // 5. 스톤 기간 검증 (프로젝트 기간 내에만 생성 가능)
+        if (dto.getStartTime().isBefore(project.getStartTime()) ||
+                dto.getEndTime().isAfter(project.getEndTime())) {
+            throw new IllegalArgumentException("프로젝트 기간 내에만 스톤 생성이 가능합니다.");
+        }
+
+        // 6. 스톤 참여자들 중 프로젝트 참여자에 아직 등록되지 않은 경우 자동 등록
         if (dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
             for (String participantId : dto.getParticipantIds()) {
                 WorkspaceParticipant wp = workspaceParticipantRepository.findById(participantId)
@@ -136,7 +142,7 @@ public class StoneService {
                         .build()
         );
 
-        // 6. 자식 스톤 생성
+        // 7. 자식 스톤 생성
         Stone childStone = stoneRepository.save(
                 Stone.builder()
                         .stoneName(dto.getStoneName())
@@ -152,7 +158,7 @@ public class StoneService {
                         .build()
         );
 
-        // 7. 상위 스톤의 자식 스톤 리스트 등록
+        // 8. 상위 스톤의 자식 스톤 리스트 등록
         childStoneListRepository.save(
                 ChildStoneList.builder()
                         .stone(parentStone)
@@ -160,7 +166,7 @@ public class StoneService {
                         .build()
         );
 
-        // 8. 스톤 참여자 등록
+        // 9. 스톤 참여자 등록
         if (dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
             List<StoneParticipant> participantEntities = new ArrayList<>();
 
