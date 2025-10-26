@@ -661,9 +661,6 @@ public class StoneService {
         return result;
     }
 
-
-// 스톤 상세 정보 조회
-
     // 스톤 상세 정보 조회
     public StoneDetailResDto getStoneDetail(String userId, String stoneId) {
         // 1. 스톤 조회
@@ -708,28 +705,74 @@ public class StoneService {
     }
 
 
-
-
     // 스톤 참여자 목록 조회
+    public List<StoneParticipantResDto> getStoneList(String userId, String stoneId) {
+    // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 상위 프로젝트 / 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 요청자 검증
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 접근 권한 검증
+        validateAccess(requester, project, stone);
+
+        // 5. 삭제된 스톤 예외 처리
+        if (Boolean.TRUE.equals(stone.getIsDelete())) {
+            throw new IllegalStateException("삭제된 스톤입니다.");
+        }
+
+        // 6. 스톤 참여자 조회
+        List<StoneParticipant> participants = stoneParticipantRepository.findAllByStone(stone);
+
+        // 7. DTO 변환
+        return participants.stream()
+                .map(sp -> StoneParticipantResDto.builder()
+                        .participantId(sp.getWorkspaceParticipant().getId())
+                        .userId(sp.getWorkspaceParticipant().getUserId().toString())
+                        .build())
+                .toList();
+    }
+
+
+    // 권한 검증 메서드
+    private void validateAccess(WorkspaceParticipant participant, Project project, Stone stone) {
+        boolean isAuthorized =
+                participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN) ||
+                        project.getWorkspaceParticipant().getId().equals(participant.getId()) ||
+                        stone.getStoneManager().getId().equals(participant.getId()) ||
+                        stoneParticipantRepository.existsByStoneAndWorkspaceParticipant(stone, participant);
+
+        if (!isAuthorized) {
+            throw new IllegalArgumentException("해당 스톤에 접근할 권한이 없습니다.");
+        }
+    }
+
 
     //ToDo: 다 하면 프로젝트 쪽 로직 완성
 
-// 공통 메서드 : 부모가 최상위 스톤인지 파악하는 메서드
-public Boolean findTopStone(Stone stone) {
+    // 공통 메서드 : 부모가 최상위 스톤인지 파악하는 메서드
+    public Boolean findTopStone(Stone stone) {
 
-    if (stone.getParentStoneId() == null) {
-        return false;
+        if (stone.getParentStoneId() == null) {
+            return false;
+        }
+
+        Optional<Stone> parentOpt = stoneRepository.findById(stone.getParentStoneId());
+
+        if (parentOpt.isEmpty()) {
+            return false;
+        }
+
+        Stone parent = parentOpt.get();
+
+        return parent.getParentStoneId() == null;
     }
-
-    Optional<Stone> parentOpt = stoneRepository.findById(stone.getParentStoneId());
-
-    if (parentOpt.isEmpty()) {
-        return false;
-    }
-
-    Stone parent = parentOpt.get();
-
-    return parent.getParentStoneId() == null;
-}
 
 }
