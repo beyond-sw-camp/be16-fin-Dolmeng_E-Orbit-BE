@@ -902,6 +902,50 @@ public class WorkspaceService {
                 .build();
     }
 
+    // 권한그룹이 없는 워크스페이스 참여자 조회
+    @Transactional(readOnly = true)
+    public List<UserInfoResDto> searchWorkspaceParticipantsNotInAccessGroup(String userId, SearchDto dto) {
+
+        // 1. 워크스페이스 조회
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
+
+        // 2. 요청자 검증
+        UserInfoResDto requesterInfo = userFeign.fetchUserInfoById(userId);
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), requesterInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
+
+        // 3. 관리자 권한 검증
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자 권한이 필요합니다.");
+        }
+
+        // 4. 워크스페이스 전체 참여자 목록 조회
+        List<WorkspaceParticipant> participants = workspaceParticipantRepository.findByWorkspaceId(workspace.getId());
+
+        // 5. AccessGroup 연결되지 않은 참여자만 필터링
+        List<WorkspaceParticipant> notInAccessGroup = participants.stream()
+                .filter(p -> p.getAccessGroup() == null)
+                .toList();
+
+        // 6. 사용자 정보 조회 (Feign)
+        List<UUID> userIds = notInAccessGroup.stream()
+                .map(WorkspaceParticipant::getUserId)
+                .toList();
+
+        if (userIds.isEmpty()) return List.of();
+
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(new UserIdListDto(userIds));
+
+        // 7. 검색 키워드 필터링
+        String keyword = dto.getSearchKeyword();
+        return userInfoListResDto.getUserInfoList().stream()
+                .filter(u -> keyword == null || keyword.isBlank() || u.getUserName().contains(keyword))
+                .toList();
+    }
+
+
 
 
     public void validateNotPersonalWorkspace(Workspace workspace) {

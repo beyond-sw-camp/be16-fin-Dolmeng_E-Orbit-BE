@@ -24,9 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -346,7 +344,6 @@ public class UserGroupService {
         userGroupRepository.delete(userGroup);
     }
 
-
     // 사용자 그룹 그룹명으로 검색
     @Transactional(readOnly = true)
     public Page<UserGroupSearchRestDto> SearchByGroupName(String userId, UserGroupSearchDto dto, Pageable pageable) {
@@ -376,14 +373,57 @@ public class UserGroupService {
         Page<UserGroup> groups = userGroupRepository
                 .findByWorkspaceAndUserGroupNameContainingIgnoreCase(workspace, keyword, pageable);
 
-        // 6. DTO 변환
-        return groups.map(group -> UserGroupSearchRestDto.builder()
-                .userGroupName(group.getUserGroupName())
-                .groupName(group.getUserGroupName()) // dto 구조 맞추기용
-                .createdAt(group.getCreatedAt())
-                .userGroupParticipantsCount(userGroupMappingRepository.countByUserGroup(group))
-                .build());
+        // 6. 검색 결과 없을 경우 빈 페이지 반환
+        List<UserGroup> groupList = groups.getContent();
+        if (groupList.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        // 7. 조회된 그룹들에 속한 모든 매핑 한 번에 조회 (IN 쿼리 사용)
+        List<UserGroupMapping> allMappings = userGroupMappingRepository.findByUserGroupIn(groupList);
+
+        // 8. 전체 참여자 userId 수집
+        List<UUID> allUserIds = allMappings.stream()
+                .map(mapping -> mapping.getWorkspaceParticipant().getUserId())
+                .distinct()
+                .toList();
+
+        // 9. 유저 상세 정보 조회 (Feign 한 번 호출)
+        final Map<UUID, UserInfoResDto> userInfoMap = new HashMap<>();
+        if (!allUserIds.isEmpty()) {
+            UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(new UserIdListDto(allUserIds));
+            userInfoListResDto.getUserInfoList().forEach(
+                    user -> userInfoMap.put(user.getUserId(), user)
+            );
+        }
+
+        // 10. 그룹별 매핑 묶기 (groupId 기준)
+        Map<String, List<UserGroupMapping>> groupIdToMappings = allMappings.stream()
+                .collect(Collectors.groupingBy(mapping -> mapping.getUserGroup().getId()));
+
+        // 11. DTO 변환
+        return groups.map(group -> {
+
+            // 11-1. 그룹에 해당하는 매핑 목록 추출
+            List<UserGroupMapping> groupMappings = groupIdToMappings.getOrDefault(group.getId(), List.of());
+
+            // 11-2. 참여자 상세 정보 구성
+            List<UserInfoResDto> participants = groupMappings.stream()
+                    .map(mapping -> userInfoMap.get(mapping.getWorkspaceParticipant().getUserId()))
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            // 11-3. DTO 변환 및 반환
+            return UserGroupSearchRestDto.builder()
+                    .userGroupName(group.getUserGroupName())
+                    .groupName(group.getUserGroupName()) // dto 구조 맞추기용
+                    .createdAt(group.getCreatedAt())
+                    .userGroupParticipantsCount(groupMappings.size())
+                    .participants(participants)
+                    .build();
+        });
     }
+
 
     @Transactional
     public String modifyUserGroup(String userId, UserGroupModifyDto dto) {
@@ -417,11 +457,15 @@ public class UserGroupService {
         }
 
         // 2. 참여자 수정 처리
-        if (dto.getUserIdList() != null && !dto.getUserIdList().isEmpty()) {
-            // 기존 매핑 전체 삭제
+        // userIdList가 null이거나 비어있으면 → 그룹 비우기
+        if (dto.getUserIdList() == null || dto.getUserIdList().isEmpty()) {
+            // 프론트에서 모든 참여자를 제거한 상태로 수정 요청 시
+            // 그룹 내 기존 매핑 전체 삭제
+            userGroupMappingRepository.deleteAllByUserGroup(userGroup);
+        } else {
+            // 기존 매핑 전체 삭제 후 새 참여자 추가
             userGroupMappingRepository.deleteAllByUserGroup(userGroup);
 
-            // 새 사용자 추가
             for (UUID id : dto.getUserIdList()) {
                 WorkspaceParticipant participant = workspaceParticipantRepository
                         .findByWorkspaceIdAndUserId(workspace.getId(), id)
@@ -435,6 +479,7 @@ public class UserGroupService {
                 );
             }
         }
+
 
         userGroupRepository.save(userGroup);
         return userGroup.getId();

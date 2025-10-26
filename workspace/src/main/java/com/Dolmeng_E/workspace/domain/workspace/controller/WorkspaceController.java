@@ -287,6 +287,24 @@ public class WorkspaceController {
         );
     }
 
+    // 권한그룹이 없는 워크스페이스 참여자 조회
+    @PostMapping("/participants/not-in-access-groups/search")
+    public ResponseEntity<?> searchWorkspaceParticipantsNotInAccessGroup(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody SearchDto dto
+    ) {
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("권한그룹 미소속 사용자 조회 성공")
+                        .result(workspaceService.searchWorkspaceParticipantsNotInAccessGroup(userId, dto))
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
+
 
 
 

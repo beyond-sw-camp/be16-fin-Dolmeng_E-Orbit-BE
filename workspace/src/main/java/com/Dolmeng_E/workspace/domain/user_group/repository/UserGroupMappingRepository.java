@@ -25,4 +25,6 @@ public interface UserGroupMappingRepository extends JpaRepository<UserGroupMappi
     boolean existsByWorkspaceParticipant(WorkspaceParticipant workspaceParticipant);
 
     void deleteByWorkspaceParticipant(WorkspaceParticipant participant);
+
+    List<UserGroupMapping> findByUserGroupIn(List<UserGroup> groups);
 }
