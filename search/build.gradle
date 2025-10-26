@@ -44,9 +44,18 @@ dependencies {
 
 	//    circuit 브레이커 도입시
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
+
+	implementation "com.example:module-common:1.1.5"
 }
 
 repositories {
+	maven {
+		url = uri("https://maven.pkg.github.com/EunDuk2/module-common")
+		credentials {
+			username = findProperty("GITHUB_USER") ?: System.getenv("GITHUB_USER")
+			password = findProperty("GITHUB_TOKEN") ?: System.getenv("GITHUB_TOKEN")
+		}
+	}
 	mavenCentral()
 }
 

@@ -1,19 +1,18 @@
 package com.Dolmeng_E.drive.domain.drive.service;
 
 import com.Dolmeng_E.drive.common.service.S3Uploader;
-import com.Dolmeng_E.drive.domain.drive.dto.DocumentResDto;
-import com.Dolmeng_E.drive.domain.drive.dto.FolderContentsDto;
-import com.Dolmeng_E.drive.domain.drive.dto.FolderSaveDto;
-import com.Dolmeng_E.drive.domain.drive.dto.FolderUpdateNameDto;
+import com.Dolmeng_E.drive.domain.drive.dto.*;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.File;
 import com.Dolmeng_E.drive.domain.drive.entity.Folder;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FolderRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +29,8 @@ public class DriverService {
     private final S3Uploader s3Uploader;
     private final FileRepository fileRepository;
     private final DocumentRepository documentRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate; // Kafka 전송용
+    private final ObjectMapper objectMapper;
 
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto){
@@ -148,7 +149,28 @@ public class DriverService {
                     .title(documentTitle)
                     .folder(folder)
                     .build();
-        return documentRepository.save(document).getId();
+        Document savedDocument = documentRepository.save(document);
+
+        // kafka 메시지 발행
+        DocumentKafkaDto documentKafkaDto = DocumentKafkaDto.builder()
+                .eventType("DOCUMENT_CREATED")
+                .eventPayload(DocumentKafkaDto.EventPayload.builder()
+                        .originalId(savedDocument.getId())
+                        .searchTitle(savedDocument.getTitle())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(documentKafkaDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("document-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
+        return savedDocument.getId();
     }
 
     // 문서 삭제(소프트)
