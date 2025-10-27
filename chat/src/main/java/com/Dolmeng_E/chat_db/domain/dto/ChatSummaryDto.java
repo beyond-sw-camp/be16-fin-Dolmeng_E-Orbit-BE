@@ -1,5 +1,6 @@
 package com.Dolmeng_E.chat_db.domain.dto;
 
+import com.Dolmeng_E.chat_db.domain.entity.MessageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,5 +18,6 @@ public class ChatSummaryDto {
     private LocalDateTime lastSendTime; // 마지막 메시지 시간
     private String lastSenderId;     // 마지막 메시지 보낸 사람 이메일 or 이름
     private Long unreadCount;       // 현재 사용자의 안읽은 메시지 수
+    private MessageType messageType;
 }
 

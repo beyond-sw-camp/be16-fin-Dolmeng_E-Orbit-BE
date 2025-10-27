@@ -24,6 +24,6 @@ public class StompController {
 
         // roomId 붙여서 카프카 메시지 발행
         dto.setRoomId(roomId);
-        kafkaService.kafkaMessageKeyCreate(dto);
+        kafkaService.kafkaChatMessageSent(dto);
     }
 }

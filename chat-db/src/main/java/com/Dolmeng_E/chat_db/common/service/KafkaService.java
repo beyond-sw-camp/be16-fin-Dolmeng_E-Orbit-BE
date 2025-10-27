@@ -29,11 +29,11 @@ public class KafkaService {
     private final UserFeignClient userFeignClient;
 
     // producer
-    public void kafkaMessageKeyCreate(ChatMessageDto dto) {
-        log.info("kafkaMessageKeyCreate() - dto: " + dto);
+    public void kafkaChatMessageSaved(ChatMessageDto dto) {
+        log.info("kafkaMessageSaved() - dto: " + dto);
         try {
             String data = objectMapper.writeValueAsString(dto);
-            kafkaTemplate.send("chat-service",Long.toString(dto.getRoomId()), data);
+            kafkaTemplate.send("chat.message.saved",Long.toString(dto.getRoomId()), data);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -41,7 +41,7 @@ public class KafkaService {
 
     // consumer
     @KafkaListener(
-            topics = "chat-service",
+            topics = "chat.message.sent",
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "kafkaListener"
     )
@@ -57,7 +57,8 @@ public class KafkaService {
 
         chatService.saveMessage(Long.parseLong(key), chatMessageDto);
 
-        chatService.broadcastChatSummary(chatMessageDto);
+        // chat.message.saved 메시지 발행
+        kafkaChatMessageSaved(chatMessageDto);
 
         // 위 작업들 문제없으면 커밋 (offset)
         ack.acknowledge();

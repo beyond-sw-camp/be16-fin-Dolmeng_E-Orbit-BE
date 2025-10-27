@@ -86,7 +86,7 @@ public class StoneService {
 
     }
 
-// 일반 스톤 생성
+    // 일반 스톤 생성
     public String createStone(String userId, StoneCreateDto dto) {
 
         // 1. 상위 스톤 조회
@@ -121,26 +121,30 @@ public class StoneService {
                 WorkspaceParticipant wp = workspaceParticipantRepository.findById(participantId)
                         .orElseThrow(() -> new EntityNotFoundException("참여자 정보를 찾을 수 없습니다."));
 
-                boolean exists = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, wp);
+                // 요청자 자신은 중복 추가하지 않음
+                if (wp.getId().equals(participant.getId())) continue;
 
+                boolean exists = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, wp);
                 if (!exists) {
                     ProjectParticipant newProjectParticipant = ProjectParticipant.builder()
                             .project(project)
                             .workspaceParticipant(wp)
                             .build();
-
                     projectParticipantRepository.save(newProjectParticipant);
                 }
             }
         }
 
-        // 스톤 담당자 프로젝트 참여자에 추가
-        projectParticipantRepository.save(
-                ProjectParticipant.builder()
-                        .workspaceParticipant(participant)
-                        .project(project)
-                        .build()
-        );
+        // 6. 스톤 담당자 프로젝트 참여자 등록 (중복 방지 로직 수정)
+        boolean alreadyProjectParticipant = projectParticipantRepository.existsByProjectAndWorkspaceParticipant(project, participant);
+        if (!alreadyProjectParticipant) {
+            projectParticipantRepository.save(
+                    ProjectParticipant.builder()
+                            .workspaceParticipant(participant)
+                            .project(project)
+                            .build()
+            );
+        }
 
         // 7. 자식 스톤 생성
         Stone childStone = stoneRepository.save(
@@ -185,12 +189,13 @@ public class StoneService {
             stoneParticipantRepository.saveAll(participantEntities);
         }
 
-        // 프로젝트 마일스톤 반영
+        // 10. 프로젝트 마일스톤 반영
         project.incrementStoneCount();
         projectRepository.save(project);
 
         return childStone.getId();
     }
+
 
 // 스톤 참여자 추가
     public void joinStoneParticipant(String userId, StoneParticipantListDto dto) {

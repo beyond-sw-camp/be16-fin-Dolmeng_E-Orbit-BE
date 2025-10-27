@@ -11,9 +11,9 @@ import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +37,7 @@ public class UserService {
     private final MailService mailService;
     private final RedisTemplate<String, String> redisTemplate;
     private final UserSignupOrchestrationService userSignupOrchestrationService;
+    private final HashOperations<String, String, String> hashOperations;
 
     @Autowired
     public UserService(UserRepository userRepository,
@@ -44,7 +45,8 @@ public class UserService {
                        JwtTokenProvider jwtTokenProvider,
                        KakaoService kakaoService, GoogleService googleService,
                        MailService mailService, @Qualifier("rtInventory") RedisTemplate<String, String> redisTemplate,
-                       UserSignupOrchestrationService userSignupOrchestrationService
+                       UserSignupOrchestrationService userSignupOrchestrationService,
+                       @Qualifier("userInventory") RedisTemplate<String, String> userRedisTemplate
                        ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -55,6 +57,7 @@ public class UserService {
         this.mailService = mailService;
         this.redisTemplate = redisTemplate;
         this.userSignupOrchestrationService = userSignupOrchestrationService;
+        this.hashOperations = userRedisTemplate.opsForHash();
     }
 
     // 회원가입 API 구현3 - 계정 생성
@@ -68,11 +71,13 @@ public class UserService {
         }
 
         User user = dto.toEntity(encodedPassword, profileImgaeUrl);
-        userRepository.save(user);
+        User saveUser = userRepository.save(user);
+
+        // 회원가입 시 redis에 저장
+        saveUserInfoToRedis(saveUser);
 
         // 회원가입 시 워크스페이스 생성 메세지 발송
         userSignupOrchestrationService.publishSignupEvent(user);
-
 
     }
 
@@ -163,6 +168,8 @@ public class UserService {
         if(user == null) {
             user = kakaoService.createOauth(kakaoProfileDto);
             userRepository.save(user);
+            // 회원가입 시 redis에 저장
+            saveUserInfoToRedis(user);
         }
         if(user.isDelete()) throw new IllegalArgumentException("탈퇴한 회원입니다.");
 
@@ -186,6 +193,8 @@ public class UserService {
         if(user == null) {
             user = googleService.createOauth(googleProfileDto);
             userRepository.save(user);
+            // 회원가입 시 redis에 저장
+            saveUserInfoToRedis(user);
         }
         if(user.isDelete()) throw new IllegalArgumentException("탈퇴한 회원입니다.");
 
@@ -234,6 +243,7 @@ public class UserService {
     public void delete(String userId) {
         User user = userRepository.findById(UUID.fromString(userId)).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
         user.updateDeleted(true);
+        hashOperations.put("user:"+user.getId(), "isDelete", String.valueOf(user.isDelete()));
     }
 
     // 회원정보 조회 API
@@ -256,6 +266,9 @@ public class UserService {
         } else {
             user.updateProfileImageUrl(null);
         }
+
+        // redis 정보 덮어쓰기
+        saveUserInfoToRedis(user);
     }
 
     // 비밀번호 리셋 API 구현1 - 이메일 검증
@@ -330,5 +343,15 @@ public class UserService {
         return UserInfoListResDto.builder()
                 .userInfoList(userInfoList)
                 .build();
+    }
+
+    // redis에 user 정보 저장
+    public void  saveUserInfoToRedis(User user){
+        String key = "user:" + user.getId();
+        hashOperations.put(key, "id", String.valueOf(user.getId()));
+        hashOperations.put(key, "email",user.getEmail());
+        hashOperations.put(key, "name", user.getName());
+        hashOperations.put(key, "profileImageUrl", user.getProfileImageUrl());
+        hashOperations.put(key, "isDelete", String.valueOf(user.isDelete()));
     }
 }

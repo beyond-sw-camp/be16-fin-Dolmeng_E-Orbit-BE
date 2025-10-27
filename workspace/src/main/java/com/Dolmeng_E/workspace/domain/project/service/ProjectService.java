@@ -3,14 +3,11 @@ package com.Dolmeng_E.workspace.domain.project.service;
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessDetailRepository;
 import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupRepository;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectListDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectSettingDto;
+import com.Dolmeng_E.workspace.domain.project.dto.*;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
-import com.Dolmeng_E.workspace.domain.stone.dto.StoneSettingDto;
+import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
@@ -28,8 +25,13 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 import static com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole.ADMIN;
 
 @Service
@@ -240,6 +242,60 @@ public class ProjectService {
 
 // 내 프로젝트 목록 조회
 
+
+// 스톤 목록? 프로젝트 내에 스톤들 뿌리처럼 보이는 거
+    public List<StoneListResDto> getStoneList(String userId, String projectId) {
+
+        // 1. 워크스페이스, 사용자 검증
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("프로젝트가 존재하지 않습니다."));
+
+        Workspace workspace = project.getWorkspace();
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 존재하지 않습니다."));
+
+        // 2. 프로젝트 참여자인지 검증
+        projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, participant)
+                .orElseThrow(() -> new EntityNotFoundException("프로젝트 참여자가 아닙니다."));
+
+        // 3. 프로젝트 내 모든 스톤 조회 (삭제된 스톤 제외)
+        List<Stone> stones = stoneRepository.findByProjectAndIsDeleteFalse(project);
+
+        // 4. DTO 변환 후 맵 구성 (id 기준으로 빠르게 탐색)
+        Map<String, StoneListResDto> dtoMap = stones.stream()
+                .collect(Collectors.toMap(
+                        Stone::getId,
+                        s -> StoneListResDto.builder()
+                                .stoneId(s.getId())
+                                .stoneName(s.getStoneName())
+                                .startTime(s.getStartTime())
+                                .endTime(s.getEndTime())
+                                .createdAt(s.getCreatedAt())
+                                .parentStoneId(s.getParentStoneId() != null ? s.getParentStoneId() : null)
+                                .childStone(new ArrayList<>()) // 초기화
+                                .build()
+                ));
+
+        // 5. 트리 구성
+        List<StoneListResDto> roots = new ArrayList<>();
+
+        for (StoneListResDto dto : dtoMap.values()) {
+            if (dto.getParentStoneId() == null) {
+                // 부모가 없는 스톤 = 루트
+                roots.add(dto);
+            } else {
+                // 부모가 있으면 부모의 child 리스트에 추가
+                StoneListResDto parent = dtoMap.get(dto.getParentStoneId());
+                if (parent != null) {
+                    parent.getChildStone().add(dto);
+                }
+            }
+        }
+
+        // 6. 트리 형태로 반환
+        return roots;
+    }
 
 
 

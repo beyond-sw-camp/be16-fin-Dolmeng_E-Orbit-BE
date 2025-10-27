@@ -117,6 +117,27 @@ public class ChatService {
         chatRoomRepository.save(chatRoom);
     }
 
+    // 채팅방에 인원 초대
+    public ChatRoom inviteChatParticipants(ChatInviteReqDto dto) {
+        // 채팅방 조회
+        ChatRoom chatRoom =
+                chatRoomRepository.findByWorkspaceIdAndProjectIdAndStoneIdAndIsDelete(dto.getWorkspaceId(),
+                        dto.getProjectId(),
+                        dto.getStoneId(),
+                        "N").orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
+
+        // 초대한 인원들을 참여자로 등록
+        for(UUID userId : dto.getUserIdList()) {
+            ChatParticipant chatParticipant = ChatParticipant.builder()
+                    .chatRoom(chatRoom)
+                    .userId(userId)
+                    .build();
+            chatRoom.getChatParticipantList().add(chatParticipant);
+        }
+
+        return chatRoom;
+    }
+
     // 채팅방 목록 조회
     public List<ChatRoomListResDto> getChatRoomListByWorkspace(String workspaceId, String userId) {
         UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(userId);
@@ -136,8 +157,10 @@ public class ChatService {
 
             List<String> userProfileImageUrlList = new ArrayList<>();
             for (ChatParticipant p : room.getChatParticipantList()) {
-                String userProfileImageUrl = userFeignClient.fetchUserInfoById(String.valueOf(p.getUserId())).getProfileImageUrl();
-                userProfileImageUrlList.add(userProfileImageUrl);
+                if(!p.getUserId().equals(senderInfo.getUserId())) {
+                    String userProfileImageUrl = userFeignClient.fetchUserInfoById(String.valueOf(p.getUserId())).getProfileImageUrl();
+                    userProfileImageUrlList.add(userProfileImageUrl);
+                }
             }
 
             ChatRoomListResDto chatRoomDto = ChatRoomListResDto.builder()
@@ -217,6 +240,7 @@ public class ChatService {
                     .lastSendTime(dto.getLastSendTime())
                     .lastSenderId(dto.getSenderId())
                     .unreadCount(unreadCount)
+                    .messageType(dto.getMessageType())
                     .build();
 
             // 각 사용자별 summary 토픽 전송

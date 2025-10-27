@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -21,4 +22,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     """)
     List<ChatRoom> findAllByUserAndWorkspace(@Param("userId") UUID userId,
                                              @Param("workspaceId") String workspaceId);
+
+    Optional<ChatRoom> findByWorkspaceIdAndProjectIdAndStoneIdAndIsDelete(
+            String workspaceId,
+            String projectId,
+            String stoneId,
+            String isDelete
+    );
 }

@@ -2,6 +2,7 @@ package com.Dolmeng_E.chat_db.common.service;
 
 import com.Dolmeng_E.chat_db.common.dto.UserInfoResDto;
 import com.Dolmeng_E.chat_db.domain.dto.ChatMessageDto;
+import com.Dolmeng_E.chat_db.domain.entity.MessageType;
 import com.Dolmeng_E.chat_db.domain.feignclient.UserFeignClient;
 import com.Dolmeng_E.chat_db.domain.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -29,11 +30,11 @@ public class KafkaService {
     private final UserFeignClient userFeignClient;
 
     // producer
-    public void kafkaMessageKeyCreate(ChatMessageDto dto) {
-        log.info("kafkaMessageKeyCreate() - dto: " + dto);
+    public void kafkaChatMessageSent(ChatMessageDto dto) {
+        log.info("kafkaChatMessageSent() - dto: " + dto);
         try {
             String data = objectMapper.writeValueAsString(dto);
-            kafkaTemplate.send("chat-service",Long.toString(dto.getRoomId()), data);
+            kafkaTemplate.send("chat.message.sent",Long.toString(dto.getRoomId()), data);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -41,26 +42,56 @@ public class KafkaService {
 
     // consumer
     @KafkaListener(
-            topics = "chat-service",
+            topics = "chat.message.sent",
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "kafkaListener"
     )
-    public void chatConsumer(@Header(KafkaHeaders.RECEIVED_KEY) String key, String message, Acknowledgment ack) throws JsonProcessingException {
-        log.info("chatConsumer() - key : " + key + "message: " + message);
+    public void sentChatConsumer(@Header(KafkaHeaders.RECEIVED_KEY) String key, String message, Acknowledgment ack) throws JsonProcessingException {
+        log.info("sentChatConsumer() - key : " + key + "message: " + message);
 
         // 채팅방
         ChatMessageDto chatMessageDto = objectMapper.readValue(message, ChatMessageDto.class);
         // sender정보 가져와서, 이름이랑 프로필 이미지 담기
         UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(chatMessageDto.getSenderId());
+
         chatMessageDto.setSenderName(senderInfo.getUserName());
         chatMessageDto.setUserProfileImageUrl(senderInfo.getProfileImageUrl());
 
-        messageTemplate.convertAndSend("/topic/"+key, chatMessageDto);
+        if(chatMessageDto.getMessageType() == MessageType.TEXT) {
+            messageTemplate.convertAndSend("/topic/"+key, chatMessageDto);
+
+            // 위 작업들 문제없으면 커밋 (offset)
+            ack.acknowledge();
+        }
+    }
+
+    @KafkaListener(
+            topics = "chat.message.saved",
+            groupId = "${spring.kafka.consumer.group-id}",
+            containerFactory = "kafkaListener"
+    )
+    public void savedChatConsumer(@Header(KafkaHeaders.RECEIVED_KEY) String key, String message, Acknowledgment ack) throws JsonProcessingException {
+        log.info("savedChatConsumer() - key : " + key + "message: " + message);
+
+        // 채팅방
+        ChatMessageDto chatMessageDto = objectMapper.readValue(message, ChatMessageDto.class);
 
         // 채팅방 목록
         chatService.broadcastChatSummary(chatMessageDto);
+        // sender정보 가져와서, 이름이랑 프로필 이미지 담기
+        UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(chatMessageDto.getSenderId());
+        chatMessageDto.setSenderName(senderInfo.getUserName());
+        chatMessageDto.setUserProfileImageUrl(senderInfo.getProfileImageUrl());
 
-        // 위 작업들 문제없으면 커밋 (offset)
-        ack.acknowledge();
+        if(chatMessageDto.getMessageType() == MessageType.FILE) {
+            messageTemplate.convertAndSend("/topic/"+key, chatMessageDto);
+
+            // 위 작업들 문제없으면 커밋 (offset)
+            ack.acknowledge();
+        } else if(chatMessageDto.getMessageType() == MessageType.TEXT_WITH_FILE) {
+            messageTemplate.convertAndSend("/topic/"+key, chatMessageDto);
+            ack.acknowledge();
+        }
+
     }
 }

@@ -20,10 +20,5 @@ public class StompController {
 
     @MessageMapping("/{roomId}")
     public void sendMessage(@DestinationVariable Long roomId, ChatMessageDto dto) {
-        log.info("sendMessage() - roomId: " + roomId + ", dto : " + dto);
-
-        // roomId 붙여서 카프카 메시지 발행
-        dto.setRoomId(roomId);
-        kafkaService.kafkaMessageKeyCreate(dto);
     }
 }

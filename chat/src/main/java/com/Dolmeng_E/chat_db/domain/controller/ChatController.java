@@ -1,6 +1,7 @@
 package com.Dolmeng_E.chat_db.domain.controller;
 
 import com.Dolmeng_E.chat_db.domain.dto.*;
+import com.Dolmeng_E.chat_db.domain.entity.ChatRoom;
 import com.Dolmeng_E.chat_db.domain.service.ChatService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
@@ -23,6 +24,13 @@ public class ChatController {
     public ResponseEntity<?> createChatRoom(@RequestBody @Valid ChatCreateReqDto dto) {
         chatService.createChatRoom(dto);
         return new ResponseEntity<>(new CommonSuccessDto(dto.getRoomName(), HttpStatus.OK.value(), "채팅방 생성 성공"), HttpStatus.OK);
+    }
+
+    // 채팅방에 인원 초대
+    @PostMapping("/room/new-user")
+    public ResponseEntity<?> inviteChatParticipants(@RequestBody @Valid ChatInviteReqDto dto) {
+        ChatRoom chatRoom = chatService.inviteChatParticipants(dto);
+        return new ResponseEntity<>(new CommonSuccessDto(chatRoom.getName(), HttpStatus.OK.value(), "채팅방 초대 성공"), HttpStatus.OK);
     }
 
     // 채팅방 목록 조회

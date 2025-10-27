@@ -294,7 +294,12 @@ public class WorkspaceService {
                 }
 
                 // 2️. 존재하지만 삭제된 경우 → 복귀 처리
+                // 추가 : 삭제 시 권한그룹을 없앴기 때문에 다시 일반 권한그룹으로 추가
                 existing.restoreParticipant();
+                AccessGroup accessGroup = accessGroupRepository.findByWorkspaceIdAndAccessGroupName(workspaceId,"일반 유저 그룹")
+                        .orElseThrow(()->new EntityNotFoundException("권한그룹이 존재하지 않습니다."));
+                existing.setAccessGroup(accessGroup);
+                workspaceParticipantRepository.save(existing);
                 continue;
             }
 
@@ -405,7 +410,8 @@ public class WorkspaceService {
     }
 
 
-//    워크스페이스 회원 삭제
+    //    워크스페이스 회원 삭제
+    @Transactional
     public void deleteWorkspaceParticipants(String userId, String workspaceId, WorkspaceDeleteUserDto dto) {
         // 1. 관리자 확인
         UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
@@ -418,7 +424,7 @@ public class WorkspaceService {
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스에 존재하지 않습니다."));
 
         if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new EntityNotFoundException("관리자만 회원 삭제가 가능합니다.");
+            throw new IllegalArgumentException("관리자만 회원 삭제가 가능합니다.");
         }
 
         // 2. 자기 자신 포함 방지
@@ -426,12 +432,19 @@ public class WorkspaceService {
             throw new IllegalArgumentException("관리자는 자기 자신을 삭제할 수 없습니다.");
         }
 
-        // 3. 유저 리스트 순회하면서 논리 삭제 처리
+        // 3. 유저 리스트 순회하면서 논리 삭제 및 그룹 해제 처리
         for (UUID targetUserId : dto.getUserIdList()) {
             WorkspaceParticipant target = workspaceParticipantRepository
                     .findByWorkspaceIdAndUserId(workspaceId, targetUserId)
                     .orElseThrow(() -> new EntityNotFoundException("삭제 대상 사용자를 찾을 수 없습니다."));
 
+            // 사용자 그룹 매핑(UserGroupMapping) 삭제
+            userGroupMappingRepository.deleteByWorkspaceParticipant(target);
+
+            // 권한그룹 연결 해제
+            target.setAccessGroup(null);
+
+            // 논리 삭제 처리
             if (!target.isDelete()) {
                 target.deleteParticipant();
                 workspaceParticipantRepository.save(target);
@@ -888,6 +901,50 @@ public class WorkspaceService {
                 .userInfoList(filteredList)
                 .build();
     }
+
+    // 권한그룹이 없는 워크스페이스 참여자 조회
+    @Transactional(readOnly = true)
+    public List<UserInfoResDto> searchWorkspaceParticipantsNotInAccessGroup(String userId, SearchDto dto) {
+
+        // 1. 워크스페이스 조회
+        Workspace workspace = workspaceRepository.findById(dto.getWorkspaceId())
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스가 존재하지 않습니다."));
+
+        // 2. 요청자 검증
+        UserInfoResDto requesterInfo = userFeign.fetchUserInfoById(userId);
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), requesterInfo.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
+
+        // 3. 관리자 권한 검증
+        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+            throw new IllegalArgumentException("관리자 권한이 필요합니다.");
+        }
+
+        // 4. 워크스페이스 전체 참여자 목록 조회
+        List<WorkspaceParticipant> participants = workspaceParticipantRepository.findByWorkspaceId(workspace.getId());
+
+        // 5. AccessGroup 연결되지 않은 참여자만 필터링
+        List<WorkspaceParticipant> notInAccessGroup = participants.stream()
+                .filter(p -> p.getAccessGroup() == null)
+                .toList();
+
+        // 6. 사용자 정보 조회 (Feign)
+        List<UUID> userIds = notInAccessGroup.stream()
+                .map(WorkspaceParticipant::getUserId)
+                .toList();
+
+        if (userIds.isEmpty()) return List.of();
+
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(new UserIdListDto(userIds));
+
+        // 7. 검색 키워드 필터링
+        String keyword = dto.getSearchKeyword();
+        return userInfoListResDto.getUserInfoList().stream()
+                .filter(u -> keyword == null || keyword.isBlank() || u.getUserName().contains(keyword))
+                .toList();
+    }
+
 
 
 
