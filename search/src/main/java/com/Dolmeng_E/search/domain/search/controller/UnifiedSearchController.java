@@ -8,18 +8,26 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/search")
 @RequiredArgsConstructor
 public class UnifiedSearchController {
 
     private final UnifiedSearchService unifiedSearchService;
 
-    @GetMapping
-    public ResponseEntity<?> searchDocumentByTitle(@RequestParam String title) {
+    @GetMapping("/search")
+    public ResponseEntity<?> searchDocument(@RequestParam String keyword) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(unifiedSearchService.searchDocumentByTitle(title))
+                .result(unifiedSearchService.search(keyword, "회원ID"))
                 .statusCode(HttpStatus.OK.value())
-                .statusMessage("이름을 통한 검색 성공")
+                .statusMessage("검색 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    @GetMapping("/suggest")
+    public ResponseEntity<?> suggestDocument(@RequestParam String keyword) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(unifiedSearchService.suggest(keyword, "회원ID"))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("검색어 제안")
                 .build(), HttpStatus.OK);
     }
 }

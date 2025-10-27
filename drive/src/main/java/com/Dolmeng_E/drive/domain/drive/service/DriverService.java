@@ -151,12 +151,17 @@ public class DriverService {
                     .build();
         Document savedDocument = documentRepository.save(document);
 
+        List<String> viewableUserIds = new ArrayList<>();
+        viewableUserIds.add(savedDocument.getCreatedBy());
         // kafka 메시지 발행
         DocumentKafkaDto documentKafkaDto = DocumentKafkaDto.builder()
                 .eventType("DOCUMENT_CREATED")
                 .eventPayload(DocumentKafkaDto.EventPayload.builder()
-                        .originalId(savedDocument.getId())
+                        .id(savedDocument.getId())
+                        .createdBy(savedDocument.getCreatedBy())
                         .searchTitle(savedDocument.getTitle())
+                        .createdAt(savedDocument.getCreatedAt())
+                        .viewableUserIds(viewableUserIds)
                         .build())
                 .build();
         try {

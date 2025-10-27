@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,13 +21,12 @@ public class EventDto {
     @AllArgsConstructor
     @Builder
     public static class EventPayload{
-        private String originalId;
+        private String id;
         private String searchTitle;
         private String searchContent;
-        private String projectId;
-        private String stoneId;
-        private Boolean isCompleted;
-        private String profileImageUrl;
+        private String createdBy;
+        private List<String> viewableUserIds;
+        private LocalDateTime createdAt;
     }
 }
 
