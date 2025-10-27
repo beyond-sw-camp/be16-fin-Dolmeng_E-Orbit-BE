@@ -255,10 +255,11 @@ public class ProjectService {
                 .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 존재하지 않습니다."));
 
-        // 2. 프로젝트 참여자인지 검증
-        projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, participant)
-                .orElseThrow(() -> new EntityNotFoundException("프로젝트 참여자가 아닙니다."));
-
+        // 2. 프로젝트 참여자인지 검증(관리자는 프로젝트 참여자 아니어도 허용)
+        if(!participant.getWorkspaceRole().equals(ADMIN)) {
+            projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, participant)
+                    .orElseThrow(() -> new EntityNotFoundException("프로젝트 참여자가 아닙니다."));
+        }
         // 3. 프로젝트 내 모든 스톤 조회 (삭제된 스톤 제외)
         List<Stone> stones = stoneRepository.findByProjectAndIsDeleteFalse(project);
 
