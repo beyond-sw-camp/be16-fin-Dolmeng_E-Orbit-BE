@@ -3,10 +3,7 @@ package com.Dolmeng_E.search.domain.search.entity;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.DateFormat;
-import org.springframework.data.elasticsearch.annotations.Document;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,6 +11,7 @@ import java.util.List;
 @Data
 @Builder
 @Document(indexName = "stones")
+@Setting(settingPath = "elasticsearch/nori-edge-ngram-analyser.json")
 public class StoneDocument {
     // --- 공통 식별 필드 ---
     // 검색 대상 ID
@@ -31,7 +29,17 @@ public class StoneDocument {
 
     // --- 검색 대상 필드 ---
     // 제목
-    @Field(type = FieldType.Text, analyzer = "nori")
+    @MultiField(
+            mainField = @Field(type = FieldType.Text, analyzer = "nori"), // searchTitle (기본 필드)
+            otherFields = {
+                    @InnerField( // searchTitle.ngram (자동완성용 서브 필드)
+                            suffix = "ngram",
+                            type = FieldType.Text,
+                            analyzer = "nori_edge_ngram_analyzer", // 인덱싱(저장) 시
+                            searchAnalyzer = "nori_search_analyzer" // 검색 시
+                    )
+            }
+    )
     private String searchTitle;
 
     // 설명
@@ -45,12 +53,12 @@ public class StoneDocument {
 
     // --- URL 생성 및 UI 표시용 필드 ---
     // 완료 여부
-    @Field(type = FieldType.Boolean)
-    private Boolean isDelete;
+    @Field(type = FieldType.Keyword)
+    private Status stoneStatus;
 
     // 생성일
     @Field(type = FieldType.Date, format = DateFormat.date_time)
-    private LocalDateTime createdAt;
+    private LocalDateTime dateTime;
 
     // 생성자 프로필 이미지
     @Field(type = FieldType.Keyword, index = false)
