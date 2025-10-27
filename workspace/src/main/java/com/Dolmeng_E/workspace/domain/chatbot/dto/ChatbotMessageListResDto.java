@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -14,11 +16,13 @@ import lombok.NoArgsConstructor;
 public class ChatbotMessageListResDto {
     private String content;
     private ChatbotMessageType type;
+    private LocalDateTime timestamp;
 
     public static ChatbotMessageListResDto fromEntity(ChatbotMessage chatbotMessage) {
         return ChatbotMessageListResDto.builder()
                 .content(chatbotMessage.getContent())
                 .type(chatbotMessage.getType())
+                .timestamp(chatbotMessage.getCreatedAt())
                 .build();
     }
 }
