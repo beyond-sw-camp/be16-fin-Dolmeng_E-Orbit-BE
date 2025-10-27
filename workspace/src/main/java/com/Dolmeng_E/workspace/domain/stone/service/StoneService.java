@@ -83,6 +83,7 @@ public class StoneService {
                 .status(StoneStatus.PROGRESS) // 최초 상태는 진행중으로 세팅
                 .build()
         ).getId();
+        //todo chatCreation이 true면 채팅방 생성 로직 추가해야함.
 
     }
 
@@ -156,6 +157,8 @@ public class StoneService {
                         .status(StoneStatus.PROGRESS)
                         .build()
         );
+        //todo chatCreation이 true면 채팅방 생성 로직 추가해야함.
+
 
         // 8. 상위 스톤의 자식 스톤 리스트 등록
         childStoneListRepository.save(
@@ -422,8 +425,8 @@ public class StoneService {
         stoneParticipantRepository.save(stoneParticipant);
     }
 
-// 스톤 정보 수정
-    public void modifyStone(String userId, StoneModifyDto dto) {
+    // 스톤 정보 수정
+    public String modifyStone(String userId, StoneModifyDto dto) {
         // 1. 스톤 조회
         Stone stone = stoneRepository.findById(dto.getStoneId())
                 .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
@@ -437,7 +440,7 @@ public class StoneService {
                 .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
-        // 4. 스톤 관련 권한 검증(프로젝트 담당자와 스톤 담당자만 참여자 추가 가능하도록)
+        // 4. 권한 검증
         if (!participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             if (!project.getWorkspaceParticipant().getId().equals(participant.getId())
                     && !stone.getStoneManager().getId().equals(participant.getId())) {
@@ -446,18 +449,30 @@ public class StoneService {
         }
 
         // 5. 기본 필드 수정 (null 체크해서 들어온 값만 반영)
-        if (dto.getStoneName() != null) {
-            stone.setStoneName(dto.getStoneName());
-        }
-        if (dto.getStartTime() != null) {
-            stone.setStartTime(dto.getStartTime());
-        }
-        if (dto.getEndTime() != null) {
-            stone.setEndTime(dto.getEndTime());
+        if (dto.getStoneName() != null) stone.setStoneName(dto.getStoneName());
+        if (dto.getStartTime() != null) stone.setStartTime(dto.getStartTime());
+        if (dto.getEndTime() != null) stone.setEndTime(dto.getEndTime());
+
+        // 6. 채팅방 생성 여부 방어 로직
+        if (dto.getChatCreation() != null) {
+            boolean prev = stone.getChatCreation();  // 현재 DB에 저장된 상태
+            boolean next = dto.getChatCreation();   // 수정 요청 값
+
+            // 이미 true인데 false로 바꾸려 하면 막기
+            if (prev && !next) {
+                throw new IllegalStateException("이미 생성된 채팅방은 비활성화할 수 없습니다.");
+            }
+
+//            // false → true 전환만 허용
+//            if (!prev && next) {
+//                stone.setChatCreation(true);
+//                // todo 추후에 여기서 chatRoomService.createChatRoom(stone) 붙여야함
+//            }
         }
 
-        // 6. 수정된 스톤 저장
+        // 7. 수정된 스톤 저장
         stoneRepository.save(stone);
+        return stone.getId();
     }
 
     // 스톤 담당자 수정
@@ -485,7 +500,7 @@ public class StoneService {
         }
 
         // 5. 새 담당자 검증
-        WorkspaceParticipant newManager = workspaceParticipantRepository.findById(dto.getNewManagerId())
+        WorkspaceParticipant newManager = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),dto.getNewManagerUserId())
                 .orElseThrow(() -> new EntityNotFoundException("새 담당자 정보를 찾을 수 없습니다."));
 
         // 같은 워크스페이스 소속인지 검증 (보안 강화)
@@ -508,6 +523,9 @@ public class StoneService {
 
         // 8. 변경된 스톤 저장
         stoneRepository.save(stone);
+
+        //todo chatCreation이 true면 채팅방 생성 로직 추가해야함. 수정의 경우, false -> true가 돼도 기존에 채팅방이 생성되어있으면 생성안되게
+
     }
 
     // 스톤 삭제

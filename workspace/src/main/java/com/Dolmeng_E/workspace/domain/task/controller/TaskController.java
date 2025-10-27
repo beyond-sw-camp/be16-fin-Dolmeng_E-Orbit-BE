@@ -2,12 +2,15 @@ package com.Dolmeng_E.workspace.domain.task.controller;
 
 import com.Dolmeng_E.workspace.domain.task.dto.TaskCreateDto;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskModifyDto;
+import com.Dolmeng_E.workspace.domain.task.dto.TaskResDto;
 import com.Dolmeng_E.workspace.domain.task.service.TaskService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/task")
@@ -65,6 +68,21 @@ public class TaskController {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("태스크 완료 처리 성공")
                 .result("마일스톤: " + taskService.completeTask(userId, taskId) + "%")
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
+
+    // 태스크 목록 조회
+    @GetMapping("/{stoneId}")
+    public ResponseEntity<?> getTaskList(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String stoneId
+    ) {
+        List<TaskResDto> dto = taskService.getTaskList(userId, stoneId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("태스크 완료 처리 성공")
+                .result(dto)
                 .statusCode(HttpStatus.OK.value())
                 .build()
                 ,HttpStatus.OK);

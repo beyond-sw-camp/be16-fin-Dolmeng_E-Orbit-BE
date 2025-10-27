@@ -8,6 +8,7 @@ import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepositor
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskCreateDto;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskModifyDto;
+import com.Dolmeng_E.workspace.domain.task.dto.TaskResDto;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -214,5 +216,51 @@ public class TaskService {
 
         return stone.getMilestone();
 
+    }
+
+    // 태스크 목록 조회
+    public List<TaskResDto> getTaskList(String userId, String stoneId) {
+
+        // 1. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2. 스톤이 속한 프로젝트 및 워크스페이스 조회
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3. 요청 사용자 검증 (워크스페이스 소속 여부)
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 4. 접근 권한 검증
+        boolean isAuthorized =
+                participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN) ||
+                        project.getWorkspaceParticipant().getId().equals(participant.getId()) ||
+                        stone.getStoneManager().getId().equals(participant.getId()) ||
+                        stoneParticipantRepository.existsByStoneAndWorkspaceParticipant(stone, participant);
+
+        if (!isAuthorized) {
+            throw new IllegalArgumentException("해당 스톤에 접근할 권한이 없습니다.");
+        }
+
+        // 5. 태스크 목록 조회 로직
+        List<Task> taskList = taskRepository.findAllByStone(stone);
+
+        List<TaskResDto> result = taskList.stream()
+                .map(task -> TaskResDto.builder()
+                        .taskId(task.getId())
+                        .taskManagerId(task.getTaskManager().getId())
+                        .taskManagerUserId(task.getTaskManager().getUserId())
+                        .taskName(task.getTaskName())
+                        .startTime(task.getStartTime())
+                        .endTime(task.getEndTime())
+                        .isDone(task.getIsDone())
+                        .build()
+                )
+                .toList();
+
+        return result;
     }
 }

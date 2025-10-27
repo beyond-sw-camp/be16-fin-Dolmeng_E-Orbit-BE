@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -20,7 +21,7 @@ public class ProjectModifyDto {
     private String projectObjective;
     private String projectDescription;
     private ProjectStatus projectStatus;
-    private String projectManagerId; // 새 담당자
+    private UUID projectManagerId; // 새 담당자
 
     public Project toEntity(Workspace workspace, WorkspaceParticipant workspaceParticipant) {
         return Project.builder()

@@ -104,10 +104,10 @@ public class StoneController {
     public ResponseEntity<?> modifyStone(@RequestHeader("X-User-Id") String userId,
                                          @RequestBody StoneModifyDto dto
     ) {
-        stoneService.modifyStone(userId, dto);
+        String stoneId = stoneService.modifyStone(userId, dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("스톤 정보 수정 완료")
-                .result(HttpStatus.OK)
+                .result(stoneId)
                 .statusCode(HttpStatus.OK.value())
                 .build()
                 ,HttpStatus.OK);

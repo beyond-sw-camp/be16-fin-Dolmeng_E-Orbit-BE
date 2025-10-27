@@ -114,7 +114,7 @@ public class ProjectService {
 
         // 4. 담당자 변경 처리 (선택)
         if (dto.getProjectManagerId() != null) {
-            WorkspaceParticipant newManager = workspaceParticipantRepository.findById(dto.getProjectManagerId())
+            WorkspaceParticipant newManager = workspaceParticipantRepository.findByWorkspaceIdAndUserId(dto.getWorkspaceId(), dto.getProjectManagerId())
                     .orElseThrow(() -> new EntityNotFoundException("변경할 담당자 정보를 찾을 수 없습니다."));
 
             if (!newManager.getWorkspace().getId().equals(dto.getWorkspaceId())) {
