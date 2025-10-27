@@ -149,7 +149,7 @@ public class DriverService {
                     .title(documentTitle)
                     .folder(folder)
                     .build();
-        Document savedDocument = documentRepository.save(document);
+        Document savedDocument = documentRepository.saveAndFlush(document);
 
         List<String> viewableUserIds = new ArrayList<>();
         viewableUserIds.add(savedDocument.getCreatedBy());
