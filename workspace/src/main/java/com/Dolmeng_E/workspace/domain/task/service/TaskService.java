@@ -125,18 +125,30 @@ public class TaskService {
         }
 
         // 4. 수정 가능한 필드만 변경
-        if (dto.getTaskName() != null) {
-            task.setTaskName(dto.getTaskName());
+        if (dto.getTaskName() != null) task.setTaskName(dto.getTaskName());
+        if (dto.getStartTime() != null) task.setStartTime(dto.getStartTime());
+        if (dto.getEndTime() != null) task.setEndTime(dto.getEndTime());
+
+        // 5. 태스크 담당자 교체 (선택적)
+        if (dto.getNewManagerUserId() != null) {
+            WorkspaceParticipant newManager = workspaceParticipantRepository
+                    .findByWorkspaceIdAndUserId(workspace.getId(), dto.getNewManagerUserId())
+                    .orElseThrow(() -> new EntityNotFoundException("새 담당자 정보를 찾을 수 없습니다."));
+
+            // 스톤 참여자 검증
+            if (!stoneParticipantRepository.existsByStoneAndWorkspaceParticipant(stone, newManager)) {
+                throw new IllegalArgumentException("해당 스톤의 참여자가 아닙니다.");
+            }
+
+            task.setTaskManager(newManager);
         }
-        if (dto.getStartTime() != null) {
-            task.setStartTime(dto.getStartTime());
-        }
-        if (dto.getEndTime() != null) {
-            task.setEndTime(dto.getEndTime());
-        }
+
+        // 6. 변경사항 저장
+        taskRepository.save(task);
 
         return task.getId();
     }
+
 
     // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
     public void deleteTask(String userId, String taskId) {

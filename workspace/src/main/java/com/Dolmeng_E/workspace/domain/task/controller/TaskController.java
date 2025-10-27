@@ -37,10 +37,10 @@ public class TaskController {
             @RequestHeader("X-User-Id") String userId,
             @RequestBody TaskModifyDto dto
     ) {
-        taskService.modifyTask(userId, dto);
+        String taskId = taskService.modifyTask(userId, dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("태스크 수정 완료")
-                .result(HttpStatus.OK)
+                .result(taskId)
                 .statusCode(HttpStatus.OK.value())
                 .build()
                 ,HttpStatus.OK);
