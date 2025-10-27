@@ -413,20 +413,37 @@ public class AccessGroupService {
             throw new IllegalArgumentException("관리자만 권한그룹을 수정할 수 있습니다.");
         }
 
-        // 3. 대상 유저 리스트 조회 (User 서비스에서)
+        // 3. 기본 그룹 조회 (비어있을 때 fallback용)
+        AccessGroup defaultGroup = accessGroupRepository
+                .findByWorkspaceIdAndAccessGroupName(workspace.getId(), DEFAULT_GROUP_NAME)
+                .orElseThrow(() -> new EntityNotFoundException("기본 권한그룹이 존재하지 않습니다."));
+
+        // 4. dto.getUserIdList()가 null 또는 비어있을 경우 → 전체 그룹 인원을 기본 그룹으로 이동
+        if (dto.getUserIdList() == null || dto.getUserIdList().isEmpty()) {
+            List<WorkspaceParticipant> participants =
+                    workspaceParticipantRepository.findByWorkspaceAndAccessGroup(workspace, accessGroup);
+
+            for (WorkspaceParticipant p : participants) {
+                if (p.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) continue;
+
+                // “삭제” 대신 “일반 그룹으로 이동”
+                p.setAccessGroup(defaultGroup);
+                workspaceParticipantRepository.save(p);
+            }
+            return;
+        }
+
+        // 5. 대상 유저 리스트 조회 (User 서비스에서)
         UserIdListDto userIdListDto = new UserIdListDto(dto.getUserIdList());
         UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
 
-        // 4. 기존 워크스페이스 참여자들의 권한그룹 업데이트
+        // 6. 기존 워크스페이스 참여자들의 권한그룹 업데이트
         for (UserInfoResDto userInfo : userInfoListResDto.getUserInfoList()) {
             WorkspaceParticipant participant = workspaceParticipantRepository
                     .findByWorkspaceIdAndUserId(workspace.getId(), userInfo.getUserId())
                     .orElseThrow(() -> new EntityNotFoundException("해당 사용자는 워크스페이스에 존재하지 않습니다."));
 
-            // 관리자면 건너뛰기 (ADMIN은 항상 유지)
-            if (participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-                continue; // 또는 log.warn("관리자는 권한그룹을 변경할 수 없습니다.");
-            }
+            if (participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) continue;
 
             participant.setAccessGroup(accessGroup);
             workspaceParticipantRepository.save(participant);

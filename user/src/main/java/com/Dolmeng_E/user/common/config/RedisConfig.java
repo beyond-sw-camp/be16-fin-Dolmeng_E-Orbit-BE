@@ -29,8 +29,29 @@ public class RedisConfig {
     }
 
     @Bean
+    @Qualifier("userInventory")
+    public RedisConnectionFactory userRedisConnectionFactory() {
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
+        configuration.setHostName(host);
+        configuration.setPort(port);
+        configuration.setDatabase(2);
+
+        return new LettuceConnectionFactory(configuration);
+    }
+
+    @Bean
     @Qualifier("rtInventory")
     public RedisTemplate<String, String> redisTemplate(@Qualifier("rtInventory") RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setValueSerializer(new StringRedisSerializer());
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
+        return redisTemplate;
+    }
+
+    @Bean
+    @Qualifier("userInventory")
+    public RedisTemplate<String, String> userRedisTemplate(@Qualifier("userInventory") RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new StringRedisSerializer());

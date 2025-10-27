@@ -37,4 +37,6 @@ public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceP
 
     List<WorkspaceParticipant> findByWorkspaceIdAndIsDeleteFalse(String workspaceId);
 
+    List<WorkspaceParticipant> findByWorkspaceAndAccessGroup(Workspace workspace, AccessGroup accessGroup);
+
 }

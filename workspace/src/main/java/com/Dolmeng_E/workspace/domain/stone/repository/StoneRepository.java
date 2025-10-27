@@ -9,4 +9,7 @@ import java.util.List;
 @Repository
 public interface StoneRepository extends JpaRepository<Stone, String> {
     List<Stone> findAllByProject(Project project);
+
+    // 특정 프로젝트 내 스톤 전체 조회 (삭제된 것 제외)
+    List<Stone> findByProjectAndIsDeleteFalse(Project project);
 }

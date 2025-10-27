@@ -1,9 +1,6 @@
 package com.Dolmeng_E.workspace.domain.project.controller;
 
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectCreateDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
-import com.Dolmeng_E.workspace.domain.project.dto.ProjectSettingDto;
+import com.Dolmeng_E.workspace.domain.project.dto.*;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.Dolmeng_E.workspace.domain.stone.dto.StoneSettingDto;
 import com.example.modulecommon.dto.CommonSuccessDto;
@@ -95,7 +92,20 @@ public class ProjectController {
 
 // 프로젝트 참여자 목록 조회
 
-// 스톤 목록? 프로젝트 내에 스톤들 뿌리처럼 보이는 거
+// 스톤 목록 조회(root 구조)
+    @GetMapping("/stones/{projectId}")
+    public ResponseEntity<?> getStoneList(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String projectId
+    ) {
+        List<StoneListResDto> dto = projectService.getStoneList(userId,projectId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤목록 조회 완료")
+                .result(dto)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
 
 }
