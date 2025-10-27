@@ -39,8 +39,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 	implementation 'org.springframework.kafka:spring-kafka' // Kafka 이벤트 수신용
 
-	//    msa간에 통신을 위한 openfeign의존성 추가
-	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 	//    circuit 브레이커 도입시
 	implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'

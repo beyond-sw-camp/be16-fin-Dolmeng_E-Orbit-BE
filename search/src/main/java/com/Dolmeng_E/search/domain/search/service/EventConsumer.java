@@ -1,19 +1,28 @@
 package com.Dolmeng_E.search.domain.search.service;
 
 import com.Dolmeng_E.search.domain.search.dto.EventDto;
-import com.Dolmeng_E.search.domain.search.entity.UnifiedSearchDocument;
-import com.Dolmeng_E.search.domain.search.repository.UnifiedSearchRepository;
+import com.Dolmeng_E.search.domain.search.entity.DocumentDocument;
+import com.Dolmeng_E.search.domain.search.repository.DocumentDocumentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
-@RequiredArgsConstructor
 public class EventConsumer {
-    private final UnifiedSearchRepository unifiedSearchRepository;
     private final ObjectMapper objectMapper; // JSON 파싱용
+    private final HashOperations<String, String, String> hashOperations;
+    private final DocumentDocumentRepository documentDocumentRepository;
+
+    public EventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository) {
+        this.objectMapper = objectMapper;
+        this.hashOperations = redisTemplate.opsForHash();
+        this.documentDocumentRepository = documentDocumentRepository;
+    }
 
     @KafkaListener(topics = "document-topic", groupId = "search-consumer-group")
     public void handleDocument(String eventMessage, Acknowledgment ack) {
@@ -28,22 +37,28 @@ public class EventConsumer {
                 case "DOCUMENT_CREATED":
                 case "DOCUMENT_UPDATED":
                     // 생성과 수정은 ES에서 동일하게 save()를 사용 (Upsert: 없으면 생성, 있으면 덮어쓰기)
-                    UnifiedSearchDocument document = UnifiedSearchDocument.builder()
-                            .id(eventPayload.getOriginalId())
+                    Map<String, String> userInfo = hashOperations.entries("user:"+eventPayload.getCreatedBy());
+                    DocumentDocument document = DocumentDocument.builder()
+                            .id(eventPayload.getId())
                             .docType("DOCUMENT")
                             .searchTitle(eventPayload.getSearchTitle())
                             .searchContent(eventPayload.getSearchContent())
+                            .dateTime(eventPayload.getCreatedAt())
+                            .viewableUserIds(eventPayload.getViewableUserIds())
+                            .createdBy(eventPayload.getCreatedBy())
+                            .creatorName(userInfo.get("name"))
+                            .profileImage(userInfo.get("profileImage"))
                             .build();
-                    unifiedSearchRepository.save(document); // ES에 저장 또는 업데이트
+                    documentDocumentRepository.save(document); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + document.getId());
                     ack.acknowledge();
                     break;
 
                 case "DOCUMENT_DELETED":
                     // 삭제는 ID만 파싱
-                    String deletedDocumentId = eventPayload.getOriginalId();
+                    String deletedDocumentId = eventPayload.getId();
 
-                    unifiedSearchRepository.deleteById(deletedDocumentId); // ES에서 삭제
+                    documentDocumentRepository.deleteById(deletedDocumentId); // ES에서 삭제
                     ack.acknowledge();
                     System.out.println("ES 삭제(D) 성공: " + deletedDocumentId);
                     break;
