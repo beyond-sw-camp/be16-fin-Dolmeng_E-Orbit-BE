@@ -40,7 +40,8 @@ public class JwtAuthFilter implements GlobalFilter {
             "/connect/**",
             "/drive/**",
             "/documentLine/**",
-            "/ws/**"
+            "/ws/**",
+            "/notification/new-noti"
     );
 
     private static final List<String> ADMIN_ONLY_PATH = List.of(

@@ -18,7 +18,7 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     // 알림 생성
-    @PostMapping("/")
+    @PostMapping("/new-noti")
     public ResponseEntity<?> createNotification(@RequestBody NotificationCreateReqDto dto) {
         notificationService.createNotification(dto);
         return new ResponseEntity<>(new CommonSuccessDto("CREATED", HttpStatus.CREATED.value(), "알림 생성 성공"), HttpStatus.CREATED);

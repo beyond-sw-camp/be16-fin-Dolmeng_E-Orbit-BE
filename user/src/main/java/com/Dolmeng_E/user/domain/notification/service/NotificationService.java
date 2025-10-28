@@ -18,6 +18,7 @@ import java.util.UUID;
 public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationKafkaService notificationKafkaService;
 
     // 알림 생성
     public void createNotification(NotificationCreateReqDto reqDto) {
@@ -30,6 +31,8 @@ public class NotificationService {
                     .type(reqDto.getType())
                     .user(user)
                     .build();
+
+            notificationKafkaService.kafkaNotificationPublish(reqDto);
 
             notificationRepository.save(notification);
         }
