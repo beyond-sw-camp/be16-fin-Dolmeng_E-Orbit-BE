@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.task.service;
 
+import com.Dolmeng_E.workspace.common.service.MilestoneCalculator;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
@@ -35,6 +36,7 @@ public class TaskService {
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
     private final WorkspaceRepository workspaceRepository;
     private final StoneParticipantRepository stoneParticipantRepository;
+    private final MilestoneCalculator milestoneCalculator;
 
     // 태스크 생성(생성시 스톤의 task수 반영 필요)
     public String createTask(String userId, TaskCreateDto dto) {
@@ -62,6 +64,11 @@ public class TaskService {
         // 스톤이 최상위 스톤이면 task 생성 불가
         if(stone.getParentStoneId()==null) {
             throw new IllegalArgumentException("최상위 스톤은 태스크 생성 불가합니다.");
+        }
+
+        // 스톤이 완료처리 되었다면 Task 생성 불가
+        if(stone.getStatus().equals(StoneStatus.COMPLETED)) {
+            throw new IllegalArgumentException("완료처리된 스톤에 task 생성 불가능합니다.");
         }
 
         // 3. 태스크 담당자 검증(스톤 참여자 혹은 스톤 담당자만 가능)
@@ -96,9 +103,10 @@ public class TaskService {
 
         // 6. 스톤의 태스크 수 갱신
         stone.incrementTaskCount();
+        stoneRepository.save(stone);
 
         // 7. 마일스톤 업데이트
-        stone.updateMilestone();
+        milestoneCalculator.updateStoneAndParents(stone);
 
         return task.getId();
 
@@ -194,7 +202,7 @@ public class TaskService {
         stone.decrementTaskCount();
 
         // 6. 마일스톤 갱신
-        stone.updateMilestone();
+        milestoneCalculator.updateStoneAndParents(stone);
     }
 
 
@@ -234,9 +242,10 @@ public class TaskService {
 
         // 5. 스톤의 완료된 태스크 수 증가
         stone.incrementCompletedCount();
+        stoneRepository.save(stone);
 
         // 6. 마일스톤(진척도) 반영
-        stone.updateMilestone();
+        milestoneCalculator.updateStoneAndParents(task.getStone());
 
         return stone.getMilestone();
 

@@ -12,4 +12,6 @@ public interface StoneRepository extends JpaRepository<Stone, String> {
 
     // 특정 프로젝트 내 스톤 전체 조회 (삭제된 것 제외)
     List<Stone> findByProjectAndIsDeleteFalse(Project project);
+
+    List<Stone> findAllByParentStoneIdAndIsDeleteFalse(String stoneId);
 }
