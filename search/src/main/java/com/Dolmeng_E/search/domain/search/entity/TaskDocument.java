@@ -31,13 +31,13 @@ public class TaskDocument {
     // --- 검색 대상 필드 ---
     // 제목
     @MultiField(
-            mainField = @Field(type = FieldType.Text, analyzer = "nori"), // searchTitle (기본 필드)
+            mainField = @Field(type = FieldType.Text, analyzer = "nori"), // searchTitle
             otherFields = {
-                    @InnerField( // searchTitle.ngram (자동완성용 서브 필드)
+                    @InnerField( // searchTitle.ngram
                             suffix = "ngram",
                             type = FieldType.Text,
-                            analyzer = "nori_edge_ngram_analyzer", // 인덱싱(저장) 시
-                            searchAnalyzer = "nori_search_analyzer" // 검색 시
+                            analyzer = "nori_edge_ngram_analyzer",
+                            searchAnalyzer = "nori_search_analyzer"
                     )
             }
     )

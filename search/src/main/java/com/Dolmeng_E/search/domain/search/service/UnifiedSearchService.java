@@ -1,6 +1,6 @@
 package com.Dolmeng_E.search.domain.search.service;
 
-import co.elastic.clients.elasticsearch._types.query_dsl.Operator; // ✅ import 문 추가
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.Dolmeng_E.search.domain.search.dto.DocumentResDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -32,11 +32,11 @@ public class UnifiedSearchService {
             IndexCoordinates.of("stones", "documents", "files", "tasks");
 
     /**
-     * ✅ 통합 검색 수행
+     * ✅ 통합 검색 수행 (변경 없음)
+     * (검색: searchTitle.ngram (N-gram) OR searchContent (Nori))
      */
     public List<DocumentResDto> search(String keyword, String currentUserId) {
 
-        String[] searchFields = {"searchTitle", "searchContent"};
         Pageable pageable = PageRequest.of(0, 20);
 
         // 1. HighlightParameters 생성
@@ -62,13 +62,29 @@ public class UnifiedSearchService {
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
+                                // 1. N-gram(제목)과 Nori(내용)를 OR로 묶음
                                 .must(m -> m
-                                        .multiMatch(mm -> mm
-                                                .query(keyword)
-                                                .fields(List.of(searchFields))
-                                                .operator(Operator.And) // [수정] Operator.And Enum 값 사용
+                                        .bool(bShould -> bShould
+                                                .should(s -> s
+                                                        // 2-1. searchTitle.ngram (N-gram 검색)
+                                                        .match(mt -> mt
+                                                                .field("searchTitle.ngram")
+                                                                .query(keyword)
+                                                        )
+                                                )
+                                                .should(s -> s
+                                                        // 2-2. searchContent (Nori 검색)
+                                                        .match(mt -> mt
+                                                                .field("searchContent")
+                                                                .query(keyword)
+                                                                .analyzer("nori")
+                                                                .operator(Operator.And)
+                                                        )
+                                                )
+                                                .minimumShouldMatch("1") // 둘 중 하나만 맞아도 됨
                                         )
                                 )
+                                // 3. 사용자 필터 조건 (bool/filter)
                                 .filter(f -> f
                                         .term(t -> t
                                                 .field("viewableUserIds")
@@ -97,12 +113,10 @@ public class UnifiedSearchService {
                     if (highlights.containsKey("searchTitle")) {
                         dto.setSearchTitle(String.join("", highlights.get("searchTitle")));
                     }
+
                     if (highlights.containsKey("searchContent")) {
                         dto.setSearchContent(String.join("", highlights.get("searchContent")));
-                    }
-
-                    // NPE(NullPointerException) 방어 코드
-                    if (dto.getSearchContent() != null && !highlights.containsKey("searchContent")) {
+                    } else if (dto.getSearchContent() != null) {
                         dto.setSearchContent(
                                 dto.getSearchContent().length() > 200
                                         ? dto.getSearchContent().substring(0, 200) + "..."
@@ -115,7 +129,8 @@ public class UnifiedSearchService {
     }
 
     /**
-     * ✅ 통합 검색어 자동완성
+     * ✅ 통합 검색어 자동완성 (수정됨)
+     * (자동완성: searchTitle.ngram (N-gram) OR searchContent (Nori))
      */
     public List<String> suggest(String keyword, String currentUserId) {
 
@@ -125,13 +140,29 @@ public class UnifiedSearchService {
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
+                                // 1. [수정] N-gram(제목)과 Nori(내용)를 OR로 묶음
                                 .must(m -> m
-                                        // [수정] match 쿼리 대신 term 쿼리 사용
-                                        .term(t -> t
-                                                .field(suggestField)
-                                                .value(keyword)
+                                        .bool(bShould -> bShould
+                                                .should(s -> s
+                                                        // 1-1. searchTitle.ngram (N-gram) 자동완성
+                                                        .matchBoolPrefix(mbp -> mbp
+                                                                .field(suggestField)
+                                                                .query(keyword)
+                                                                .analyzer("nori_search_analyzer")
+                                                        )
+                                                )
+                                                .should(s -> s
+                                                        // 1-2. searchContent (Nori) 자동완성
+                                                        .matchBoolPrefix(mbp -> mbp
+                                                                .field("searchContent")
+                                                                .query(keyword)
+                                                                .analyzer("nori") // nori 분석기 사용
+                                                        )
+                                                )
+                                                .minimumShouldMatch("1") // 둘 중 하나만 일치해도 됨
                                         )
                                 )
+                                // 2. 사용자 필터 조건
                                 .filter(f -> f
                                         .term(t -> t
                                                 .field("viewableUserIds")
