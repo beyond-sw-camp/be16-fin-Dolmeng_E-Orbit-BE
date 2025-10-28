@@ -54,8 +54,10 @@ public class RedisConfig {
     public RedisTemplate<String, String> userRedisTemplate(@Qualifier("userInventory") RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
         redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new StringRedisSerializer());
         redisTemplate.setConnectionFactory(redisConnectionFactory);
+        redisTemplate.setHashValueSerializer(new StringRedisSerializer());
         return redisTemplate;
     }
 

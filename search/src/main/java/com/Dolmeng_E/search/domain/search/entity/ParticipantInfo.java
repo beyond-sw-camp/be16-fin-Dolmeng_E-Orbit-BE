@@ -19,5 +19,5 @@ public class ParticipantInfo {
 
     // 참여자 프로필 이미지 (UI 표시용)
     @Field(type = FieldType.Keyword, index = false) // index=false: 검색 안 함
-    private String profileImage;
+    private String profileImageUrl;
 }

@@ -1,4 +1,5 @@
 {
+  "index.max_ngram_diff": 20,
   "analysis": {
     "tokenizer": {
       "nori_tokenizer_custom": {
@@ -7,8 +8,8 @@
       }
     },
     "filter": {
-      "edge_ngram_filter": {
-        "type": "edge_ngram",
+      "ngram_filter": {
+        "type": "ngram",
         "min_gram": 1,
         "max_gram": 20
       }
@@ -16,11 +17,10 @@
     "analyzer": {
       "nori_edge_ngram_analyzer": {
         "type": "custom",
-        "tokenizer": "nori_tokenizer_custom",
+        "tokenizer": "keyword",
         "filter": [
           "lowercase",
-          "nori_readingform",
-          "edge_ngram_filter"
+          "ngram_filter"
         ]
       },
       "nori_search_analyzer": {
@@ -33,4 +33,3 @@
     }
   }
 }
-

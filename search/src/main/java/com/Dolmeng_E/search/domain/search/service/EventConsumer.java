@@ -4,12 +4,14 @@ import com.Dolmeng_E.search.domain.search.dto.EventDto;
 import com.Dolmeng_E.search.domain.search.entity.DocumentDocument;
 import com.Dolmeng_E.search.domain.search.repository.DocumentDocumentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Component
@@ -27,6 +29,7 @@ public class EventConsumer {
     @KafkaListener(topics = "document-topic", groupId = "search-consumer-group")
     public void handleDocument(String eventMessage, Acknowledgment ack) {
         try {
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             // 1. Kafka 메시지(JSON)를 DTO로 파싱
             EventDto eventDto = objectMapper.readValue(eventMessage, EventDto.class);
             String eventType = eventDto.getEventType();
@@ -37,17 +40,18 @@ public class EventConsumer {
                 case "DOCUMENT_CREATED":
                 case "DOCUMENT_UPDATED":
                     // 생성과 수정은 ES에서 동일하게 save()를 사용 (Upsert: 없으면 생성, 있으면 덮어쓰기)
-                    Map<String, String> userInfo = hashOperations.entries("user:"+eventPayload.getCreatedBy());
+                    String key = "user:"+eventPayload.getCreatedBy();
+                    Map<String, String> userInfo = hashOperations.entries(key);
                     DocumentDocument document = DocumentDocument.builder()
                             .id(eventPayload.getId())
                             .docType("DOCUMENT")
                             .searchTitle(eventPayload.getSearchTitle())
                             .searchContent(eventPayload.getSearchContent())
-                            .dateTime(eventPayload.getCreatedAt())
+                            .dateTime(eventPayload.getCreatedAt().toLocalDate())
                             .viewableUserIds(eventPayload.getViewableUserIds())
                             .createdBy(eventPayload.getCreatedBy())
                             .creatorName(userInfo.get("name"))
-                            .profileImage(userInfo.get("profileImage"))
+                            .profileImageUrl(userInfo.get("profileImageUrl"))
                             .build();
                     documentDocumentRepository.save(document); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + document.getId());
