@@ -114,7 +114,7 @@ public class ProjectService {
 
         // 4. 담당자 변경 처리 (선택)
         if (dto.getProjectManagerId() != null) {
-            WorkspaceParticipant newManager = workspaceParticipantRepository.findById(dto.getProjectManagerId())
+            WorkspaceParticipant newManager = workspaceParticipantRepository.findByWorkspaceIdAndUserId(dto.getWorkspaceId(), dto.getProjectManagerId())
                     .orElseThrow(() -> new EntityNotFoundException("변경할 담당자 정보를 찾을 수 없습니다."));
 
             if (!newManager.getWorkspace().getId().equals(dto.getWorkspaceId())) {
@@ -255,10 +255,11 @@ public class ProjectService {
                 .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 존재하지 않습니다."));
 
-        // 2. 프로젝트 참여자인지 검증
-        projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, participant)
-                .orElseThrow(() -> new EntityNotFoundException("프로젝트 참여자가 아닙니다."));
-
+        // 2. 프로젝트 참여자인지 검증(관리자는 프로젝트 참여자 아니어도 허용)
+        if(!participant.getWorkspaceRole().equals(ADMIN)) {
+            projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, participant)
+                    .orElseThrow(() -> new EntityNotFoundException("프로젝트 참여자가 아닙니다."));
+        }
         // 3. 프로젝트 내 모든 스톤 조회 (삭제된 스톤 제외)
         List<Stone> stones = stoneRepository.findByProjectAndIsDeleteFalse(project);
 
@@ -295,6 +296,44 @@ public class ProjectService {
 
         // 6. 트리 형태로 반환
         return roots;
+    }
+
+    // 프로젝트 상세조회
+    @Transactional(readOnly = true)
+    public ProjectDetailResDto getProjectDetail(String userId, String projectId) {
+
+        // 1. 프로젝트 조회
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
+
+        // 2. 워크스페이스 및 사용자 검증
+        Workspace workspace = project.getWorkspace();
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 3. 권한 검증
+        // 관리자이거나 프로젝트 담당자인 경우는 바로 통과
+        if (!participant.getWorkspaceRole().equals(ADMIN) &&
+                !project.getWorkspaceParticipant().getId().equals(participant.getId())) {
+            accessCheckService.validateAccess(participant, "ws_acc_list_1"); // 프로젝트 관련 접근 권한
+        }
+
+        // 4. DTO 변환 및 반환
+        return ProjectDetailResDto.builder()
+                .projectId(project.getId())
+                .projectName(project.getProjectName())
+                .projectObjective(project.getProjectObjective())
+                .projectDescription(project.getProjectDescription())
+                .milestone(project.getMilestone())
+                .startTime(project.getStartTime())
+                .endTime(project.getEndTime())
+                .projectStatus(project.getProjectStatus())
+                .isDelete(project.getIsDelete())
+                .stoneCount(project.getStoneCount())
+                .completedCount(project.getCompletedCount())
+                .projectManagerName(project.getWorkspaceParticipant().getUserName())
+                .build();
     }
 
 

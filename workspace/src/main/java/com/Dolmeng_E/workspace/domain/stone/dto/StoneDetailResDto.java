@@ -34,7 +34,10 @@ public class StoneDetailResDto {
     // 태스크 목록
     private List<TaskResDto> taskResDtoList;
 
-    public static StoneDetailResDto fromEntity(Stone stone, List<TaskResDto> taskResDtoList) {
+    // 참여자 목록
+    private List<StoneParticipantDto> stoneParticipantDtoList;
+
+    public static StoneDetailResDto fromEntity(Stone stone, List<TaskResDto> taskResDtoList, List<StoneParticipantDto> stoneParticipantDtoList) {
         return StoneDetailResDto.builder()
                 .stoneManagerName(stone.getStoneManager().getUserName())
                 .stoneName(stone.getStoneName())
@@ -42,6 +45,7 @@ public class StoneDetailResDto {
                 .endTime(stone.getEndTime())
                 .chatCreation(stone.getChatCreation())
                 .taskResDtoList(taskResDtoList)
+                .stoneParticipantDtoList(stoneParticipantDtoList)
                 .build();
     }
 

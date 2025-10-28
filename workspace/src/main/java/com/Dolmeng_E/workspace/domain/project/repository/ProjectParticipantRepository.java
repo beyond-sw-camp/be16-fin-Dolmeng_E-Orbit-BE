@@ -66,4 +66,7 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
             @Param("userId") UUID userId,
             @Param("workspaceId") String workspaceId
     );
+
+    void deleteByProjectAndWorkspaceParticipant(Project project, WorkspaceParticipant wp);
+
 }

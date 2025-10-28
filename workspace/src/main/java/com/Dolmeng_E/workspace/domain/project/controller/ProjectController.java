@@ -18,7 +18,7 @@ public class ProjectController {
 
     private final ProjectService projectService;
 
-// 프로젝트 생성(To-Do: 스톤 생성도 구현해야함)
+// 프로젝트 생성
     @PostMapping("")
     public ResponseEntity<?> createProject(
             @RequestHeader("X-User-Id") String userId,
@@ -101,6 +101,21 @@ public class ProjectController {
         List<StoneListResDto> dto = projectService.getStoneList(userId,projectId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("스톤목록 조회 완료")
+                .result(dto)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
+
+//    프로젝트 상세조회
+    @GetMapping("detail/{projectId}")
+    public ResponseEntity<?> getProjectDetail(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String projectId
+    ) {
+        ProjectDetailResDto dto = projectService.getProjectDetail(userId, projectId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("프로젝트 상세정보 조회 완료")
                 .result(dto)
                 .statusCode(HttpStatus.OK.value())
                 .build()

@@ -106,10 +106,10 @@ public class StoneController {
     public ResponseEntity<?> modifyStone(@RequestHeader("X-User-Id") String userId,
                                          @RequestBody StoneModifyDto dto
     ) {
-        stoneService.modifyStone(userId, dto);
+        String stoneId = stoneService.modifyStone(userId, dto);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("스톤 정보 수정 완료")
-                .result(HttpStatus.OK)
+                .result(stoneId)
                 .statusCode(HttpStatus.OK.value())
                 .build()
                 ,HttpStatus.OK);
@@ -188,22 +188,21 @@ public class StoneController {
                 ,HttpStatus.OK);
     }
 
-    // 스톤 참여자 목록 조회 - 스톤참여자 테이블 조회
-    @GetMapping("/participant/list/{stoneId}")
-    public ResponseEntity<?> getStoneList(
+    // 스톤 참여자 목록 조회
+    @GetMapping("/participant/{stoneId}")
+    public ResponseEntity<?> getStoneParticipantList(
             @RequestHeader("X-User-Id") String userId,
             @PathVariable String stoneId
     ) {
-        List<StoneParticipantResDto> participants = stoneService.getStoneList(userId, stoneId);
-        return ResponseEntity.ok(
-                CommonSuccessDto.builder()
-                        .statusMessage("스톤 참여자 목록 조회 성공")
-                        .result(participants)
-                        .statusCode(HttpStatus.OK.value())
-                        .build()
-        );
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤 참여자 목록 조회 성공")
+                .result(stoneService.getStoneParticipantList(userId, stoneId))
+                .statusCode(HttpStatus.OK.value())
+                .build(),
+                HttpStatus.OK);
     }
 
-    //ToDo: 다 하면 프로젝트 쪽 로직 완성
+
+
 
 }

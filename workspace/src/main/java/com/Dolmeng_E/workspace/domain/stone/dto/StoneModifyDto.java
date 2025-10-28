@@ -12,5 +12,5 @@ public class StoneModifyDto {
     private String stoneName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-//    private Boolean chatCreation; // 이미 채팅방이 생성되었는데 써야하는지 궁금
+    private Boolean chatCreation;
 }
