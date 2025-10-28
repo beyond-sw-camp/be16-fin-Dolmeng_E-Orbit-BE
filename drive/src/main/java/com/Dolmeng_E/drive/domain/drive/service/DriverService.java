@@ -120,7 +120,7 @@ public class DriverService {
         }
         File fileEntity = File.builder()
                 .url(file_url)
-                .createdBy("회원ID")
+                .createdBy("ed682ca4-1be0-4409-949a-3cd70e524e4c")
                 .folder(folder)
                 .name(file.getOriginalFilename())
                 .type(file.getContentType())
@@ -145,11 +145,11 @@ public class DriverService {
             throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
         }
         Document document = Document.builder()
-                    .createdBy("회원ID")
+                    .createdBy("2eb87833-c2dd-47ec-9799-be958953e2e6")
                     .title(documentTitle)
                     .folder(folder)
                     .build();
-        Document savedDocument = documentRepository.save(document);
+        Document savedDocument = documentRepository.saveAndFlush(document);
 
         List<String> viewableUserIds = new ArrayList<>();
         viewableUserIds.add(savedDocument.getCreatedBy());

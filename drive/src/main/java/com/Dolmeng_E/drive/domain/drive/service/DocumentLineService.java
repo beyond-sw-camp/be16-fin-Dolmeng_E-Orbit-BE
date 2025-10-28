@@ -28,7 +28,7 @@ public class DocumentLineService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RedisTemplate<String, String> redisTemplate;
 
-    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate, RedisTemplate<String, String> redisTemplate1) {
+    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate) {
         this.documentLineRepository = documentLineRepository;
         this.documentRepository = documentRepository;
         this.hashOperations = redisTemplate.opsForHash();
