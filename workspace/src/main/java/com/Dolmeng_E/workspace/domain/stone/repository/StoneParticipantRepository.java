@@ -21,7 +21,7 @@ public interface StoneParticipantRepository extends JpaRepository<StoneParticipa
 
     // n+1 을 해결하기 위한 쿼리문 - 내가 참여 중인 스톤들만 미리 캐싱
     @Query("""
-    SELECT DISTINCT sp 
+    SELECT DISTINCT sp
     FROM StoneParticipant sp
     JOIN FETCH sp.stone s
     JOIN FETCH s.project p

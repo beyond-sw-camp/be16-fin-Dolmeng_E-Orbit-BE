@@ -74,7 +74,13 @@ public class TaskService {
             throw new IllegalArgumentException("스톤이 이미 완료상태입니다.");
         }
 
-        // 4. 태스크 생성 및 저장
+        // 4. 태스크 기간 검증 (스톤 기간 내에만 생성 가능)
+        if (dto.getStartTime().isBefore(stone.getStartTime()) ||
+                dto.getEndTime().isAfter(stone.getEndTime())) {
+            throw new IllegalArgumentException("스톤 기간 내에만 스톤 생성이 가능합니다.");
+        }
+
+        // 5. 태스크 생성 및 저장
                 Task task = Task.builder()
                         .taskName(dto.getTaskName())
                         .stone(stone)
@@ -86,10 +92,10 @@ public class TaskService {
 
                 taskRepository.save(task);
 
-        // 5. 스톤의 태스크 수 갱신
+        // 6. 스톤의 태스크 수 갱신
         stone.incrementTaskCount();
 
-        // 6. 마일스톤 업데이트
+        // 7. 마일스톤 업데이트
         stone.updateMilestone();
 
         return task.getId();
@@ -122,7 +128,13 @@ public class TaskService {
             throw new IllegalArgumentException("태스크 수정 권한이 없습니다.");
         }
 
-        // 4. 수정 가능한 필드만 변경
+        // 4. 태스크 기간 검증 (스톤 기간 내에만 수정 가능)
+        if (dto.getStartTime().isBefore(stone.getStartTime()) ||
+                dto.getEndTime().isAfter(stone.getEndTime())) {
+            throw new IllegalArgumentException("스톤 기간 내에만 스톤 수정이 가능합니다.");
+        }
+
+        // 5. 수정 가능한 필드만 변경
         if (dto.getTaskName() != null) {
             task.setTaskName(dto.getTaskName());
         }
