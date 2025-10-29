@@ -1,5 +1,6 @@
 package com.Dolmeng_E.chat_db.domain.service;
 
+import com.Dolmeng_E.chat_db.common.dto.NotificationCreateReqDto;
 import com.Dolmeng_E.chat_db.common.dto.UserInfoResDto;
 import com.Dolmeng_E.chat_db.common.service.S3Uploader;
 import com.Dolmeng_E.chat_db.domain.dto.*;
@@ -246,6 +247,30 @@ public class ChatService {
             // 각 사용자별 summary 토픽 전송
             messageTemplate.convertAndSend("/topic/summary/" + p.getUserId(), summary);
         }
+    }
+
+    public List<NotificationCreateReqDto> createNotification(ChatMessageDto dto) {
+        ChatRoom room = chatRoomRepository.findById(dto.getRoomId())
+                .orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
+
+        List<NotificationCreateReqDto> notificationCreateReqDtoList = new ArrayList<>();
+        for (ChatParticipant p : room.getChatParticipantList()) {
+            Long unreadCount = readStatusRepository
+                    .countUnreadMessagesInWorkspaceByUser(room.getWorkspaceId(), p.getUserId());
+
+            List<UUID> userIdList = new ArrayList<>();
+            userIdList.add(p.getUserId());
+
+            NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
+                    .title(Long.toString(unreadCount))
+                    .type("NEW_CHAT_MESSAGE")
+                    .userIdList(userIdList)
+                    .build();
+
+            notificationCreateReqDtoList.add(notificationCreateReqDto);
+        }
+
+        return notificationCreateReqDtoList;
     }
 
     // 파일 업로드
