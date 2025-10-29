@@ -61,7 +61,7 @@ public class DriveController {
     @GetMapping("/folder/{folderId}/contents")
     public ResponseEntity<?> getFolderContents(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.getFolderContents(folderId))
+                .result(driverService.getFolderContents(folderId, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("폴더 하위 요소들 조회 성공")
                 .build(), HttpStatus.OK);

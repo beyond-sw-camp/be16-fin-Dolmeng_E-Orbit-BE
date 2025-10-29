@@ -96,7 +96,8 @@ public class DriverService {
     }
     
     // 폴더 하위 요소들 조회
-    public List<FolderContentsDto> getFolderContents(String folderId){
+    public List<FolderContentsDto> getFolderContents(String folderId, String userId){
+        Map<String, String> userInfo = hashOperations.entries("user:"+userId);
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
         List<FolderContentsDto> folderContentsDtos = new ArrayList<>();
@@ -109,6 +110,8 @@ public class DriverService {
                             .updateAt(childfolder.getUpdatedAt().toString())
                             .id(childfolder.getId())
                             .type("folder")
+                            .creatorName(userInfo.get("name"))
+                            .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         // 파일 불러오기
@@ -120,6 +123,8 @@ public class DriverService {
                     .name(file.getName())
                     .type(file.getType())
                     .id(file.getId())
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         // 문서 불러오기
@@ -131,6 +136,8 @@ public class DriverService {
                     .name(document.getTitle())
                     .type("document")
                     .id(document.getId())
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         return folderContentsDtos;
