@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface StoneParticipantRepository extends JpaRepository<StoneParticipant, String> {
@@ -34,4 +35,16 @@ public interface StoneParticipantRepository extends JpaRepository<StoneParticipa
     boolean existsByWorkspaceParticipantAndStone_Project(WorkspaceParticipant wp, Project project);
 
     List<StoneParticipant> findAllByStoneAndWorkspaceParticipant_IsDeleteFalse(Stone stone);
+
+    Optional<StoneParticipant> findByStone_IdAndWorkspaceParticipant_UserId(String stoneId, UUID userId);
+
+    // 스톤 ID와 사용자 ID로 참여자 존재 여부 확인
+    @Query("SELECT sp FROM StoneParticipant sp " +
+            "WHERE sp.stone.id = :stoneId " +
+            "AND sp.workspaceParticipant.userId = :userId " +
+            "AND sp.isDelete = false")
+    Optional<StoneParticipant> findByStoneIdAndUserId(
+            @Param("stoneId") String stoneId,
+            @Param("userId") UUID userId
+    );
 }

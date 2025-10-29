@@ -10,10 +10,13 @@ import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
+import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.dto.MilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
+import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.user_group.dto.UserGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroup;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroupMapping;
@@ -57,6 +60,9 @@ public class WorkspaceService {
     private final ProjectParticipantRepository projectParticipantRepository;
     private final UserGroupRepository userGroupRepository;
     private final UserGroupMappingRepository userGroupMappingRepository;
+    private final StoneParticipantRepository stoneParticipantRepository;
+    private final StoneRepository stoneRepository;
+    private final ProjectRepository projectRepository;
 
 //    워크스페이스 생성(PRO,ENTERPRISE)
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
@@ -953,6 +959,49 @@ public class WorkspaceService {
             throw new IllegalArgumentException("개인 워크스페이스에서는 이 작업을 수행할 수 없습니다.");
         }
     }
+
+
+    // 워크스페이스 참여자인지 리턴
+    public boolean checkWorkspaceMembership(String workspaceId, String userId) {
+        UUID uuidUserId = UUID.fromString(userId);
+        return workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, uuidUserId)
+                .isPresent();
+    }
+
+    // 프로젝트 담당자 확인
+    public boolean checkProjectManagership(String projectId, String userId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
+        UUID uuid = UUID.fromString(userId);
+        return project.getWorkspaceParticipant().getUserId().equals(uuid);
+    }
+
+    // 프로젝트 참여자 확인
+    public boolean checkProjectMembership(String projectId, String userId) {
+        UUID uuid = UUID.fromString(userId);
+        return projectParticipantRepository
+                .findByProjectIdAndUserId(projectId, uuid)
+                .isPresent();
+    }
+
+    // 스톤 담당자 확인
+    public boolean checkStoneManagership(String stoneId, String userId) {
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+        UUID uuid = UUID.fromString(userId);
+        return stone.getStoneManager().getUserId().equals(uuid);
+    }
+
+    // 스톤 참여자 확인
+    public boolean checkStoneMembership(String stoneId, String userId) {
+        UUID uuid = UUID.fromString(userId);
+        return stoneParticipantRepository
+                .findByStoneIdAndUserId(stoneId, uuid)
+                .isPresent();
+    }
+
+
 
 
 }

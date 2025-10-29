@@ -19,4 +19,5 @@ public class N8nResDto {
     private String calendarType;
     private Boolean bookmark;
     private Boolean isShared;
+    private String repeatType;
 }
