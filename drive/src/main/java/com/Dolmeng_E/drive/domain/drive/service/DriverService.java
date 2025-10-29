@@ -173,13 +173,14 @@ public class DriverService {
                 throw new IllegalArgumentException("예상치못한오류 발생");
             }
         }else if(rootType.equals("PROJECT")){
-//            try {
-//                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)){
-//                    throw new IllegalArgumentException("권한이 없습니다.");
-//                }
-//            }catch (Exception e){
-//                throw new IllegalArgumentException("예상치못한오류 발생");
-//            }
+            try {
+                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
             try {
                 StoneTaskResDto stoneTaskResDto = workspaceServiceClient.getSubStonesAndTasks(rootId);
                 List<StoneTaskResDto.StoneInfo> stones = stoneTaskResDto.getStones();
@@ -278,16 +279,18 @@ public class DriverService {
     }
 
     // 문서 생성
-    public String createDocument(String folderId, String documentTitle){
-//        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-//        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
-//            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
-//        }
+    public String createDocument(DocumentSaveDto documentSaveDto, String userId){
+        Folder folder = folderRepository.findById(documentSaveDto.getFolderId()).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentSaveDto.getName()).isPresent()){
+            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+        }
         Document document = Document.builder()
-                    .createdBy("2eb87833-c2dd-47ec-9799-be958953e2e6")
-                    .title(documentTitle)
-//                    .folder(folder)
-                    .build();
+                .title(documentSaveDto.getName())
+                .createdBy(userId)
+                .folder(folder)
+                .rootId(documentSaveDto.getRootId())
+                .rootType(RootType.valueOf(documentSaveDto.getRootType()))
+                .build();
         Document savedDocument = documentRepository.saveAndFlush(document);
 
         List<String> viewableUserIds = new ArrayList<>();

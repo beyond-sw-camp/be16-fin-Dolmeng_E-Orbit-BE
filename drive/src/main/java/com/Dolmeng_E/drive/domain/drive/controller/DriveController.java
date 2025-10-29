@@ -1,5 +1,6 @@
 package com.Dolmeng_E.drive.domain.drive.controller;
 
+import com.Dolmeng_E.drive.domain.drive.dto.DocumentSaveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderMoveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderSaveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderUpdateNameDto;
@@ -108,10 +109,10 @@ public class DriveController {
     }
 
     // 문서 생성
-    @PostMapping("/folder/{folderId}/document")
-    public ResponseEntity<?> saveDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestParam String documentTitle) {
+    @PostMapping("/document")
+    public ResponseEntity<?> saveDocument(@RequestHeader("X-User-Id") String userId, @RequestBody DocumentSaveDto documentSaveDto) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.createDocument(folderId, documentTitle))
+                .result(driverService.createDocument(documentSaveDto, userId))
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("문서 생성 성공")
                 .build(), HttpStatus.CREATED);
