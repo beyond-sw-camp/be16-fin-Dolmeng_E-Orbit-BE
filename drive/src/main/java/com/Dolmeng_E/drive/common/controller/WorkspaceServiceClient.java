@@ -2,6 +2,7 @@ package com.Dolmeng_E.drive.common.controller;
 
 import com.Dolmeng_E.drive.common.dto.StoneTaskResDto;
 import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
+import com.Dolmeng_E.drive.common.dto.WorkspaceOrProjectManagerCheckDto;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,14 @@ public interface WorkspaceServiceClient {
     //projectId 넘겼을 때 하위 스톤 id, 테스크명 가져오는 api
     @GetMapping("/stone/{projectId}/sub-stone-task")
     StoneTaskResDto getSubStonesAndTasks(@PathVariable("projectId") String projectId);
+
+    // stoneId 와 userId 넘겼을 때 웤스 관리자인지 프로젝트관리자인지 확인하는 api
+    @GetMapping("/work-project/{stoneId}/manager/check")
+    WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
+            @PathVariable("stoneId") String stoneId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
 
 
 }

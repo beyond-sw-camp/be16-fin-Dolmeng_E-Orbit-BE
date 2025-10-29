@@ -1,9 +1,6 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
-import com.Dolmeng_E.workspace.common.dto.StoneTaskResDto;
-import com.Dolmeng_E.workspace.common.dto.SubProjectResDto;
-import com.Dolmeng_E.workspace.common.dto.WorkspaceInfoResDto;
-import com.Dolmeng_E.workspace.common.dto.WorkspaceNameDto;
+import com.Dolmeng_E.workspace.common.dto.*;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
@@ -323,6 +320,23 @@ public class WorkspaceController {
         );
     }
 
+    // 특정 워크스페이스 내 내 프로젝트 목록 조회
+    @GetMapping("/{workspaceId}/my-projects")
+    public ResponseEntity<?> getMyProjectsInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<MyProjectResDto> myProjects = workspaceService.getMyProjectsInWorkspace(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스별 내 프로젝트 목록 조회 성공")
+                        .result(myProjects)
+                        .build(),
+                HttpStatus.OK
+        );
+    }
 
 
     // 워크스페이스 담당자 확인
@@ -441,6 +455,15 @@ public class WorkspaceController {
     public ResponseEntity<StoneTaskResDto> getSubStonesAndTasks(@PathVariable String projectId) {
         StoneTaskResDto response = workspaceService.getSubStonesAndTasks(projectId);
         return ResponseEntity.ok(response);
+    }
+
+    // stoneId 와 userId 넘겼을 때 웤스 관리자인지 프로젝트관리자인지 확인하는 api
+    @GetMapping("/work-project/{stoneId}/manager/check")
+    public WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable("stoneId") String stoneId
+    ) {
+        return workspaceService.checkWorkspaceOrProjectManager(stoneId, userId);
     }
 
 
