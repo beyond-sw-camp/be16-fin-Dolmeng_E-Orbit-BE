@@ -42,15 +42,20 @@ public class NotificationKafkaService {
     public void NotificationConsumer(String message, Acknowledgment ack) throws JsonProcessingException {
         log.info("kafkaListener2 - NotificationConsumer() - message: " + message);
 
-        ObjectMapper objectMapper = new ObjectMapper();
         NotificationCreateReqDto reqDto = objectMapper.readValue(message, NotificationCreateReqDto.class);
 
-        // DB저장
-        notificationService.createNotification(reqDto);
+        // 즉시 알림인지, 예약 알림인지 구분
+        if(reqDto.getSendAt() == null) { // 즉시 알림
+            // DB저장
+            notificationService.createNotification(reqDto);
 
-        // Pub/Sub 전파
-        String pubsubMessage = objectMapper.writeValueAsString(reqDto);
-        redisPubSubService.publish("notification", pubsubMessage);
+            // Pub/Sub 전파
+            String pubsubMessage = objectMapper.writeValueAsString(reqDto);
+            redisPubSubService.publish("notification", pubsubMessage);
+        } else { // 예약 알림
+            // DB저장
+            notificationService.createReservationNotification(reqDto);
+        }
 
         // 위 작업들 문제없으면 커밋 (offset)
         ack.acknowledge();

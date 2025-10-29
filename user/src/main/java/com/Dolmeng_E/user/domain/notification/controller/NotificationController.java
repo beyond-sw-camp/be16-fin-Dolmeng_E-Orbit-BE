@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -34,14 +35,25 @@ public class NotificationController {
         List<UUID> userIdList = new ArrayList<>();
         userIdList.add(UUID.fromString("59c720ae-8c62-41d0-abcb-a247113ba2e9"));
 
-        NotificationCreateReqDto dto = NotificationCreateReqDto.builder()
+        NotificationCreateReqDto dto1 = NotificationCreateReqDto.builder()
                 .title("test111")
                 .content("test222")
                 .userIdList(userIdList)
                 .type(NotificationType.PROJECT_CONFIRMED)
+                .sendAt(LocalDateTime.now().plusSeconds(10))
                 .build();
 
-        notificationKafkaService.kafkaNotificationPublish(dto);
+        notificationKafkaService.kafkaNotificationPublish(dto1);
+
+        NotificationCreateReqDto dto2 = NotificationCreateReqDto.builder()
+                .title("test333")
+                .content("test444")
+                .userIdList(userIdList)
+                .type(NotificationType.PROJECT_CONFIRMED)
+                .sendAt(LocalDateTime.now().plusSeconds(20))
+                .build();
+
+        notificationKafkaService.kafkaNotificationPublish(dto2);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

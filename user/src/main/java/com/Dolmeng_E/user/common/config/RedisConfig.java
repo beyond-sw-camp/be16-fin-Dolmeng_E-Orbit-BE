@@ -22,6 +22,7 @@ public class RedisConfig {
     @Value("${spring.redis.port}")
     private int port;
 
+    // ConnectionFactory
     @Bean
     @Qualifier("rtInventory")
     public RedisConnectionFactory redisConnectionFactory() {
@@ -45,6 +46,19 @@ public class RedisConfig {
     }
 
     @Bean
+    @Qualifier("notificationInventory")
+    public RedisConnectionFactory notificationRedisConnectionFactory() {
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
+        configuration.setHostName(host);
+        configuration.setPort(port);
+        configuration.setDatabase(4);
+
+        return new LettuceConnectionFactory(configuration);
+    }
+
+
+    // RedisTemplate
+    @Bean
     @Qualifier("rtInventory")
     public RedisTemplate<String, String> redisTemplate(@Qualifier("rtInventory") RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
@@ -66,7 +80,18 @@ public class RedisConfig {
         return redisTemplate;
     }
 
+    @Bean
+    @Qualifier("notificationInventory")
+    public RedisTemplate<String, Object> notificationRedisTemplate(@Qualifier("notificationInventory") RedisConnectionFactory factory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        return template;
+    }
 
+
+    // pub/sub
     @Bean
     @Qualifier("notificationPubSub")
     public RedisConnectionFactory chatPubSubFactory() {
