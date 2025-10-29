@@ -7,6 +7,8 @@ import com.Dolmeng_E.user.domain.sharedCalendar.repository.SharedCalendarReposit
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -45,19 +47,29 @@ public class TodoService {
     }
 
     // todo 리스트 조회
-    public List<TodoCreateResDto> getTodo(UUID userId, String workspaceId) {
-        // 1. 검증
+    public List<TodoCreateResDto> getTodo(UUID userId, String workspaceId, LocalDate date) {
         validationService.validateUserAndWorkspace(userId, workspaceId);
 
-        // 2. TODO만 조회
-        List<SharedCalendar> todo = sharedCalendarRepository
-                .findTodosByUserIdAndWorkspaceIdAndCalendarType(userId, workspaceId, CalendarType.TODO);
+        List<SharedCalendar> todos;
 
-        return todo.stream()
+        // 날짜 필터가 있는 경우
+        if (date != null) {
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.atTime(23, 59, 59);
+
+            todos = sharedCalendarRepository.findTodosByUserIdAndWorkspaceIdAndCalendarTypeAndDateRange(
+                    userId, workspaceId, CalendarType.TODO, startOfDay, endOfDay
+            );
+        } else {
+            todos = sharedCalendarRepository.findTodosByUserIdAndWorkspaceIdAndCalendarType(
+                    userId, workspaceId, CalendarType.TODO
+            );
+        }
+
+        return todos.stream()
                 .map(TodoCreateResDto::fromEntity)
                 .toList();
     }
-
 
     // todo 수정
     public TodoCreateResDto updateTodo(String todoId, UUID userId, UpdateTodoReqDto dto) {
