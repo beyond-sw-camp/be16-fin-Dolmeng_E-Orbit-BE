@@ -24,7 +24,7 @@ public class TodoController {
         return todoService.createTodo(UUID.fromString(userId), dto);
     }
 
-    // todo 리스트 조회
+    // todo 특정 날짜 조회
     @GetMapping("/{workspaceId}")
     public List<TodoCreateResDto> getTodo(
             @RequestHeader("X-User-Id") String userId,
@@ -32,6 +32,15 @@ public class TodoController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         return todoService.getTodo(UUID.fromString(userId), workspaceId, date);
+    }
+
+    // todo 전체 조회
+    @GetMapping("/{workspaceId}/all")
+    public List<TodoCreateResDto> getAllTodo(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        return todoService.getAllTodo(UUID.fromString(userId), workspaceId);
     }
 
     // todo 수정
