@@ -275,6 +275,7 @@ public class ProjectService {
                                 .createdAt(s.getCreatedAt())
                                 .parentStoneId(s.getParentStoneId() != null ? s.getParentStoneId() : null)
                                 .childStone(new ArrayList<>()) // 초기화
+                                .milestone(s.getMilestone())
                                 .build()
                 ));
 

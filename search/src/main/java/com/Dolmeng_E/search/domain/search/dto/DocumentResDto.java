@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class DocumentResDto {
-    private String Id;
+    private String id;
     private String searchTitle;
     private String searchContent;
     private List<participantInfo> participants;
@@ -23,7 +23,7 @@ public class DocumentResDto {
     private String createdBy;
     private String profileImageUrl;
 //  파일, 문서는 생성일, 스톤과 테스크는 마감일
-    private LocalDateTime dateTime;
+    private LocalDate dateTime;
 
     @Data
     @NoArgsConstructor

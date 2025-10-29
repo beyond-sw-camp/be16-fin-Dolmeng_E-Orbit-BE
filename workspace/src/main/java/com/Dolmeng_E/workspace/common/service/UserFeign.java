@@ -1,10 +1,12 @@
 package com.Dolmeng_E.workspace.common.service;
 
-import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
-import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
-import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
+import com.Dolmeng_E.workspace.common.dto.*;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @FeignClient(name = "user-service")
 public interface UserFeign {
@@ -20,4 +22,10 @@ public interface UserFeign {
 
     @PostMapping("/user/not-in-workspace")
     UserInfoListResDto fetchUsersNotInWorkspace(@RequestBody UserIdListDto dto);
+
+    @GetMapping("/shared-calendars/chatbot/schedules")
+    List<SharedCalendarResDto> getSchedulesForAgent(@RequestHeader("X-User-Id") String userId, @SpringQueryMap GetSchedulesForChatBotReqDto dto);
+
+    @GetMapping("/shared-calendars/chatbot/todos")
+    List<SharedCalendarResDto> getTodosForAgent(@RequestHeader("X-User-Id") String userId, @SpringQueryMap GetSchedulesForChatBotReqDto dto);
 }

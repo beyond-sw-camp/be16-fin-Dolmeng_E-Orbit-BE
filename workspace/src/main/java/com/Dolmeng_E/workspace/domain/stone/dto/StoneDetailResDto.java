@@ -37,6 +37,9 @@ public class StoneDetailResDto {
     // 참여자 목록
     private List<StoneParticipantDto> stoneParticipantDtoList;
 
+    // +추가 : 스톤 상태
+    private StoneStatus stoneStatus;
+
     public static StoneDetailResDto fromEntity(Stone stone, List<TaskResDto> taskResDtoList, List<StoneParticipantDto> stoneParticipantDtoList) {
         return StoneDetailResDto.builder()
                 .stoneManagerName(stone.getStoneManager().getUserName())
@@ -46,6 +49,7 @@ public class StoneDetailResDto {
                 .chatCreation(stone.getChatCreation())
                 .taskResDtoList(taskResDtoList)
                 .stoneParticipantDtoList(stoneParticipantDtoList)
+                .stoneStatus(stone.getStatus()) // 추가
                 .build();
     }
 

@@ -65,4 +65,19 @@ public interface SharedCalendarRepository extends JpaRepository<SharedCalendar, 
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
+
+    @Query("""
+        SELECT c FROM SharedCalendar c
+        WHERE c.userId.id = :userId
+            AND c.workspaceId = :workspaceId
+            AND c.calendarType = :calendarType
+            AND c.endedAt < :endedAt
+            AND c.isCompleted = false
+    """)
+    List<SharedCalendar> findByUserIdAndWorkspaceIdAndCalendarTypeAndEndedAtBeforeAndNotCompleted(
+            @Param("userId") UUID userId,
+            @Param("workspaceId") String workspaceId,
+            @Param("calendarType") CalendarType calendarType,
+            @Param("endedAt") LocalDateTime endedAt
+    );
 }
