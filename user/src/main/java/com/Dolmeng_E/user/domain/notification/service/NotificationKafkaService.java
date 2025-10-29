@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.domain.notification.service;
 
+import com.Dolmeng_E.user.common.service.RedisPubSubService;
 import com.Dolmeng_E.user.domain.notification.dto.NotificationCreateReqDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationKafkaService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
+    private final RedisPubSubService redisPubSubService;
 
     // producer
     public void kafkaNotificationPublish(NotificationCreateReqDto dto) {
@@ -34,12 +37,20 @@ public class NotificationKafkaService {
     @KafkaListener(
             topics = "notification.publish",
             groupId = "notification-group",
-            containerFactory = "kafkaListener2"
+            containerFactory = "notificationKafkaListener"
     )
     public void NotificationConsumer(String message, Acknowledgment ack) throws JsonProcessingException {
         log.info("kafkaListener2 - NotificationConsumer() - message: " + message);
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        NotificationCreateReqDto reqDto = objectMapper.readValue(message, NotificationCreateReqDto.class);
 
+        // DB저장
+        notificationService.createNotification(reqDto);
+
+        // Pub/Sub 전파
+        String pubsubMessage = objectMapper.writeValueAsString(reqDto);
+        redisPubSubService.publish("notification", pubsubMessage);
 
         // 위 작업들 문제없으면 커밋 (offset)
         ack.acknowledge();
