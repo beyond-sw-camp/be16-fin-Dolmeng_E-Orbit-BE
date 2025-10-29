@@ -25,4 +25,7 @@ public interface TaskRepository extends JpaRepository<Task, String> {
             @Param("endTime") LocalDateTime endTime
     );
     List<Task> findAllByStone(Stone stone);
+
+    @Query("SELECT t FROM Task t WHERE t.stone.project.id = :projectId")
+    List<Task> findAllByProjectId(@Param("projectId") String projectId);
 }

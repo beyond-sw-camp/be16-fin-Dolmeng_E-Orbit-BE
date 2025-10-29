@@ -17,6 +17,7 @@ import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
+import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.user_group.dto.UserGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroup;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroupMapping;
@@ -63,6 +64,7 @@ public class WorkspaceService {
     private final StoneParticipantRepository stoneParticipantRepository;
     private final StoneRepository stoneRepository;
     private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
 
 //    워크스페이스 생성(PRO,ENTERPRISE)
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
@@ -999,6 +1001,43 @@ public class WorkspaceService {
         return stoneParticipantRepository
                 .findByStoneIdAndUserId(stoneId, uuid)
                 .isPresent();
+    }
+
+    // workspaceId 넘겼을 때 하위 프로젝트 Id, 프로젝트명 가져오는 api
+    public List<SubProjectResDto> getSubProjectsByWorkspace(String workspaceId) {
+        return projectRepository.findAllByWorkspaceId(workspaceId).stream()
+                .filter(project -> !project.getIsDelete())
+                .map(project -> SubProjectResDto.builder()
+                        .projectId(project.getId())
+                        .projectName(project.getProjectName())
+                        .build())
+                .toList();
+    }
+
+    //projectId 넘겼을 때 하위 스톤 id, 테스크명 가져오는 api
+    public StoneTaskResDto getSubStonesAndTasks(String projectId) {
+
+        // 하위 스톤
+        List<StoneTaskResDto.StoneInfo> stones = stoneRepository.findAllByProjectId(projectId).stream()
+                .filter(stone -> !stone.getIsDelete()) // 삭제된거 제외
+                .map(stone -> StoneTaskResDto.StoneInfo.builder() // 스톤객체에서 아이디랑 이름만 가져옴
+                        .stoneId(stone.getId())
+                        .stoneName(stone.getStoneName())
+                        .build())
+                .toList();
+
+        // 하위 태스크
+        List<StoneTaskResDto.TaskInfo> tasks = taskRepository.findAllByProjectId(projectId).stream()
+                .map(task -> StoneTaskResDto.TaskInfo.builder() // 태스크에서 아이디 이름 가져오옴, 태스크는 하드삭제입니다
+                        .taskId(task.getId())
+                        .taskName(task.getTaskName())
+                        .build())
+                .toList();
+
+        return StoneTaskResDto.builder()
+                .stones(stones)
+                .tasks(tasks)
+                .build();
     }
 
 
