@@ -23,9 +23,12 @@ public class Notification extends BaseTimeEntity {
     private String content;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private NotificationType type;
+
     @Column(nullable = false)
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     private NotificationReadStatus readStatus = NotificationReadStatus.UNREAD;
 
     @JoinColumn(name = "user_id")

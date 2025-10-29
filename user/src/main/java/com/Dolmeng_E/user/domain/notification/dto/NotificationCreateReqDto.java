@@ -18,7 +18,7 @@ import java.util.UUID;
 public class NotificationCreateReqDto {
     private String title;
     private String content;
-    private NotificationType type;
+    private String type;
     private List<UUID> userIdList = new ArrayList<>();
     private LocalDateTime sendAt;
 }

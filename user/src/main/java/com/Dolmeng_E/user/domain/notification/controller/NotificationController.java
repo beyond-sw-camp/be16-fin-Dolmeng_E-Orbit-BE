@@ -39,7 +39,7 @@ public class NotificationController {
                 .title("test111")
                 .content("test222")
                 .userIdList(userIdList)
-                .type(NotificationType.PROJECT_CONFIRMED)
+                .type("PROJECT_CONFIRMED")
                 .sendAt(LocalDateTime.now().plusSeconds(10))
                 .build();
 
@@ -49,7 +49,7 @@ public class NotificationController {
                 .title("test333")
                 .content("test444")
                 .userIdList(userIdList)
-                .type(NotificationType.PROJECT_CONFIRMED)
+                .type("PROJECT_CONFIRMED")
                 .sendAt(LocalDateTime.now().plusSeconds(20))
                 .build();
 

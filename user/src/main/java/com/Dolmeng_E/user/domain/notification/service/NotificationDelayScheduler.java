@@ -47,9 +47,9 @@ public class NotificationDelayScheduler {
                 String payload = objectMapper.writeValueAsString(dto);
                 redisPubSubService.publish("notification", payload);
 
-                log.info("📩 예약 알림 발행 완료: {}", dto.getTitle());
+                log.info("NotificationDelayScheduler - processDueNotifications() - 예약 알림 발행 완료: {}", dto.getTitle());
             } catch (Exception e) {
-                log.error("❌ 예약 알림 처리 실패", e);
+                log.error("NotificationDelayScheduler - processDueNotifications() - 예약 알림 처리 실패", e);
             }
         }
     }

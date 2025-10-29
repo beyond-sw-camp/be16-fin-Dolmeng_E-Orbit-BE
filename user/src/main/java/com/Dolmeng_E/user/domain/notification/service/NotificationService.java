@@ -2,6 +2,7 @@ package com.Dolmeng_E.user.domain.notification.service;
 
 import com.Dolmeng_E.user.domain.notification.dto.NotificationCreateReqDto;
 import com.Dolmeng_E.user.domain.notification.entity.Notification;
+import com.Dolmeng_E.user.domain.notification.entity.NotificationType;
 import com.Dolmeng_E.user.domain.notification.repository.NotificationRepository;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.repository.UserRepository;
@@ -43,7 +44,7 @@ public class NotificationService {
             Notification notification = Notification.builder()
                     .title(reqDto.getTitle())
                     .content(reqDto.getContent())
-                    .type(reqDto.getType())
+                    .type(NotificationType.valueOf(reqDto.getType()))
                     .user(user)
                     .build();
 
@@ -59,7 +60,7 @@ public class NotificationService {
             Notification notification = Notification.builder()
                     .title(reqDto.getTitle())
                     .content(reqDto.getContent())
-                    .type(reqDto.getType())
+                    .type(NotificationType.valueOf(reqDto.getType()))
                     .user(user)
                     .build();
 
