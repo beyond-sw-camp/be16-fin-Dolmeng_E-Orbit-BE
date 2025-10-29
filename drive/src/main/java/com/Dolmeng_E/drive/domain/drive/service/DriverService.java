@@ -1,17 +1,24 @@
 package com.Dolmeng_E.drive.domain.drive.service;
 
+import com.Dolmeng_E.drive.common.controller.WorkspaceServiceClient;
+import com.Dolmeng_E.drive.common.dto.StoneTaskResDto;
+import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
 import com.Dolmeng_E.drive.common.service.S3Uploader;
 import com.Dolmeng_E.drive.domain.drive.dto.*;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.File;
 import com.Dolmeng_E.drive.domain.drive.entity.Folder;
+import com.Dolmeng_E.drive.domain.drive.entity.RootType;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FolderRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +26,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional
-@RequiredArgsConstructor
 public class DriverService {
 
     private final FolderRepository folderRepository;
@@ -31,12 +38,26 @@ public class DriverService {
     private final DocumentRepository documentRepository;
     private final KafkaTemplate<String, String> kafkaTemplate; // Kafka 전송용
     private final ObjectMapper objectMapper;
+    private final HashOperations<String, String, String> hashOperations;
+    private final WorkspaceServiceClient workspaceServiceClient;
+
+    public DriverService(FolderRepository folderRepository, S3Uploader s3Uploader, FileRepository fileRepository, DocumentRepository documentRepository, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, @Qualifier("userInventory") RedisTemplate<String, String> redisTemplate, WorkspaceServiceClient workspaceServiceClient) {
+        this.folderRepository = folderRepository;
+        this.s3Uploader = s3Uploader;
+        this.fileRepository = fileRepository;
+        this.documentRepository = documentRepository;
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
+        this.hashOperations = redisTemplate.opsForHash();
+        this.workspaceServiceClient = workspaceServiceClient;
+    }
 
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto, String userId){
         if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderSaveDto.getParentId(), folderSaveDto.getName()).isPresent()){
             throw new IllegalArgumentException("중복된 폴더명입니다.");
         }
+        System.out.println(hashOperations.entries("user:"+userId));
         return folderRepository.save(folderSaveDto.toEntity()).getId();
     }
 
@@ -85,6 +106,7 @@ public class DriverService {
                             .createBy(childfolder.getCreatedBy())
                             .name(childfolder.getName())
                             .updateAt(childfolder.getUpdatedAt().toString())
+                            .id(childfolder.getId())
                             .type("folder")
                     .build());
         }
@@ -96,6 +118,7 @@ public class DriverService {
                     .createBy(file.getCreatedBy())
                     .name(file.getName())
                     .type(file.getType())
+                    .id(file.getId())
                     .build());
         }
         // 문서 불러오기
@@ -106,9 +129,93 @@ public class DriverService {
                     .updateAt(document.getUpdatedBy())
                     .name(document.getTitle())
                     .type("document")
+                    .id(document.getId())
                     .build());
         }
         return folderContentsDtos;
+    }
+
+    // 루트 하위 요소들 조회 + 바로가기(ex. 워크스페이스의 하위 스톤 드라이브로 바로가기)
+    public List<RootContentsDto> getContents(String rootId, String userId, String rootType){
+        List<RootContentsDto> rootContentsDtos = new ArrayList<>();
+        if(rootType.equals("WORKSPACE")){
+            try {
+                List<SubProjectResDto> projects = workspaceServiceClient.getSubProjectsByWorkspace(rootId);
+                for(SubProjectResDto project : projects){
+                    rootContentsDtos.add(RootContentsDto.builder()
+                            .id(project.getProjectId())
+                            .name(project.getProjectName())
+                            .type("PROJECT")
+                            .build());
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }else if(rootType.equals("PROJECT")){
+//            try {
+//                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)){
+//                    throw new IllegalArgumentException("권한이 없습니다.");
+//                }
+//            }catch (Exception e){
+//                throw new IllegalArgumentException("예상치못한오류 발생");
+//            }
+            try {
+                StoneTaskResDto stoneTaskResDto = workspaceServiceClient.getSubStonesAndTasks(rootId);
+                List<StoneTaskResDto.StoneInfo> stones = stoneTaskResDto.getStones();
+                for(StoneTaskResDto.StoneInfo stone : stones){
+                    rootContentsDtos.add(RootContentsDto.builder()
+                            .id(stone.getStoneId())
+                            .name(stone.getStoneName())
+                            .type("STONE")
+                            .build());
+                }
+            }catch (Exception e){
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }else if(rootType.equals("STONE")){
+//            try {
+//                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)){
+//                    throw new IllegalArgumentException("권한이 없습니다.");
+//                }
+//            }catch (Exception e){
+//                throw new IllegalArgumentException("예상치못한오류 발생");
+//            }
+            // 폴더 불러오기
+            List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+            for(Folder folder : folders){
+                rootContentsDtos.add(RootContentsDto.builder()
+                        .createBy(folder.getCreatedBy())
+                        .name(folder.getName())
+                        .updateAt(folder.getUpdatedAt().toString())
+                        .id(folder.getId())
+                        .type("folder")
+                        .build());
+            }
+            // 파일 불러오기
+            List<File> files = fileRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+            for(File file : files){
+                rootContentsDtos.add(RootContentsDto.builder()
+                        .size(file.getSize())
+                        .createBy(file.getCreatedBy())
+                        .name(file.getName())
+                        .type(file.getType())
+                        .id(file.getId())
+                        .build());
+            }
+            // 문서 불러오기
+            List<Document> documents = documentRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+            for(Document document : documents){
+                rootContentsDtos.add(RootContentsDto.builder()
+                        .createBy(document.getCreatedBy())
+                        .updateAt(document.getUpdatedBy())
+                        .name(document.getTitle())
+                        .type("document")
+                        .id(document.getId())
+                        .build());
+            }
+        }
+        return rootContentsDtos;
     }
 
     // 파일 업로드
@@ -141,14 +248,14 @@ public class DriverService {
 
     // 문서 생성
     public String createDocument(String folderId, String documentTitle){
-        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
-            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
-        }
+//        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+//        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
+//            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+//        }
         Document document = Document.builder()
                     .createdBy("2eb87833-c2dd-47ec-9799-be958953e2e6")
                     .title(documentTitle)
-                    .folder(folder)
+//                    .folder(folder)
                     .build();
         Document savedDocument = documentRepository.saveAndFlush(document);
 

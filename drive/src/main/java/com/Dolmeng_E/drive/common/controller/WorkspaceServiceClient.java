@@ -56,12 +56,10 @@ public interface WorkspaceServiceClient {
     );
 
     // workspaceId 넘겼을 때 하위 프로젝트 Id, 프로젝트명 가져오는 api
-    @GetMapping("/project/{workspaceId}/sub-project")
+    @GetMapping("/workspace/project/{workspaceId}/sub-project")
     List<SubProjectResDto> getSubProjectsByWorkspace(@PathVariable("workspaceId") String workspaceId);
 
     //projectId 넘겼을 때 하위 스톤 id, 테스크명 가져오는 api
-    @GetMapping("/stone/{projectId}/sub-stone-task")
+    @GetMapping("/workspace/stone/{projectId}/sub-stone-task")
     StoneTaskResDto getSubStonesAndTasks(@PathVariable("projectId") String projectId);
-
-
 }

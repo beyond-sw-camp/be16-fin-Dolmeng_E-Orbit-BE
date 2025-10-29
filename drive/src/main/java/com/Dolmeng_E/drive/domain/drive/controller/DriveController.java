@@ -47,6 +47,16 @@ public class DriveController {
                 .build(), HttpStatus.OK);
     }
 
+    // 위치 별 하위 항목들 가져오기
+    @GetMapping("/{rootType}/{rootId}")
+    public ResponseEntity<?> getContents(@RequestHeader("X-User-Id") String userId, @PathVariable String rootId, @PathVariable String rootType) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getContents(rootId, userId, rootType))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("루트 하위 요소들 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
     // 폴더 하위 요소들 조회
     @GetMapping("/folder/{folderId}/contents")
     public ResponseEntity<?> getFolderContents(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId) {

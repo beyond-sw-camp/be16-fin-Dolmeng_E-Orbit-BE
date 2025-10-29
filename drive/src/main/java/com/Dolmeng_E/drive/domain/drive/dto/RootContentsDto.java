@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FolderContentsDto {
+public class RootContentsDto {
     private String name;
     private String createBy;
     private String updateAt;

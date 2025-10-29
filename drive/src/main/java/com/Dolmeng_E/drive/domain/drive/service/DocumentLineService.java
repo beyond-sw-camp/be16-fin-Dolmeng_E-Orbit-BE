@@ -10,6 +10,7 @@ import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
@@ -26,7 +27,7 @@ public class DocumentLineService {
     private final HashOperations<String, String, String> hashOperations;
     private final SetOperations<String, String> setOperations;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RedisTemplate<String, String> redisTemplate;
+    private final @Qualifier("document")RedisTemplate<String, String> redisTemplate;
 
     public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate) {
         this.documentLineRepository = documentLineRepository;
