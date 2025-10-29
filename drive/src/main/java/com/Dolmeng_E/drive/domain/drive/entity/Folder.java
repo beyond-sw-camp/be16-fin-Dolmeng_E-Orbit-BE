@@ -69,4 +69,5 @@ public class Folder extends BaseTimeEntity {
         this.name = updatedName;
     }
     public void updateIsDelete() {this.isDelete = true;}
+    public void updateParentId(String ParentId) {this.parentId = ParentId;}
 }

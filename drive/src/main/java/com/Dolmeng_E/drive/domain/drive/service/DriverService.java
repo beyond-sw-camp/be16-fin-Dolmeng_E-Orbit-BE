@@ -96,6 +96,7 @@ public class DriverService {
         }
     }
 
+    // 폴더 정보 조회
     public FolderInfoResDto getFolderInfo(String folderId){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         return FolderInfoResDto.builder()
@@ -240,6 +241,12 @@ public class DriverService {
                     .build());
         }
         return rootContentsDtos;
+    }
+
+    public String updateFolderStruct(String userId, String folderId, FolderMoveDto folderMoveDto){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
+        folder.updateParentId(folderMoveDto.getParentId());
+        return folder.getParentId();
     }
 
     // 파일 업로드

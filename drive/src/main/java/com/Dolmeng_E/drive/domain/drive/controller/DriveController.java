@@ -1,5 +1,6 @@
 package com.Dolmeng_E.drive.domain.drive.controller;
 
+import com.Dolmeng_E.drive.domain.drive.dto.FolderMoveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderSaveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderUpdateNameDto;
 import com.Dolmeng_E.drive.domain.drive.service.DriverService;
@@ -74,6 +75,15 @@ public class DriveController {
                 .result(driverService.getFolderContents(folderId, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("폴더 하위 요소들 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    @PutMapping("/folder/{folderId}/move")
+    public ResponseEntity<?> updateFolderStruct(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestBody FolderMoveDto folderMoveDto) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.updateFolderStruct(userId, folderId, folderMoveDto))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 위치 변경 성공")
                 .build(), HttpStatus.OK);
     }
 
