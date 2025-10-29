@@ -306,6 +306,24 @@ public class WorkspaceController {
     }
 
 
+    // 워크스페이스 담당자 확인
+    @GetMapping("/{workspaceId}/manager/check")
+    ResponseEntity<CommonSuccessDto> checkWorkspaceManager(
+            @PathVariable("workspaceId") String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean isWorkspaceParticipant = workspaceService.checkWorkspaceManager(workspaceId,userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(isWorkspaceParticipant)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 담당자 정보입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
     // 워크스페이스 참여자 확인
     @GetMapping("/workspace/{workspaceId}/members/check")
     ResponseEntity<CommonSuccessDto> checkWorkspaceMembership(

@@ -13,6 +13,13 @@ import java.util.List;
 
 @FeignClient(name = "workspace-service")
 public interface WorkspaceServiceClient {
+    // 워크스페이스 담당자 확인
+    @GetMapping("/{workspaceId}/manager/check")
+    ResponseEntity<CommonSuccessDto> checkWorkspaceManager(
+            @PathVariable("workspaceId") String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
     // 워크스페이스 참여자 확인
     @GetMapping("/workspace/{workspaceId}/members/check")
     ResponseEntity<CommonSuccessDto> checkWorkspaceMembership(

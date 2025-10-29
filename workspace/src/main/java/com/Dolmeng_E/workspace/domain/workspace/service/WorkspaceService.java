@@ -962,6 +962,15 @@ public class WorkspaceService {
         }
     }
 
+    // 워크스페이스 담당자 확인
+    public boolean checkWorkspaceManager(String workspaceId, String userId) {
+        UUID uuidUserId = UUID.fromString(userId);
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, uuidUserId)
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자 정보를 찾을 수 없습니다."));
+
+        return participant.getWorkspaceRole() == WorkspaceRole.ADMIN;
+    }
 
     // 워크스페이스 참여자인지 리턴
     public boolean checkWorkspaceMembership(String workspaceId, String userId) {
