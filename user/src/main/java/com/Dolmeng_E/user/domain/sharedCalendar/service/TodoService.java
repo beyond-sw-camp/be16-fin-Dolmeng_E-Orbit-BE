@@ -46,7 +46,21 @@ public class TodoService {
         return TodoCreateResDto.fromEntity(todo);
     }
 
-    // todo 리스트 조회
+    // todo 전체 조회
+    public List<TodoCreateResDto> getAllTodo(UUID userId, String workspaceId) {
+        // 1. 검증
+        validationService.validateUserAndWorkspace(userId, workspaceId);
+
+        // 2. TODO만 조회
+        List<SharedCalendar> todo = sharedCalendarRepository
+                .findTodosByUserIdAndWorkspaceIdAndCalendarType(userId, workspaceId, CalendarType.TODO);
+
+        return todo.stream()
+                .map(TodoCreateResDto::fromEntity)
+                .toList();
+    }
+
+    // todo 특정 날짜 조회
     public List<TodoCreateResDto> getTodo(UUID userId, String workspaceId, LocalDate date) {
         validationService.validateUserAndWorkspace(userId, workspaceId);
 
