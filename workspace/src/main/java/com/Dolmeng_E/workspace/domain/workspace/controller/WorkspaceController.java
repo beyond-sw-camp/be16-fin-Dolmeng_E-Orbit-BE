@@ -305,6 +305,25 @@ public class WorkspaceController {
         );
     }
 
+    // 특정 워크스페이스 내 내 Task 목록 조회
+    @GetMapping("/{workspaceId}/my-tasks")
+    public ResponseEntity<?> getMyTasksInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<MyTaskResDto> myTasks = workspaceService.getMyTasksInWorkspace(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스별 내 태스크 목록 조회 성공")
+                        .result(myTasks)
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
 
     // 워크스페이스 담당자 확인
     @GetMapping("/{workspaceId}/manager/check")

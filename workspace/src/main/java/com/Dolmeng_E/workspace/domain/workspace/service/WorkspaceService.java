@@ -17,6 +17,7 @@ import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.user_group.dto.UserGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroup;
@@ -952,6 +953,35 @@ public class WorkspaceService {
                 .filter(u -> keyword == null || keyword.isBlank() || u.getUserName().contains(keyword))
                 .toList();
     }
+
+    // 특정 워크스페이스별 완료 안 된 task 목록 조회
+    @Transactional(readOnly = true)
+    public List<MyTaskResDto> getMyTasksInWorkspace(String userId, String workspaceId) {
+
+        // 1. 현재 유저가 해당 워크스페이스에 속한 참가자 조회
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스의 참가자가 아닙니다."));
+
+        // 2. 참가자 ID로 담당 중인 Task 조회
+        List<Task> tasks = taskRepository.findAllByTaskManagerId(participant.getId())
+                .stream()
+                .toList();
+
+        // 3. DTO 변환
+        return tasks.stream()
+                .map(task -> MyTaskResDto.builder()
+                        .taskId(task.getId())
+                        .taskName(task.getTaskName())
+                        .projectName(task.getStone().getProject().getProjectName())
+                        .stoneName(task.getStone().getStoneName())
+                        .isDone(task.getIsDone())
+                        .startTime(task.getStartTime())
+                        .endTime(task.getEndTime())
+                        .build())
+                .toList();
+    }
+
 
 
 

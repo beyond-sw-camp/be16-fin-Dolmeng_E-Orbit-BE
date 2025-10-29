@@ -290,6 +290,7 @@ public class TaskService {
                         .startTime(task.getStartTime())
                         .endTime(task.getEndTime())
                         .isDone(task.getIsDone())
+                        .taskManagerName(task.getTaskManager().getUserName()) // 담당자 이름 추가
                         .build()
                 )
                 .toList();
