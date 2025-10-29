@@ -98,7 +98,47 @@ public class DriverService {
                             .createBy(childfolder.getCreatedBy())
                             .name(childfolder.getName())
                             .updateAt(childfolder.getUpdatedAt().toString())
+                            .id(childfolder.getId())
                             .type("folder")
+                    .build());
+        }
+        // 파일 불러오기
+        for(File file : folder.getFiles()){
+            if(file.getIsDelete().equals(true)) continue;
+            folderContentsDtos.add(FolderContentsDto.builder()
+                    .size(file.getSize())
+                    .createBy(file.getCreatedBy())
+                    .name(file.getName())
+                    .type(file.getType())
+                    .id(file.getId())
+                    .build());
+        }
+        // 문서 불러오기
+        for(Document document : folder.getDocuments()){
+            if(document.getIsDelete().equals(true)) continue;
+            folderContentsDtos.add(FolderContentsDto.builder()
+                    .createBy(document.getCreatedBy())
+                    .updateAt(document.getUpdatedBy())
+                    .name(document.getTitle())
+                    .type("document")
+                    .id(document.getId())
+                    .build());
+        }
+        return folderContentsDtos;
+    }
+
+    // 루트 하위 요소들 조회 + 바로가기(ex. 워크스페이스의 하위 스톤 드라이브로 바로가기)
+    public List<FolderContentsDto> getContents(String rootId, String userId, String rootType){
+
+        List<FolderContentsDto> folderContentsDtos = new ArrayList<>();
+        // 하위 폴더 불러오기
+        for(Folder childfolder : folders){
+            if(childfolder.getIsDelete().equals(true)) continue;
+            folderContentsDtos.add(FolderContentsDto.builder()
+                    .createBy(childfolder.getCreatedBy())
+                    .name(childfolder.getName())
+                    .updateAt(childfolder.getUpdatedAt().toString())
+                    .type("folder")
                     .build());
         }
         // 파일 불러오기
@@ -154,14 +194,14 @@ public class DriverService {
 
     // 문서 생성
     public String createDocument(String folderId, String documentTitle){
-        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
-            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
-        }
+//        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+//        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
+//            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+//        }
         Document document = Document.builder()
                     .createdBy("2eb87833-c2dd-47ec-9799-be958953e2e6")
                     .title(documentTitle)
-                    .folder(folder)
+//                    .folder(folder)
                     .build();
         Document savedDocument = documentRepository.saveAndFlush(document);
 

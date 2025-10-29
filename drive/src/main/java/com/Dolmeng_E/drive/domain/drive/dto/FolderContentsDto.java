@@ -15,4 +15,5 @@ public class FolderContentsDto {
     private String updateAt;
     private Long size;
     private String type;
+    private String id;
 }
