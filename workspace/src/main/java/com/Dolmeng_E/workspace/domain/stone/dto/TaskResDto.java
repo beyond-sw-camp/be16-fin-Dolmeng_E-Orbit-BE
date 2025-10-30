@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -19,6 +20,8 @@ public class TaskResDto {
     private String taskId;
 
     private String taskName;
+
+    private UUID taskManagerUserId;
 
     private LocalDateTime startTime;
 
@@ -33,6 +36,7 @@ public class TaskResDto {
         return TaskResDto.builder()
                 .taskId(task.getId())
                 .taskName(task.getTaskName())
+                .taskManagerUserId(task.getTaskManager().getUserId())
                 .startTime(task.getStartTime())
                 .endTime(task.getEndTime())
                 .isDone(task.getIsDone())

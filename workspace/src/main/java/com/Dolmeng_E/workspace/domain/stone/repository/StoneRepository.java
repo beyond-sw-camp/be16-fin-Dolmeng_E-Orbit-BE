@@ -19,4 +19,15 @@ public interface StoneRepository extends JpaRepository<Stone, String> {
 
     @Query("SELECT s FROM Stone s WHERE s.project.id = :projectId AND s.isDelete = false")
     List<Stone> findAllByProjectId(@Param("projectId") String projectId);
+
+    // 워크스페이스 ID 기준 스톤 전체 조회
+    @Query("""
+    select s
+    from Stone s
+    join s.project p
+    where p.workspace.id = :workspaceId
+    and s.isDelete = false
+    """)
+    List<Stone> findAllByWorkspaceId(@Param("workspaceId") String workspaceId);
+
 }

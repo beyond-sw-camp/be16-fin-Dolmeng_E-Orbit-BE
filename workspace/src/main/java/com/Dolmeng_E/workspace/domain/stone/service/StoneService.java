@@ -29,6 +29,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.Dolmeng_E.workspace.domain.stone.dto.TaskResDto;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -865,4 +866,11 @@ public class StoneService {
         return parent.getParentStoneId() == null;
     }
 
+    // 워크스페이스 ID로 스톤 전체 조회
+    public List<StoneListResDto> getStonesByWorkspace(String workspaceId) {
+        List<Stone> stones = stoneRepository.findAllByWorkspaceId(workspaceId);
+        return stones.stream()
+                .map(StoneListResDto::fromEntity)
+                .toList();
+    }
 }
