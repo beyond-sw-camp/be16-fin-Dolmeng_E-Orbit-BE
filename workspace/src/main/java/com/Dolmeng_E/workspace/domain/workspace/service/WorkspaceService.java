@@ -17,6 +17,7 @@ import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.user_group.dto.UserGroupAddUserDto;
 import com.Dolmeng_E.workspace.domain.user_group.entity.UserGroup;
@@ -718,7 +719,7 @@ public class WorkspaceService {
         return result;
     }
 
-    // 워크스페이스에 존재하지 않는 회원 목록에서 검색
+    // 워크스페이스에 존재하지 않는 회원 목록에서 검색 (이메일 기반)
     public UserInfoListResDto searchParticipants(String userId, SearchDto dto) {
 
         // 1. 워크스페이스 유효성 검증
@@ -734,6 +735,7 @@ public class WorkspaceService {
                 .filter(p -> !p.isDelete()) // 삭제된 사람은 제외 (검색 결과에 포함되도록)
                 .map(WorkspaceParticipant::getUserId)
                 .toList();
+
         // 3️. user-service에 userIdList 제외한 유저목록 요청
         UserIdListDto excludedIdsDto = UserIdListDto.builder()
                 .userIdList(participantUserIds)
@@ -741,10 +743,11 @@ public class WorkspaceService {
 
         UserInfoListResDto userInfoListResDto = userFeign.fetchUsersNotInWorkspace(excludedIdsDto);
 
-        // 4️. 키워드 검색 (optional)
+        // 4️. 키워드 검색 (optional) — 이메일 기준으로 변경
         if (dto.getSearchKeyword() != null && !dto.getSearchKeyword().isBlank()) {
             List<UserInfoResDto> filtered = userInfoListResDto.getUserInfoList().stream()
-                    .filter(user -> user.getUserName().contains(dto.getSearchKeyword()))
+                    .filter(user -> user.getUserEmail() != null
+                            && user.getUserEmail().contains(dto.getSearchKeyword())) // 추가됨
                     .toList();
 
             return UserInfoListResDto.builder()
@@ -756,7 +759,7 @@ public class WorkspaceService {
         return userInfoListResDto;
     }
 
-    // 워크스페이스 내 참여자 검색 (user-service 정보 포함)
+    // 워크스페이스 내 참여자 검색 (user-service 정보 포함, 이메일 기준)
     @Transactional(readOnly = true)
     public UserInfoListResDto searchWorkspaceParticipants(String userId, SearchDto dto) {
 
@@ -791,49 +794,37 @@ public class WorkspaceService {
                 .map(WorkspaceParticipant::getUserId)
                 .toList();
 
-        // 5. user-service에서 상세 정보 가져오기 (Feign)
-        UserIdListDto userIdListDto = new UserIdListDto(participantUserIds);
-        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+        // 5. user-service에서 상세 정보 일괄 조회 (이메일 포함)
+        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(new UserIdListDto(participantUserIds));
 
-        // 6. 워크스페이스 참가자와 user-service의 정보 병합
-        Map<UUID, UserInfoResDto> userInfoMap = new HashMap<>();
-        for (UserInfoResDto userInfo : userInfoListResDto.getUserInfoList()) {
-            userInfoMap.put(userInfo.getUserId(), userInfo);
-        }
+        String keyword = dto.getSearchKeyword();
 
-        // 7. 키워드 필터링 및 병합
-                String keyword = dto.getSearchKeyword();
-                List<UserInfoResDto> filteredList = new ArrayList<>();
-
-                for (WorkspaceParticipant participant : participants) {
-
-                    // 키워드가 없거나, 이름이 검색어를 포함하면 통과
-                    boolean matches = (keyword == null || keyword.isBlank())
-                            || participant.getUserName().contains(keyword);
-
-                    if (!matches) continue;
-
-                    // user-service에서 받은 추가 정보 매칭
-                    UserInfoResDto info = userInfoMap.get(participant.getUserId());
-
-                    // 결과 DTO 조립
-                    UserInfoResDto mergedDto = UserInfoResDto.builder()
-                            .userId(participant.getUserId())
-                            .userName(participant.getUserName())
-                            .userEmail(info != null ? info.getUserEmail() : null)
-                            .profileImageUrl(info != null ? info.getProfileImageUrl() : null)
+        // 6. 이메일 기준 필터링 및 병합
+        List<UserInfoResDto> result = userInfoListResDto.getUserInfoList().stream()
+                .filter(info -> info != null && info.getUserId() != null)
+                .filter(info -> keyword == null || keyword.isBlank()
+                        || (info.getUserEmail() != null && info.getUserEmail().contains(keyword))) // 추가됨
+                .map(info -> {
+                    // 워크스페이스에 저장된 표시명을 우선 사용(정책 유지)
+                    WorkspaceParticipant p = participants.stream()
+                            .filter(pp -> pp.getUserId().equals(info.getUserId()))
+                            .findFirst()
+                            .orElse(null);
+                    return UserInfoResDto.builder()
+                            .userId(info.getUserId())
+                            .userName(p != null ? p.getUserName() : info.getUserName())
+                            .userEmail(info.getUserEmail()) // 추가됨
+                            .profileImageUrl(info.getProfileImageUrl())
                             .build();
+                })
+                .toList();
 
-                    filteredList.add(mergedDto);
-                }
-
-        // 8. 결과 반환
         return UserInfoListResDto.builder()
-                .userInfoList(filteredList)
+                .userInfoList(result)
                 .build();
     }
 
-    // 워크스페이스 내 사용자 그룹이 없는 참여자 검색(사용자 그룹 추가시 활용)
+    // 워크스페이스 내 사용자 그룹이 없는 참여자 검색(사용자 그룹 추가시 활용, 이메일 기준)
     @Transactional(readOnly = true)
     public UserInfoListResDto searchWorkspaceParticipantsNotInUserGroup(String userId, SearchDto dto) {
 
@@ -880,19 +871,16 @@ public class WorkspaceService {
                 .toList();
 
         // 6. user-service에서 상세 정보 가져오기 (Feign)
-        UserIdListDto userIdListDto = UserIdListDto.builder()
-                .userIdList(participantUserIds)
-                .build();
-        UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
+        UserInfoListResDto userInfoListResDto =
+                userFeign.fetchUserListInfo(UserIdListDto.builder().userIdList(participantUserIds).build());
 
         // 7. 워크스페이스 참가자와 user-service의 정보 병합
         Map<UUID, UserInfoResDto> userInfoMap = userInfoListResDto.getUserInfoList().stream()
                 .collect(Collectors.toMap(UserInfoResDto::getUserId, u -> u));
 
-        // 8. 키워드 필터링 및 병합
+        // 8. 키워드 필터링 및 병합 — 이메일 기준으로 변경
         String keyword = dto.getSearchKeyword();
         List<UserInfoResDto> filteredList = filteredParticipants.stream()
-                .filter(p -> keyword == null || keyword.isBlank() || p.getUserName().contains(keyword))
                 .map(p -> {
                     UserInfoResDto info = userInfoMap.get(p.getUserId());
                     return UserInfoResDto.builder()
@@ -902,6 +890,8 @@ public class WorkspaceService {
                             .profileImageUrl(info != null ? info.getProfileImageUrl() : null)
                             .build();
                 })
+                .filter(u -> keyword == null || keyword.isBlank()
+                        || (u.getUserEmail() != null && u.getUserEmail().contains(keyword))) // 추가됨
                 .toList();
 
         // 9. 결과 반환
@@ -909,6 +899,7 @@ public class WorkspaceService {
                 .userInfoList(filteredList)
                 .build();
     }
+
 
     // 권한그룹이 없는 워크스페이스 참여자 조회
     @Transactional(readOnly = true)
@@ -952,6 +943,66 @@ public class WorkspaceService {
                 .filter(u -> keyword == null || keyword.isBlank() || u.getUserName().contains(keyword))
                 .toList();
     }
+
+    // 특정 워크스페이스별 완료 안 된 task 목록 조회
+    @Transactional(readOnly = true)
+    public List<MyTaskResDto> getMyTasksInWorkspace(String userId, String workspaceId) {
+
+        // 1. 현재 유저가 해당 워크스페이스에 속한 참가자 조회
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스의 참가자가 아닙니다."));
+
+        // 2. 참가자 ID로 담당 중인 Task 조회
+        List<Task> tasks = taskRepository.findAllByTaskManagerId(participant.getId())
+                .stream()
+                .toList();
+
+        // 3. DTO 변환
+        return tasks.stream()
+                .map(task -> MyTaskResDto.builder()
+                        .taskId(task.getId())
+                        .taskName(task.getTaskName())
+                        .projectName(task.getStone().getProject().getProjectName())
+                        .stoneName(task.getStone().getStoneName())
+                        .isDone(task.getIsDone())
+                        .startTime(task.getStartTime())
+                        .endTime(task.getEndTime())
+                        .build())
+                .toList();
+    }
+
+    // 특정 워크스페이스 내 내가 속한 프로젝트 목록 조회
+    @Transactional(readOnly = true)
+    public List<MyProjectResDto> getMyProjectsInWorkspace(String userId, String workspaceId) {
+
+        // 1. 현재 유저가 워크스페이스에 존재하는지 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스의 참가자가 아닙니다."));
+
+        // 2. 내가 속한 프로젝트 참가 정보 조회
+        List<ProjectParticipant> projectParticipants =
+                projectParticipantRepository.findAllByWorkspaceParticipant(participant);
+
+        // 3. 프로젝트 중복 제거 및 삭제 제외
+        Set<Project> projects = projectParticipants.stream()
+                .map(ProjectParticipant::getProject)
+                .filter(p -> !Boolean.TRUE.equals(p.getIsDelete()))
+                .collect(Collectors.toSet());
+
+        // 4. DTO 변환
+        return projects.stream()
+                .map(project -> MyProjectResDto.builder()
+                        .projectId(project.getId())
+                        .projectName(project.getProjectName())
+                        .startTime(project.getStartTime())
+                        .endTime(project.getEndTime())
+                        .milestone(project.getMilestone() != null ? project.getMilestone() : BigDecimal.ZERO)
+                        .build())
+                .toList();
+    }
+
 
 
 
@@ -1048,6 +1099,36 @@ public class WorkspaceService {
                 .tasks(tasks)
                 .build();
     }
+
+    // WorkspaceService.java
+
+    @Transactional(readOnly = true)
+    public WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(String stoneId, String userId) {
+
+        // 1️. 스톤 조회
+        Stone stone = stoneRepository.findById(stoneId)
+                .orElseThrow(() -> new EntityNotFoundException("스톤을 찾을 수 없습니다."));
+
+        // 2️. 프로젝트, 워크스페이스 추적
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 3️. 요청자 정보 조회
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스의 참가자가 아닙니다."));
+
+        // 4️. 관리자 여부 판단
+        boolean isWorkspaceManager = participant.getWorkspaceRole().equals(WorkspaceRole.ADMIN);
+        boolean isProjectManager = project.getWorkspaceParticipant().equals(participant);
+
+        // 5️. DTO 반환
+        return WorkspaceOrProjectManagerCheckDto.builder()
+                .isWorkspaceManager(isWorkspaceManager)
+                .isProjectManager(isProjectManager)
+                .build();
+    }
+
 
 
 

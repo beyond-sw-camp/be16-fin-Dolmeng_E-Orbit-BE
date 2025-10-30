@@ -22,4 +22,6 @@ public class TaskResDto {
     private LocalDateTime endTime;
 
     private Boolean isDone;
+
+    private String taskManagerName; // 이름 추가
 }
