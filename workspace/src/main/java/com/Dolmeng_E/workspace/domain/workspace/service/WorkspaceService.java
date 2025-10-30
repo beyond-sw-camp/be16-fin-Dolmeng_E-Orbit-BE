@@ -392,12 +392,12 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));
 
-        // 해당 워크스페이스의 관리자만 가능하도록 방어 코드
-        WorkspaceParticipant admin = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
-                .orElseThrow(()->new EntityNotFoundException("참여자 정보가 없습니다."));
-        if(!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException(("해당 워크스페이스의 관리자만 조회 가능합니다."));
-        }
+//        // 해당 워크스페이스의 관리자만 가능하도록 방어 코드
+//        WorkspaceParticipant admin = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+//                .orElseThrow(()->new EntityNotFoundException("참여자 정보가 없습니다."));
+//        if(!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+//            throw new IllegalArgumentException(("해당 워크스페이스의 관리자만 조회 가능합니다."));
+//        }
 
         // 3. 내부에서 페이지 및 정렬 설정 (createdAt ASC, 8개씩)
         Pageable pageable = PageRequest.of(0, 8, Sort.by("createdAt").ascending());
