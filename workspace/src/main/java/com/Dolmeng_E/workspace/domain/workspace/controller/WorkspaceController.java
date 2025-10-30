@@ -1,7 +1,6 @@
 package com.Dolmeng_E.workspace.domain.workspace.controller;
 
-import com.Dolmeng_E.workspace.common.dto.WorkspaceInfoResDto;
-import com.Dolmeng_E.workspace.common.dto.WorkspaceNameDto;
+import com.Dolmeng_E.workspace.common.dto.*;
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectProgressResDto;
 import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
@@ -301,6 +300,170 @@ public class WorkspaceController {
                         .build(),
                 HttpStatus.OK
         );
+    }
+
+    // 특정 워크스페이스 내 내 Task 목록 조회
+    @GetMapping("/{workspaceId}/my-tasks")
+    public ResponseEntity<?> getMyTasksInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<MyTaskResDto> myTasks = workspaceService.getMyTasksInWorkspace(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스별 내 태스크 목록 조회 성공")
+                        .result(myTasks)
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 특정 워크스페이스 내 내 프로젝트 목록 조회
+    @GetMapping("/{workspaceId}/my-projects")
+    public ResponseEntity<?> getMyProjectsInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<MyProjectResDto> myProjects = workspaceService.getMyProjectsInWorkspace(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스별 내 프로젝트 목록 조회 성공")
+                        .result(myProjects)
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
+    // 워크스페이스 담당자 확인
+    @GetMapping("/{workspaceId}/manager/check")
+    ResponseEntity<CommonSuccessDto> checkWorkspaceManager(
+            @PathVariable("workspaceId") String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean isWorkspaceParticipant = workspaceService.checkWorkspaceManager(workspaceId,userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(isWorkspaceParticipant)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 담당자 정보입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+
+    // 워크스페이스 참여자 확인
+    @GetMapping("/workspace/{workspaceId}/members/check")
+    ResponseEntity<CommonSuccessDto> checkWorkspaceMembership(
+            @PathVariable("workspaceId") String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean isWorkspaceParticipant = workspaceService.checkWorkspaceMembership(workspaceId,userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(isWorkspaceParticipant)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 참여자 정보입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+
+    }
+
+    // 프로젝트 담당자 확인
+    @GetMapping("/project/{projectId}/manager/check")
+    public ResponseEntity<CommonSuccessDto> checkProjectManagership(
+            @PathVariable("projectId") String projectId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean result = workspaceService.checkProjectManagership(projectId, userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(result)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("프로젝트 담당자 여부입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 프로젝트 참여자 확인
+    @GetMapping("/workspace/project/{projectId}/members/check")
+    public ResponseEntity<CommonSuccessDto> checkProjectMembership(
+            @PathVariable("projectId") String projectId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean result = workspaceService.checkProjectMembership(projectId, userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(result)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("프로젝트 참여자 여부입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 스톤 담당자 확인
+    @GetMapping("/stone/{stoneId}/manager/check")
+    public ResponseEntity<CommonSuccessDto> checkStoneManagership(
+            @PathVariable("stoneId") String stoneId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean result = workspaceService.checkStoneManagership(stoneId, userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(result)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("스톤 담당자 여부입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // 스톤 참여자 확인
+    @GetMapping("/stone/{stoneId}/members/check")
+    public ResponseEntity<CommonSuccessDto> checkStoneMembership(
+            @PathVariable("stoneId") String stoneId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        boolean result = workspaceService.checkStoneMembership(stoneId, userId);
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .result(result)
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("스톤 참여자 여부입니다.")
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
+    // workspaceId 넘겼을 때 하위 프로젝트 Id, 프로젝트명 가져오는 api
+    @GetMapping("/project/{workspaceId}/sub-project")
+    public ResponseEntity<List<SubProjectResDto>> getSubProjects(@PathVariable String workspaceId) {
+        List<SubProjectResDto> projects = workspaceService.getSubProjectsByWorkspace(workspaceId);
+        return ResponseEntity.ok(projects);
+    }
+
+    //projectId 넘겼을 때 하위 스톤 id, 테스크명 가져오는 api
+    @GetMapping("/stone/{projectId}/sub-stone-task")
+    public ResponseEntity<StoneTaskResDto> getSubStonesAndTasks(@PathVariable String projectId) {
+        StoneTaskResDto response = workspaceService.getSubStonesAndTasks(projectId);
+        return ResponseEntity.ok(response);
+    }
+
+    // stoneId 와 userId 넘겼을 때 웤스 관리자인지 프로젝트관리자인지 확인하는 api
+    @GetMapping("/work-project/{stoneId}/manager/check")
+    public WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable("stoneId") String stoneId
+    ) {
+        return workspaceService.checkWorkspaceOrProjectManager(stoneId, userId);
     }
 
 

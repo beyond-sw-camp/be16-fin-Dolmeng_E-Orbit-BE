@@ -45,5 +45,12 @@ public class Document extends BaseTimeEntity {
     @JoinColumn(name = "folder_id")
     private Folder folder;
 
+    @Column(nullable = false)
+    private String rootId;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private RootType rootType;
+
     public void updateIsDelete() {this.isDelete = true;}
 }

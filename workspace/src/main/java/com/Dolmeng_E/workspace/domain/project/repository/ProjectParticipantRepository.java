@@ -69,4 +69,13 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
 
     void deleteByProjectAndWorkspaceParticipant(Project project, WorkspaceParticipant wp);
 
+    @Query("SELECT pp FROM ProjectParticipant pp " +
+            "WHERE pp.project.id = :projectId " +
+            "AND pp.workspaceParticipant.userId = :userId " +
+            "AND pp.workspaceParticipant.isDelete = false")
+    Optional<ProjectParticipant> findByProjectIdAndUserId(
+            @Param("projectId") String projectId,
+            @Param("userId") UUID userId
+    );
+
 }

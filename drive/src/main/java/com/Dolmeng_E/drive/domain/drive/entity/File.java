@@ -30,6 +30,9 @@ public class File extends BaseTimeEntity {
     private String id;
 
     @Column(nullable = false)
+    private String workspaceId;
+
+    @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
@@ -51,6 +54,13 @@ public class File extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "folder_id")
     private Folder folder;
+
+    @Column(nullable = false)
+    private String rootId;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private RootType rootType;
 
     public void updateIsDelete() {this.isDelete = true;}
 }

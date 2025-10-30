@@ -202,7 +202,18 @@ public class StoneController {
                 HttpStatus.OK);
     }
 
-
-
-
+    // 워크스페이스별 스톤 목록 조회
+    @GetMapping("/list/{workspaceId}")
+    public ResponseEntity<?> getStonesByWorkspace(
+            @PathVariable String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        List<StoneListResDto> stones = stoneService.getStonesByWorkspace(workspaceId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("스톤 목록 조회 성공")
+                .result(stones)
+                .statusCode(HttpStatus.OK.value())
+                .build(),
+                HttpStatus.OK);
+    }
 }

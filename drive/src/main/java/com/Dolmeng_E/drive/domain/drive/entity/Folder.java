@@ -36,6 +36,7 @@ public class Folder extends BaseTimeEntity {
     @Column(nullable = false)
     private String workspaceId;
 
+    @Column(nullable = false)
     private String rootId;
 
     @Column(nullable = false)

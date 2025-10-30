@@ -81,7 +81,7 @@ public class TaskController {
     ) {
         List<TaskResDto> dto = taskService.getTaskList(userId, stoneId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .statusMessage("태스크 완료 처리 성공")
+                .statusMessage("태스크 목록 조회 성공")
                 .result(dto)
                 .statusCode(HttpStatus.OK.value())
                 .build()

@@ -19,9 +19,9 @@ public class DriveController {
 
     // 폴더 생성
     @PostMapping("/folder")
-    public ResponseEntity<?> saveFolder(@RequestBody FolderSaveDto folderSaveDto) {
+    public ResponseEntity<?> saveFolder(@RequestHeader("X-User-Id") String userId, @RequestBody FolderSaveDto folderSaveDto) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.createFolder(folderSaveDto))
+                .result(driverService.createFolder(folderSaveDto, userId))
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("폴더 생성 성공")
                 .build(), HttpStatus.CREATED);
@@ -29,7 +29,7 @@ public class DriveController {
 
     // 폴더명 수정
     @PutMapping("/folder/{folderId}")
-    public ResponseEntity<?> updateFolder(@RequestBody FolderUpdateNameDto folderUpdateNameDto, @PathVariable String folderId) {
+    public ResponseEntity<?> updateFolder(@RequestHeader("X-User-Id") String userId, @RequestBody FolderUpdateNameDto folderUpdateNameDto, @PathVariable String folderId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.updateFolderName(folderUpdateNameDto, folderId))
                 .statusCode(HttpStatus.OK.value())
@@ -39,7 +39,7 @@ public class DriveController {
 
     // 폴더 삭제
     @DeleteMapping("/folder/{folderId}")
-    public ResponseEntity<?> deleteFolder(@PathVariable String folderId) {
+    public ResponseEntity<?> deleteFolder(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.deleteFolder(folderId))
                 .statusCode(HttpStatus.OK.value())
@@ -47,9 +47,19 @@ public class DriveController {
                 .build(), HttpStatus.OK);
     }
 
+    // 위치 별 하위 항목들 가져오기
+    @GetMapping("/{rootType}/{rootId}")
+    public ResponseEntity<?> getContents(@RequestHeader("X-User-Id") String userId, @PathVariable String rootId, @PathVariable String rootType) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getContents(rootId, userId, rootType))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("루트 하위 요소들 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
     // 폴더 하위 요소들 조회
     @GetMapping("/folder/{folderId}/contents")
-    public ResponseEntity<?> getFolderContents(@PathVariable String folderId) {
+    public ResponseEntity<?> getFolderContents(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.getFolderContents(folderId))
                 .statusCode(HttpStatus.OK.value())
@@ -59,9 +69,9 @@ public class DriveController {
 
     // 파일 업로드
     @PostMapping("/folder/{folderId}/file")
-    public ResponseEntity<?> uploadFile(@PathVariable String folderId, @RequestParam MultipartFile file) {
+    public ResponseEntity<?> uploadFile(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestParam MultipartFile file, @RequestParam String workspaceId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.uploadFile(file, folderId))
+                .result(driverService.uploadFile(file, folderId, workspaceId))
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("파일 업로드 성공")
                 .build(), HttpStatus.CREATED);
@@ -69,7 +79,7 @@ public class DriveController {
 
     // 파일 삭제
     @DeleteMapping("/file/{fileId}")
-    public ResponseEntity<?> deleteFile(@PathVariable String fileId) {
+    public ResponseEntity<?> deleteFile(@RequestHeader("X-User-Id") String userId, @PathVariable String fileId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.deleteFile(fileId))
                 .statusCode(HttpStatus.OK.value())
@@ -79,7 +89,7 @@ public class DriveController {
 
     // 문서 생성
     @PostMapping("/folder/{folderId}/document")
-    public ResponseEntity<?> saveDocument(@PathVariable String folderId, @RequestParam String documentTitle) {
+    public ResponseEntity<?> saveDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestParam String documentTitle) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.createDocument(folderId, documentTitle))
                 .statusCode(HttpStatus.CREATED.value())
@@ -89,7 +99,7 @@ public class DriveController {
 
     // 문서 삭제
     @DeleteMapping("/document/{documentId}")
-    public ResponseEntity<?> deleteDocument(@PathVariable String documentId) {
+    public ResponseEntity<?> deleteDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.deleteDocument(documentId))
                 .statusCode(HttpStatus.OK.value())
@@ -99,11 +109,21 @@ public class DriveController {
 
     // 문서 조회
     @GetMapping("/document/{documentId}")
-    public ResponseEntity<?> getDocument(@PathVariable String documentId) {
+    public ResponseEntity<?> getDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.findDocument(documentId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("문서 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+    
+    // 워크스페이스 사용량 조회
+    @GetMapping("/files/storage")
+    public ResponseEntity<?> getFilesSize(@RequestHeader("X-Workspace-Id") String workspaceId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFilesSize(workspaceId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("스토리지 사용량 조회 성공")
                 .build(), HttpStatus.OK);
     }
 }
