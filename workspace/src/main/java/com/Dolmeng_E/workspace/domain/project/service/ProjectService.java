@@ -124,6 +124,17 @@ public class ProjectService {
             project.changeManager(newManager);
         }
 
+        // 5. 최상위 스톤명 변경
+        if (dto.getProjectName() != null && !dto.getProjectName().isBlank()) {
+            Stone topStone = project.getStones().stream()
+                    .filter(stone -> stone.getParentStoneId() == null)
+                    .findFirst()
+                    .orElseThrow(() -> new EntityNotFoundException("최상위 스톤이 없습니다."));
+
+            topStone.setStoneName(dto.getProjectName());
+            stoneRepository.save(topStone);
+        }
+
         project.update(dto);
         return project.getId();
     }
@@ -268,6 +279,7 @@ public class ProjectService {
                 .collect(Collectors.toMap(
                         Stone::getId,
                         s -> StoneListResDto.builder()
+                                .projectId(projectId)
                                 .stoneId(s.getId())
                                 .stoneName(s.getStoneName())
                                 .startTime(s.getStartTime())
