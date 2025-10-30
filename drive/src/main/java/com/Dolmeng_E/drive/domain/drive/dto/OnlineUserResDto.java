@@ -11,4 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class OnlineUserResDto {
     private String userId;
+    private String userName;
+    private String profileImage;
 }
