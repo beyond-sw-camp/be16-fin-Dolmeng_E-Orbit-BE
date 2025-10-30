@@ -65,12 +65,9 @@ public interface WorkspaceServiceClient {
     StoneTaskResDto getSubStonesAndTasks(@PathVariable("projectId") String projectId);
 
     // stoneId 와 userId 넘겼을 때 웤스 관리자인지 프로젝트관리자인지 확인하는 api
-    @GetMapping("/work-project/{stoneId}/manager/check")
+    @GetMapping("/workspace/work-project/{stoneId}/manager/check")
     WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
             @PathVariable("stoneId") String stoneId,
             @RequestHeader("X-User-Id") String userId
     );
-
-
-
 }

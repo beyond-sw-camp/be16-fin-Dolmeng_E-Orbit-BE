@@ -3,6 +3,7 @@ package com.Dolmeng_E.drive.domain.drive.service;
 import com.Dolmeng_E.drive.common.controller.WorkspaceServiceClient;
 import com.Dolmeng_E.drive.common.dto.StoneTaskResDto;
 import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
+import com.Dolmeng_E.drive.common.dto.WorkspaceOrProjectManagerCheckDto;
 import com.Dolmeng_E.drive.common.service.S3Uploader;
 import com.Dolmeng_E.drive.domain.drive.dto.*;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
@@ -156,7 +157,7 @@ public class DriverService {
     }
 
     // 루트 하위 요소들 조회 + 바로가기(ex. 워크스페이스의 하위 스톤 드라이브로 바로가기)
-    public List<RootContentsDto> getContents(String rootId, String userId, String rootType){
+    public List<RootContentsDto> getContents(String rootId, String userId, String rootType, String workspaceId){
         List<RootContentsDto> rootContentsDtos = new ArrayList<>();
         if(rootType.equals("WORKSPACE")){
             try {
@@ -174,7 +175,8 @@ public class DriverService {
             }
         }else if(rootType.equals("PROJECT")){
             try {
-                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)){
+                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)
+                        &&Objects.requireNonNull(workspaceServiceClient.checkWorkspaceManager(workspaceId, userId).getBody()).getResult().equals(false)){
                     throw new IllegalArgumentException("권한이 없습니다.");
                 }
             }catch (FeignException e){
@@ -195,13 +197,18 @@ public class DriverService {
                 throw new IllegalArgumentException("예상치못한오류 발생");
             }
         }else if(rootType.equals("STONE")){
-//            try {
-//                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)){
-//                    throw new IllegalArgumentException("권한이 없습니다.");
-//                }
-//            }catch (Exception e){
-//                throw new IllegalArgumentException("예상치못한오류 발생");
-//            }
+            try {
+                WorkspaceOrProjectManagerCheckDto workspaceOrProjectManagerCheckDto = workspaceServiceClient.checkWorkspaceOrProjectManager(rootId, userId);
+                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)
+                        && !workspaceOrProjectManagerCheckDto.isProjectManager() && !workspaceOrProjectManagerCheckDto.isWorkspaceManager()
+                        && Objects.requireNonNull(workspaceServiceClient.checkStoneManagership(rootId, userId).getBody()).getResult().equals(false)
+                        ){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
         }
         Map<String, String> userInfo = hashOperations.entries("user:"+userId);
         // 폴더 불러오기

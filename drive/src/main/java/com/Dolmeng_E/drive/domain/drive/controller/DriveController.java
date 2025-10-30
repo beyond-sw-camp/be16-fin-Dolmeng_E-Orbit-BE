@@ -61,9 +61,9 @@ public class DriveController {
 
     // 위치 별 하위 항목들 가져오기
     @GetMapping("/{rootType}/{rootId}")
-    public ResponseEntity<?> getContents(@RequestHeader("X-User-Id") String userId, @PathVariable String rootId, @PathVariable String rootType) {
+    public ResponseEntity<?> getContents(@RequestHeader("X-User-Id") String userId, @RequestHeader("X-Workspace-Id") String workspaceId, @PathVariable String rootId, @PathVariable String rootType) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.getContents(rootId, userId, rootType))
+                .result(driverService.getContents(rootId, userId, rootType, workspaceId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("루트 하위 요소들 조회 성공")
                 .build(), HttpStatus.OK);
