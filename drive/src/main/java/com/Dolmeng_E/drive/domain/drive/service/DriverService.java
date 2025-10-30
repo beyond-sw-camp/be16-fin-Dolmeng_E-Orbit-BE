@@ -256,10 +256,28 @@ public class DriverService {
         return rootContentsDtos;
     }
 
-    public String updateFolderStruct(String userId, String folderId, FolderMoveDto folderMoveDto){
+    public String updateFolderStruct(String folderId, FolderMoveDto folderMoveDto){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
+        if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderMoveDto.getParentId(), folder.getName()).isPresent()){
+            throw new IllegalArgumentException("중복된 폴더명입니다.");
+        }
         folder.updateParentId(folderMoveDto.getParentId());
         return folder.getParentId();
+    }
+
+    public String updateElementStruct(String elementId, ElementMoveDto elementMoveDto){
+        Optional<Folder> folder = folderRepository.findById(elementMoveDto.getFolderId());
+        if(elementMoveDto.getType().equals("document")){
+            Document document = documentRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
+            document.updateFolder(folder.orElse(null));
+            return document.getTitle();
+        }
+        if(elementMoveDto.getType().equals("file")){
+            File file = fileRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 파일이 존재하지 않습니다."));
+            file.updateFolder(folder.orElse(null));
+            return file.getName();
+        }
+        else throw new IllegalArgumentException("예기치 못한 오류 발생");
     }
 
     // 파일 업로드
@@ -284,7 +302,7 @@ public class DriverService {
                     .createdBy(userId)
                     .folder(folder.orElse(null))
                     .name(file.getOriginalFilename())
-                    .type(file.getContentType())
+                    .type("file")
                     .size(file.getSize())
                     .workspaceId(fileSaveDto.getWorkspaceId())
                     .rootId(fileSaveDto.getRootId())
