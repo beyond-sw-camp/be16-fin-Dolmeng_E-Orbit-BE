@@ -362,4 +362,10 @@ public class ChatService {
         return unreadMessageList;
     }
 
+    // 워크스페이스의 안 읽은 메시지 수 조회
+    public Long getMessageCountByWorkspace(String workspaceId, String userId) {
+        Long unreadCount = readStatusRepository
+                .countUnreadMessagesInWorkspaceByUser(workspaceId, UUID.fromString(userId));
+        return unreadCount;
+    }
 }

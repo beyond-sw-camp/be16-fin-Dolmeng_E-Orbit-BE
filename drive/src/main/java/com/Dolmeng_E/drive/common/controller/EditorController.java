@@ -52,7 +52,6 @@ public class EditorController {
 
     @MessageMapping("/editor/join")
     public void handleJoinUser(@Payload EditorBatchMessageDto message) {
-        documentLineService.joinUser(message.getDocumentId(), message.getSenderId());
-        redisTemplate.convertAndSend("document-updates", message);
+        redisTemplate.convertAndSend("document-updates", documentLineService.joinUser(message));
     }
 }

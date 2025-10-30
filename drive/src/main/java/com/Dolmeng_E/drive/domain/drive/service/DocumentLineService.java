@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
@@ -25,16 +26,18 @@ public class DocumentLineService {
     private final DocumentLineRepository documentLineRepository;
     private final DocumentRepository documentRepository;
     private final HashOperations<String, String, String> hashOperations;
+    private final HashOperations<String, String, String> userHashOperations;
     private final SetOperations<String, String> setOperations;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final @Qualifier("document")RedisTemplate<String, String> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate) {
+    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate, @Qualifier("userInventory")RedisTemplate<String, String> userRedisTemplate) {
         this.documentLineRepository = documentLineRepository;
         this.documentRepository = documentRepository;
         this.hashOperations = redisTemplate.opsForHash();
         this.setOperations = redisTemplate.opsForSet();
         this.redisTemplate = redisTemplate;
+        this.userHashOperations = userRedisTemplate.opsForHash();
     }
 
 
@@ -83,8 +86,11 @@ public class DocumentLineService {
         List<OnlineUserResDto> onlineUserResDtoList = new ArrayList<>();
         Set<String> getOnlineUsers = setOperations.members("online:"+documentId);
         for (String user : getOnlineUsers) {
+            Map<String, String> userInfo = userHashOperations.entries("user:"+user);
             onlineUserResDtoList.add(OnlineUserResDto.builder()
                     .userId(user)
+                    .userName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         return onlineUserResDtoList;
@@ -176,12 +182,25 @@ public class DocumentLineService {
         redisTemplate.delete("user_lock:"+documentId+userId);
     }
 
-    public void joinUser(String documentId, String userId){
-        setOperations.add("online:"+documentId, userId);
+    public EditorBatchMessageDto joinUser(EditorBatchMessageDto message){
+        setOperations.add("online:"+message.getDocumentId(), message.getSenderId());
+        Map<String, String> userInfo = userHashOperations.entries("user:"+message.getSenderId());
+        message.setSenderName(userInfo.get("name"));
+        message.setProfileImage(userInfo.get("profileImageUrl"));
+        return message;
     }
 
     public void leaveUser(String documentId, String userId){
         unLockDocumentLineByUser(documentId, userId);
         setOperations.remove("online:"+documentId, userId);
+    }
+
+    public OnlineUserResDto getUserInfo(String userId){
+        Map<String, String> userInfo = userHashOperations.entries("user:"+userId);
+        return OnlineUserResDto.builder()
+                .userId(userId)
+                .userName(userInfo.get("name"))
+                .profileImage(userInfo.get("profileImageUrl"))
+                .build();
     }
 }

@@ -17,4 +17,6 @@ public interface FileRepository extends JpaRepository<File, String> {
     Long findTotalSizeByWorkspaceId(@Param("workspaceId") String workspaceId);
 
     List<File> findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType rootType, String rootId);
+
+    Optional<File> findByRootIdAndNameAndIsDeleteFalse(String rootId, String name);
 }

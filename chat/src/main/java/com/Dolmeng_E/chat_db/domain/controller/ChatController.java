@@ -82,5 +82,11 @@ public class ChatController {
         return new ResponseEntity<>(new CommonSuccessDto(unreadMessages, HttpStatus.OK.value(), "채팅방 안 읽은 메시지 목록 조회 성공"), HttpStatus.OK);
     }
 
+    // 워크스페이스의 안 읽은 메시지 수 조회
+    @GetMapping("/{workspaceId}/message-count")
+    public ResponseEntity<?>  getMessageCountByWorkspace(@PathVariable("workspaceId") String workspaceId, @RequestHeader("X-User-Id")String userId) {
+        Long unreadMessagesCount = chatService.getMessageCountByWorkspace(workspaceId, userId);
+        return new ResponseEntity<>(new CommonSuccessDto(unreadMessagesCount, HttpStatus.OK.value(), "워크스페이스 안 읽은 메시지 수 조회 성공"), HttpStatus.OK);
+    }
 
 }

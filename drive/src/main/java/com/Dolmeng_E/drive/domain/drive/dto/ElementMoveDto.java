@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OnlineUserResDto {
-    private String userId;
-    private String userName;
-    private String profileImage;
+public class ElementMoveDto {
+    private String folderId;
+    private String type;
 }

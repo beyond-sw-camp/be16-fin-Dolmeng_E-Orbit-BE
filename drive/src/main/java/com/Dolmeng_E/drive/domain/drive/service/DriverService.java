@@ -26,10 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -210,10 +207,10 @@ public class DriverService {
                 throw new IllegalArgumentException("예상치못한오류 발생");
             }
         }
-        Map<String, String> userInfo = hashOperations.entries("user:"+userId);
-        // 폴더 불러오기
         List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
         for(Folder folder : folders){
+            String getUserId = folder.getCreatedBy();
+            Map<String, String> userInfo = hashOperations.entries("user:"+getUserId);
             List<FolderInfoDto> ancestors = folderRepository.findAncestors(folder.getId());
             rootContentsDtos.add(RootContentsDto.builder()
                     .createBy(folder.getCreatedBy())
@@ -229,51 +226,92 @@ public class DriverService {
         // 파일 불러오기
         List<File> files = fileRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
         for(File file : files){
+            String getUserId = file.getCreatedBy();
+            Map<String, String> userInfo = hashOperations.entries("user:"+getUserId);
             rootContentsDtos.add(RootContentsDto.builder()
                     .size(file.getSize())
                     .createBy(file.getCreatedBy())
                     .name(file.getName())
                     .type(file.getType())
                     .id(file.getId())
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         // 문서 불러오기
         List<Document> documents = documentRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
         for(Document document : documents){
+            String getUserId = document.getCreatedBy();
+            Map<String, String> userInfo = hashOperations.entries("user:"+getUserId);
             rootContentsDtos.add(RootContentsDto.builder()
                     .createBy(document.getCreatedBy())
                     .updateAt(document.getUpdatedBy())
                     .name(document.getTitle())
                     .type("document")
                     .id(document.getId())
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         return rootContentsDtos;
     }
 
-    public String updateFolderStruct(String userId, String folderId, FolderMoveDto folderMoveDto){
+    public String updateFolderStruct(String folderId, FolderMoveDto folderMoveDto){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
+        if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderMoveDto.getParentId(), folder.getName()).isPresent()){
+            throw new IllegalArgumentException("중복된 폴더명입니다.");
+        }
         folder.updateParentId(folderMoveDto.getParentId());
         return folder.getParentId();
     }
 
-    // 파일 업로드
-    public String uploadFile(MultipartFile file, String folderId, String workspaceId){
-        String file_url = s3Uploader.upload(file, "drive");
-        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        if(fileRepository.findByFolderAndNameAndIsDeleteFalse(folder, file.getOriginalFilename()).isPresent()){
-            throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
+    public String updateElementStruct(String elementId, ElementMoveDto elementMoveDto){
+        Optional<Folder> folder = folderRepository.findById(elementMoveDto.getFolderId());
+        if(elementMoveDto.getType().equals("document")){
+            Document document = documentRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
+            document.updateFolder(folder.orElse(null));
+            return document.getTitle();
         }
-        File fileEntity = File.builder()
-                .url(file_url)
-                .createdBy("ed682ca4-1be0-4409-949a-3cd70e524e4c")
-                .folder(folder)
-                .name(file.getOriginalFilename())
-                .type(file.getContentType())
-                .size(file.getSize())
-                .workspaceId(workspaceId)
-                .build();
-        return fileRepository.save(fileEntity).getId();
+        if(elementMoveDto.getType().equals("file")){
+            File file = fileRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 파일이 존재하지 않습니다."));
+            file.updateFolder(folder.orElse(null));
+            return file.getName();
+        }
+        else throw new IllegalArgumentException("예기치 못한 오류 발생");
+    }
+
+    // 파일 업로드
+    public String uploadFile(String userId, String folderId, FileSaveDto fileSaveDto){
+        for(MultipartFile file : fileSaveDto.getFile()){
+            String file_url = s3Uploader.upload(file, "drive");
+            Optional<Folder> folder = folderRepository.findById(folderId);
+            // 폴더가 있을 경우
+            if(folder.isPresent()){
+                if(fileRepository.findByFolderAndNameAndIsDeleteFalse(folder.get(), file.getOriginalFilename()).isPresent()){
+                    throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
+                }
+            }
+            // 상위 파일일 경우
+            else{
+                if(fileRepository.findByRootIdAndNameAndIsDeleteFalse(fileSaveDto.getRootId(), file.getOriginalFilename()).isPresent()){
+                    throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
+                }
+            }
+            File fileEntity = File.builder()
+                    .url(file_url)
+                    .createdBy(userId)
+                    .folder(folder.orElse(null))
+                    .name(file.getOriginalFilename())
+                    .type("file")
+                    .size(file.getSize())
+                    .workspaceId(fileSaveDto.getWorkspaceId())
+                    .rootId(fileSaveDto.getRootId())
+                    .rootType(RootType.valueOf(fileSaveDto.getRootType()))
+                    .build();
+            fileRepository.save(fileEntity).getId();
+        }
+
+        return "파일 업로드 성공";
     }
 
     // 파일 삭제(소프트)
@@ -286,15 +324,24 @@ public class DriverService {
     }
 
     // 문서 생성
-    public String createDocument(DocumentSaveDto documentSaveDto, String userId){
-        Folder folder = folderRepository.findById(documentSaveDto.getFolderId()).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentSaveDto.getName()).isPresent()){
-            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+    public String createDocument(String userId, String folderId, DocumentSaveDto documentSaveDto){
+        Optional<Folder> folder = folderRepository.findById(folderId);
+        // 폴더가 있을 경우
+        if(folder.isPresent()){
+            if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder.get(), documentSaveDto.getName()).isPresent()){
+                throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+            }
+        }
+        // 상위 파일일 경우
+        else{
+            if(documentRepository.findByRootIdAndTitleAndIsDeleteFalse(documentSaveDto.getRootId(), documentSaveDto.getName()).isPresent()){
+                throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+            }
         }
         Document document = Document.builder()
                 .title(documentSaveDto.getName())
                 .createdBy(userId)
-                .folder(folder)
+                .folder(folder.orElse(null))
                 .rootId(documentSaveDto.getRootId())
                 .rootType(RootType.valueOf(documentSaveDto.getRootType()))
                 .build();
