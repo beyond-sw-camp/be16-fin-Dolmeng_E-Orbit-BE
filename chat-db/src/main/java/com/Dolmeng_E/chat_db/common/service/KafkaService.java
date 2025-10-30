@@ -16,6 +16,10 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.util.concurrent.ExecutionException;
 
 @Service
 @Transactional
@@ -57,8 +61,16 @@ public class KafkaService {
 
         chatService.saveMessage(Long.parseLong(key), chatMessageDto);
 
-        // chat.message.saved 메시지 발행
-        kafkaChatMessageSaved(chatMessageDto);
+
+
+        // 커밋 이후 실행되도록 예약
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                // chat.message.saved 메시지 발행
+                kafkaChatMessageSaved(chatMessageDto);
+            }
+        });
 
         // 위 작업들 문제없으면 커밋 (offset)
         ack.acknowledge();

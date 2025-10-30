@@ -1,5 +1,6 @@
 package com.Dolmeng_E.chat_db.common.service;
 
+import com.Dolmeng_E.chat_db.common.dto.NotificationCreateReqDto;
 import com.Dolmeng_E.chat_db.common.dto.UserInfoResDto;
 import com.Dolmeng_E.chat_db.domain.dto.ChatMessageDto;
 import com.Dolmeng_E.chat_db.domain.entity.MessageType;
@@ -30,6 +31,17 @@ public class KafkaService {
     private final UserFeignClient userFeignClient;
 
     // producer
+    // 알림 발행
+    public void kafkaNotificationPublish(NotificationCreateReqDto dto) {
+        log.info("kafkaNotificationPublish() - dto: " + dto);
+        try {
+            String data = objectMapper.writeValueAsString(dto);
+            kafkaTemplate.send("notification.publish", data);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void kafkaChatMessageSent(ChatMessageDto dto) {
         log.info("kafkaChatMessageSent() - dto: " + dto);
         try {
@@ -73,8 +85,12 @@ public class KafkaService {
     public void savedChatConsumer(@Header(KafkaHeaders.RECEIVED_KEY) String key, String message, Acknowledgment ack) throws JsonProcessingException {
         log.info("savedChatConsumer() - key : " + key + "message: " + message);
 
-        // 채팅방
         ChatMessageDto chatMessageDto = objectMapper.readValue(message, ChatMessageDto.class);
+
+        // 먼저 알림 발행
+        for(NotificationCreateReqDto dto : chatService.createNotification(chatMessageDto)) {
+            kafkaNotificationPublish(dto);
+        }
 
         // 채팅방 목록
         chatService.broadcastChatSummary(chatMessageDto);

@@ -10,6 +10,7 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.util.backoff.FixedBackOff;
@@ -60,6 +61,25 @@ public class KafkaConsumerConfig {
         factory.setCommonErrorHandler(errorHandler);
 
         return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, Object> notificationConsumerFactory(){
+        Map<String, Object> config = new HashMap<>();
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        return new DefaultKafkaConsumerFactory<>(config);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> notificationKafkaListener(){
+        ConcurrentKafkaListenerContainerFactory<String, String> listener
+                = new ConcurrentKafkaListenerContainerFactory<>();
+        listener.setConsumerFactory(notificationConsumerFactory());
+        // 수동커밋을 위한 설정. 메시지를 배치단위로 커밋하는게 아닌, 레코드 단위로 커밋
+        listener.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        return listener;
     }
 }
 

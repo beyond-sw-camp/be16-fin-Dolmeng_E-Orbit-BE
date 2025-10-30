@@ -350,8 +350,9 @@ public class UserService {
         String key = "user:" + user.getId();
         hashOperations.put(key, "id", String.valueOf(user.getId()));
         hashOperations.put(key, "email",user.getEmail());
-        hashOperations.put(key, "name", user.getName());
-        hashOperations.put(key, "profileImageUrl", user.getProfileImageUrl());
+        hashOperations.put(key, "name", user.getName() !=null ? user.getName() : "");
+        hashOperations.put(key, "profileImageUrl",
+                user.getProfileImageUrl() != null ? user.getProfileImageUrl() : "");
         hashOperations.put(key, "isDelete", String.valueOf(user.isDelete()));
     }
 }

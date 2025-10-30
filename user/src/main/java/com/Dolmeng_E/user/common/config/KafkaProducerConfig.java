@@ -33,4 +33,18 @@ public class KafkaProducerConfig {
     public KafkaTemplate<String, UserSignupEventDto> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
+
+    @Bean
+    public ProducerFactory<String, Object> notificationProducerFactory(){
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> notificationKafkaTemplate(){
+        return new KafkaTemplate<>(notificationProducerFactory());
+    }
 }

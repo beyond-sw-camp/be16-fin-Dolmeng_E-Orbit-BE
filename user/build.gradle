@@ -58,6 +58,13 @@ dependencies {
 
 	// kafka 의존성 추가
 	implementation 'org.springframework.kafka:spring-kafka'
+
+    // 알림 - Stomp 연결
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // LocalDateTime 역/직렬화를 위함
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
 }
 
 repositories {

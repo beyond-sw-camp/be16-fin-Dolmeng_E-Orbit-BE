@@ -29,4 +29,23 @@ public interface ReadStatusRepository extends JpaRepository<ReadStatus,Long> {
             @Param("userId") UUID userId
     );
 
+    @Query("""
+    SELECT COUNT(rs)
+    FROM ReadStatus rs
+    JOIN rs.chatRoom cr
+    WHERE cr.workspaceId = :workspaceId
+      AND rs.userId = :userId
+      AND rs.isRead = false
+      AND cr.id IN (
+          SELECT cp.chatRoom.id
+          FROM ChatParticipant cp
+          WHERE cp.userId = :userId
+      )
+    """)
+    Long countUnreadMessagesInWorkspaceByUser(
+            @Param("workspaceId") String workspaceId,
+            @Param("userId") UUID userId
+    );
+
+
 }
