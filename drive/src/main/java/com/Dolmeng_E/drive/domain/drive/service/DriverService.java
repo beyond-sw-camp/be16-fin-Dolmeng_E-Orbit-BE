@@ -3,6 +3,7 @@ package com.Dolmeng_E.drive.domain.drive.service;
 import com.Dolmeng_E.drive.common.controller.WorkspaceServiceClient;
 import com.Dolmeng_E.drive.common.dto.StoneTaskResDto;
 import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
+import com.Dolmeng_E.drive.common.dto.WorkspaceOrProjectManagerCheckDto;
 import com.Dolmeng_E.drive.common.service.S3Uploader;
 import com.Dolmeng_E.drive.domain.drive.dto.*;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
@@ -17,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -26,7 +28,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -57,7 +61,6 @@ public class DriverService {
         if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderSaveDto.getParentId(), folderSaveDto.getName()).isPresent()){
             throw new IllegalArgumentException("중복된 폴더명입니다.");
         }
-        System.out.println(hashOperations.entries("user:"+userId));
         return folderRepository.save(folderSaveDto.toEntity()).getId();
     }
 
@@ -93,21 +96,35 @@ public class DriverService {
             document.updateIsDelete();
         }
     }
+
+    // 폴더 정보 조회
+    public FolderInfoResDto getFolderInfo(String folderId){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        return FolderInfoResDto.builder()
+                .folderId(folderId)
+                .folderName(folder.getName())
+                .ancestors(folderRepository.findAncestors(folderId))
+                .build();
+    }
     
     // 폴더 하위 요소들 조회
-    public List<FolderContentsDto> getFolderContents(String folderId){
+    public List<FolderContentsDto> getFolderContents(String folderId, String userId){
+        Map<String, String> userInfo = hashOperations.entries("user:"+userId);
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
         List<FolderContentsDto> folderContentsDtos = new ArrayList<>();
         // 하위 폴더 불러오기
         for(Folder childfolder : folders){
-            if(childfolder.getIsDelete().equals(true)) continue;
+            List<FolderInfoDto> ancestors = folderRepository.findAncestors(childfolder.getId());
             folderContentsDtos.add(FolderContentsDto.builder()
                             .createBy(childfolder.getCreatedBy())
                             .name(childfolder.getName())
                             .updateAt(childfolder.getUpdatedAt().toString())
                             .id(childfolder.getId())
                             .type("folder")
+                            .creatorName(userInfo.get("name"))
+                            .profileImage(userInfo.get("profileImageUrl"))
+                            .ancestors(ancestors)
                     .build());
         }
         // 파일 불러오기
@@ -119,6 +136,8 @@ public class DriverService {
                     .name(file.getName())
                     .type(file.getType())
                     .id(file.getId())
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         // 문서 불러오기
@@ -130,13 +149,15 @@ public class DriverService {
                     .name(document.getTitle())
                     .type("document")
                     .id(document.getId())
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
                     .build());
         }
         return folderContentsDtos;
     }
 
     // 루트 하위 요소들 조회 + 바로가기(ex. 워크스페이스의 하위 스톤 드라이브로 바로가기)
-    public List<RootContentsDto> getContents(String rootId, String userId, String rootType){
+    public List<RootContentsDto> getContents(String rootId, String userId, String rootType, String workspaceId){
         List<RootContentsDto> rootContentsDtos = new ArrayList<>();
         if(rootType.equals("WORKSPACE")){
             try {
@@ -153,13 +174,15 @@ public class DriverService {
                 throw new IllegalArgumentException("예상치못한오류 발생");
             }
         }else if(rootType.equals("PROJECT")){
-//            try {
-//                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)){
-//                    throw new IllegalArgumentException("권한이 없습니다.");
-//                }
-//            }catch (Exception e){
-//                throw new IllegalArgumentException("예상치못한오류 발생");
-//            }
+            try {
+                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)
+                        &&Objects.requireNonNull(workspaceServiceClient.checkWorkspaceManager(workspaceId, userId).getBody()).getResult().equals(false)){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
             try {
                 StoneTaskResDto stoneTaskResDto = workspaceServiceClient.getSubStonesAndTasks(rootId);
                 List<StoneTaskResDto.StoneInfo> stones = stoneTaskResDto.getStones();
@@ -174,48 +197,64 @@ public class DriverService {
                 throw new IllegalArgumentException("예상치못한오류 발생");
             }
         }else if(rootType.equals("STONE")){
-//            try {
-//                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)){
-//                    throw new IllegalArgumentException("권한이 없습니다.");
-//                }
-//            }catch (Exception e){
-//                throw new IllegalArgumentException("예상치못한오류 발생");
-//            }
-            // 폴더 불러오기
-            List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
-            for(Folder folder : folders){
-                rootContentsDtos.add(RootContentsDto.builder()
-                        .createBy(folder.getCreatedBy())
-                        .name(folder.getName())
-                        .updateAt(folder.getUpdatedAt().toString())
-                        .id(folder.getId())
-                        .type("folder")
-                        .build());
-            }
-            // 파일 불러오기
-            List<File> files = fileRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
-            for(File file : files){
-                rootContentsDtos.add(RootContentsDto.builder()
-                        .size(file.getSize())
-                        .createBy(file.getCreatedBy())
-                        .name(file.getName())
-                        .type(file.getType())
-                        .id(file.getId())
-                        .build());
-            }
-            // 문서 불러오기
-            List<Document> documents = documentRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
-            for(Document document : documents){
-                rootContentsDtos.add(RootContentsDto.builder()
-                        .createBy(document.getCreatedBy())
-                        .updateAt(document.getUpdatedBy())
-                        .name(document.getTitle())
-                        .type("document")
-                        .id(document.getId())
-                        .build());
+            try {
+                WorkspaceOrProjectManagerCheckDto workspaceOrProjectManagerCheckDto = workspaceServiceClient.checkWorkspaceOrProjectManager(rootId, userId);
+                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)
+                        && !workspaceOrProjectManagerCheckDto.isProjectManager() && !workspaceOrProjectManagerCheckDto.isWorkspaceManager()
+                        && Objects.requireNonNull(workspaceServiceClient.checkStoneManagership(rootId, userId).getBody()).getResult().equals(false)
+                        ){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
             }
         }
+        Map<String, String> userInfo = hashOperations.entries("user:"+userId);
+        // 폴더 불러오기
+        List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+        for(Folder folder : folders){
+            List<FolderInfoDto> ancestors = folderRepository.findAncestors(folder.getId());
+            rootContentsDtos.add(RootContentsDto.builder()
+                    .createBy(folder.getCreatedBy())
+                    .name(folder.getName())
+                    .updateAt(folder.getUpdatedAt().toString())
+                    .id(folder.getId())
+                    .type("folder")
+                    .creatorName(userInfo.get("name"))
+                    .profileImage(userInfo.get("profileImageUrl"))
+                    .ancestors(ancestors)
+                    .build());
+        }
+        // 파일 불러오기
+        List<File> files = fileRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+        for(File file : files){
+            rootContentsDtos.add(RootContentsDto.builder()
+                    .size(file.getSize())
+                    .createBy(file.getCreatedBy())
+                    .name(file.getName())
+                    .type(file.getType())
+                    .id(file.getId())
+                    .build());
+        }
+        // 문서 불러오기
+        List<Document> documents = documentRepository.findAllByFolderIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+        for(Document document : documents){
+            rootContentsDtos.add(RootContentsDto.builder()
+                    .createBy(document.getCreatedBy())
+                    .updateAt(document.getUpdatedBy())
+                    .name(document.getTitle())
+                    .type("document")
+                    .id(document.getId())
+                    .build());
+        }
         return rootContentsDtos;
+    }
+
+    public String updateFolderStruct(String userId, String folderId, FolderMoveDto folderMoveDto){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
+        folder.updateParentId(folderMoveDto.getParentId());
+        return folder.getParentId();
     }
 
     // 파일 업로드
@@ -247,16 +286,18 @@ public class DriverService {
     }
 
     // 문서 생성
-    public String createDocument(String folderId, String documentTitle){
-//        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
-//        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentTitle).isPresent()){
-//            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
-//        }
+    public String createDocument(DocumentSaveDto documentSaveDto, String userId){
+        Folder folder = folderRepository.findById(documentSaveDto.getFolderId()).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
+        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder, documentSaveDto.getName()).isPresent()){
+            throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
+        }
         Document document = Document.builder()
-                    .createdBy("2eb87833-c2dd-47ec-9799-be958953e2e6")
-                    .title(documentTitle)
-//                    .folder(folder)
-                    .build();
+                .title(documentSaveDto.getName())
+                .createdBy(userId)
+                .folder(folder)
+                .rootId(documentSaveDto.getRootId())
+                .rootType(RootType.valueOf(documentSaveDto.getRootType()))
+                .build();
         Document savedDocument = documentRepository.saveAndFlush(document);
 
         List<String> viewableUserIds = new ArrayList<>();

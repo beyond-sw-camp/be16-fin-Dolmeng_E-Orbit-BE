@@ -15,14 +15,14 @@ import java.util.List;
 @FeignClient(name = "workspace-service")
 public interface WorkspaceServiceClient {
     // 워크스페이스 담당자 확인
-    @GetMapping("/{workspaceId}/manager/check")
+    @GetMapping("/workspace/{workspaceId}/manager/check")
     ResponseEntity<CommonSuccessDto> checkWorkspaceManager(
             @PathVariable("workspaceId") String workspaceId,
             @RequestHeader("X-User-Id") String userId
     );
 
     // 워크스페이스 참여자 확인
-    @GetMapping("/workspace/{workspaceId}/members/check")
+    @GetMapping("/workspace/workspace/{workspaceId}/members/check")
     ResponseEntity<CommonSuccessDto> checkWorkspaceMembership(
             @PathVariable("workspaceId") String workspaceId,
             @RequestHeader("X-User-Id") String userId
@@ -36,7 +36,7 @@ public interface WorkspaceServiceClient {
     );
 
     // 프로젝트 참여자 확인
-    @GetMapping("/workspace/project/{projectId}/members/check")
+    @GetMapping("/workspace/workspace/project/{projectId}/members/check")
     ResponseEntity<CommonSuccessDto> checkProjectMembership(
             @PathVariable("projectId") String projectId,
             @RequestHeader("X-User-Id") String userId
@@ -65,12 +65,9 @@ public interface WorkspaceServiceClient {
     StoneTaskResDto getSubStonesAndTasks(@PathVariable("projectId") String projectId);
 
     // stoneId 와 userId 넘겼을 때 웤스 관리자인지 프로젝트관리자인지 확인하는 api
-    @GetMapping("/work-project/{stoneId}/manager/check")
+    @GetMapping("/workspace/work-project/{stoneId}/manager/check")
     WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
             @PathVariable("stoneId") String stoneId,
             @RequestHeader("X-User-Id") String userId
     );
-
-
-
 }

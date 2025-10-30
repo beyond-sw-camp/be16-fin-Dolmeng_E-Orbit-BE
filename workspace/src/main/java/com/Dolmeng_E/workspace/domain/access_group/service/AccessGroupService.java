@@ -23,6 +23,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -191,13 +193,17 @@ public class AccessGroupService {
 
             // 4. 권한그룹 이름 변경 (새 이름이 있을 때만)
             if (dto.getNewAccessGroupName() != null && !dto.getNewAccessGroupName().isBlank()) {
-                // 동일 워크스페이스 내 중복 이름 방지
-                boolean exists = accessGroupRepository.existsByWorkspaceIdAndAccessGroupName(workspace.getId(), dto.getNewAccessGroupName());
-                if (exists) {
-                    throw new IllegalArgumentException("이미 동일한 이름의 권한 그룹이 존재합니다: " + dto.getNewAccessGroupName());
+                // 기존 권한 그룹명이 바꿀 그룹명과 같으면 패스, 다르면 중복이름 검사
+                if(!targetGroup.getAccessGroupName().equals(dto.getNewAccessGroupName())) {
+                    // 동일 워크스페이스 내 중복 이름 방지
+                    boolean exists = accessGroupRepository.existsByWorkspaceIdAndAccessGroupName(workspace.getId(), dto.getNewAccessGroupName());
+                    if (exists) {
+                        throw new IllegalArgumentException("이미 동일한 이름의 권한 그룹이 존재합니다: " + dto.getNewAccessGroupName());
+                    }
+                    targetGroup.setAccessGroupName(dto.getNewAccessGroupName());
+                    accessGroupRepository.save(targetGroup);
                 }
-                targetGroup.setAccessGroupName(dto.getNewAccessGroupName());
-                accessGroupRepository.save(targetGroup);
+
             }
 
             // 5. 순회하면서 권한 여부 업데이트
@@ -394,50 +400,59 @@ public class AccessGroupService {
 
     }
 
-    //    권한그룹 사용자 변경 (워크스페이스 내 기존 사용자 그룹 변경)
+    // 권한그룹 사용자 변경 (워크스페이스 내 기존 사용자 그룹 변경)
     @Transactional
     public void updateUserAccessGroup(String userId, String groupId, AccessGroupAddUserDto dto) {
+
         // 1. 권한그룹 조회
         AccessGroup accessGroup = accessGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 권한그룹이 존재하지 않습니다."));
-
         Workspace workspace = accessGroup.getWorkspace();
 
-        // 2. 요청자(관리자) 확인
+        // 2. 요청자(관리자) 검증
         UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
         WorkspaceParticipant admin = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
-
         if (!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
             throw new IllegalArgumentException("관리자만 권한그룹을 수정할 수 있습니다.");
         }
 
-        // 3. 기본 그룹 조회 (비어있을 때 fallback용)
+        // 3. 기본 그룹 조회 (fallback용)
         AccessGroup defaultGroup = accessGroupRepository
                 .findByWorkspaceIdAndAccessGroupName(workspace.getId(), DEFAULT_GROUP_NAME)
                 .orElseThrow(() -> new EntityNotFoundException("기본 권한그룹이 존재하지 않습니다."));
 
-        // 4. dto.getUserIdList()가 null 또는 비어있을 경우 → 전체 그룹 인원을 기본 그룹으로 이동
+        // 4. 현재 그룹 인원 조회
+        List<WorkspaceParticipant> currentParticipants =
+                workspaceParticipantRepository.findByWorkspaceAndAccessGroup(workspace, accessGroup);
+
+        // 5. 요청 목록이 비어있을 경우 → 전체를 기본 그룹으로 이동
         if (dto.getUserIdList() == null || dto.getUserIdList().isEmpty()) {
-            List<WorkspaceParticipant> participants =
-                    workspaceParticipantRepository.findByWorkspaceAndAccessGroup(workspace, accessGroup);
-
-            for (WorkspaceParticipant p : participants) {
+            for (WorkspaceParticipant p : currentParticipants) {
                 if (p.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) continue;
-
-                // “삭제” 대신 “일반 그룹으로 이동”
                 p.setAccessGroup(defaultGroup);
                 workspaceParticipantRepository.save(p);
             }
             return;
         }
 
-        // 5. 대상 유저 리스트 조회 (User 서비스에서)
+        // 6. 요청된 사용자 ID set 생성
+        Set<UUID> requestedUserIds = new HashSet<>(dto.getUserIdList());
+
+        // 7. 요청 목록에 없는 기존 인원 → 기본 그룹으로 이동
+        for (WorkspaceParticipant p : currentParticipants) {
+            if (p.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) continue;
+            if (!requestedUserIds.contains(p.getUserId())) {
+                p.setAccessGroup(defaultGroup);
+                workspaceParticipantRepository.save(p);
+            }
+        }
+
+        // 8. 요청된 인원 → 지정된 권한그룹으로 이동
         UserIdListDto userIdListDto = new UserIdListDto(dto.getUserIdList());
         UserInfoListResDto userInfoListResDto = userFeign.fetchUserListInfo(userIdListDto);
 
-        // 6. 기존 워크스페이스 참여자들의 권한그룹 업데이트
         for (UserInfoResDto userInfo : userInfoListResDto.getUserInfoList()) {
             WorkspaceParticipant participant = workspaceParticipantRepository
                     .findByWorkspaceIdAndUserId(workspace.getId(), userInfo.getUserId())
@@ -449,6 +464,7 @@ public class AccessGroupService {
             workspaceParticipantRepository.save(participant);
         }
     }
+
 
 
     //    권한그룹 사용자 이동(일반 그룹으로 이동)

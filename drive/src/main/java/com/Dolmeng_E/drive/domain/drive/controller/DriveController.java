@@ -1,5 +1,7 @@
 package com.Dolmeng_E.drive.domain.drive.controller;
 
+import com.Dolmeng_E.drive.domain.drive.dto.DocumentSaveDto;
+import com.Dolmeng_E.drive.domain.drive.dto.FolderMoveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderSaveDto;
 import com.Dolmeng_E.drive.domain.drive.dto.FolderUpdateNameDto;
 import com.Dolmeng_E.drive.domain.drive.service.DriverService;
@@ -16,6 +18,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class DriveController {
 
     private final DriverService driverService;
+
+    // 폴더 정보 조회
+    @GetMapping("/folder/{folder_id}")
+    public ResponseEntity<?> saveFolder(@PathVariable("folder_id") String folderId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFolderInfo(folderId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 정보 조회 성공")
+                .build(), HttpStatus.OK);
+    }
 
     // 폴더 생성
     @PostMapping("/folder")
@@ -49,9 +61,9 @@ public class DriveController {
 
     // 위치 별 하위 항목들 가져오기
     @GetMapping("/{rootType}/{rootId}")
-    public ResponseEntity<?> getContents(@RequestHeader("X-User-Id") String userId, @PathVariable String rootId, @PathVariable String rootType) {
+    public ResponseEntity<?> getContents(@RequestHeader("X-User-Id") String userId, @RequestHeader("X-Workspace-Id") String workspaceId, @PathVariable String rootId, @PathVariable String rootType) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.getContents(rootId, userId, rootType))
+                .result(driverService.getContents(rootId, userId, rootType, workspaceId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("루트 하위 요소들 조회 성공")
                 .build(), HttpStatus.OK);
@@ -61,9 +73,18 @@ public class DriveController {
     @GetMapping("/folder/{folderId}/contents")
     public ResponseEntity<?> getFolderContents(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.getFolderContents(folderId))
+                .result(driverService.getFolderContents(folderId, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("폴더 하위 요소들 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    @PutMapping("/folder/{folderId}/move")
+    public ResponseEntity<?> updateFolderStruct(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestBody FolderMoveDto folderMoveDto) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.updateFolderStruct(userId, folderId, folderMoveDto))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 위치 변경 성공")
                 .build(), HttpStatus.OK);
     }
 
@@ -88,10 +109,10 @@ public class DriveController {
     }
 
     // 문서 생성
-    @PostMapping("/folder/{folderId}/document")
-    public ResponseEntity<?> saveDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestParam String documentTitle) {
+    @PostMapping("/document")
+    public ResponseEntity<?> saveDocument(@RequestHeader("X-User-Id") String userId, @RequestBody DocumentSaveDto documentSaveDto) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.createDocument(folderId, documentTitle))
+                .result(driverService.createDocument(documentSaveDto, userId))
                 .statusCode(HttpStatus.CREATED.value())
                 .statusMessage("문서 생성 성공")
                 .build(), HttpStatus.CREATED);

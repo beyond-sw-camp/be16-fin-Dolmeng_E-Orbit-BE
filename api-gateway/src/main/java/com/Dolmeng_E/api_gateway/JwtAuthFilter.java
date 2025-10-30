@@ -38,8 +38,6 @@ public class JwtAuthFilter implements GlobalFilter {
             "/chatbot/unread-messages",
             "/chatbot/history",
             "/connect/**",
-            "/drive/**",
-            "/documentLine/**",
             "/ws/**",
             "/notification/new-noti"
     );
