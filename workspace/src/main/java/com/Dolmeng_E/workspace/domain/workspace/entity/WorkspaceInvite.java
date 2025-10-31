@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -13,18 +12,23 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "workspace_invite")
 public class WorkspaceInvite extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false)
-    private String email;  // 초대 이메일
+    private String email;
 
-    @Column(nullable = false)
-    private String inviteToken;  // 초대코드(UUID 등)
+    @Column(name = "invite_code", nullable = false)
+    private String inviteToken;
+
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiredAt;
+
+    @Column(name = "is_used", nullable = false)
+    private Boolean isUsed;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id")
@@ -34,7 +38,9 @@ public class WorkspaceInvite extends BaseTimeEntity {
     @JoinColumn(name = "inviter_id")
     private WorkspaceParticipant inviter;
 
-    private LocalDateTime expiredAt;   // 만료 시간
-    private boolean isUsed;            // 사용 여부
+    @PrePersist
+    public void prePersist() {
+        if (expiredAt == null) expiredAt = LocalDateTime.now().plusHours(24);
+        if (isUsed == null) isUsed = false;
+    }
 }
-
