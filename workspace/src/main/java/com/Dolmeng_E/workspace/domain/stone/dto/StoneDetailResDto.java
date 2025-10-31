@@ -40,6 +40,9 @@ public class StoneDetailResDto {
     // +추가 : 스톤 상태
     private StoneStatus stoneStatus;
 
+    // 추가 : 스톤 설명
+    private String stoneDescribe;
+
     public static StoneDetailResDto fromEntity(Stone stone, List<TaskResDto> taskResDtoList, List<StoneParticipantDto> stoneParticipantDtoList) {
         return StoneDetailResDto.builder()
                 .stoneManagerName(stone.getStoneManager().getUserName())
@@ -50,6 +53,7 @@ public class StoneDetailResDto {
                 .taskResDtoList(taskResDtoList)
                 .stoneParticipantDtoList(stoneParticipantDtoList)
                 .stoneStatus(stone.getStatus()) // 추가
+                .stoneDescribe(stone.getStoneDescribe()) // 추가
                 .build();
     }
 

@@ -166,6 +166,7 @@ public class StoneService {
                         .startTime(dto.getStartTime())
                         .endTime(dto.getEndTime())
                         .project(project)
+                        .stoneDescribe(dto.getStoneDescribe())
                         .stoneManager(participant)
                         .chatCreation(dto.getChatCreation() != null ? dto.getChatCreation() : false)
                         .parentStoneId(parentStone.getId())
@@ -525,6 +526,7 @@ public class StoneService {
         if (dto.getStoneName() != null) stone.setStoneName(dto.getStoneName());
         if (dto.getStartTime() != null) stone.setStartTime(dto.getStartTime());
         if (dto.getEndTime() != null) stone.setEndTime(dto.getEndTime());
+        if (dto.getStoneDescribe() != null) stone.setStoneDescribe(dto.getStoneDescribe());
 
         // 7. 채팅방 생성 여부 방어 로직
         if (dto.getChatCreation() != null) {
