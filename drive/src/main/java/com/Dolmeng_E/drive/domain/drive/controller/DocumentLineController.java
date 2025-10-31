@@ -32,4 +32,13 @@ public class DocumentLineController {
                 .statusMessage("문서의 모든 온라인 사용자 목록 조회 성공")
                 .build(), HttpStatus.OK);
     }
+    
+    @GetMapping("/userInfo")
+    public ResponseEntity<?> getUserInfo(@RequestHeader("X-User-Id") String userId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(documentLineService.getUserInfo(userId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("정보 조회 성공")
+                .build(), HttpStatus.OK);
+    }
 }

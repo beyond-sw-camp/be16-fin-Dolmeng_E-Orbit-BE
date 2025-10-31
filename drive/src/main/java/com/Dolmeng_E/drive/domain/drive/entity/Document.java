@@ -54,4 +54,5 @@ public class Document extends BaseTimeEntity {
 
     public void updateIsDelete() {this.isDelete = true;}
     public void updateFolder(Folder folder) {this.folder = folder;}
+    public void updateTitle(String title) {this.title = title;}
 }

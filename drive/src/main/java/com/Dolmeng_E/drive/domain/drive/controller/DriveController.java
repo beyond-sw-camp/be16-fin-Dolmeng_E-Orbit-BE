@@ -140,7 +140,17 @@ public class DriveController {
     @GetMapping("/document/{documentId}")
     public ResponseEntity<?> getDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.findDocument(documentId))
+                .result(driverService.findDocument(userId, documentId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 문서 수정
+    @PutMapping("/document/{documentId}")
+    public ResponseEntity<?> updateDocument(@PathVariable String documentId, @RequestBody DocumentUpdateDto documentUpdateDto) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.updateDocument(documentId, documentUpdateDto))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("문서 조회 성공")
                 .build(), HttpStatus.OK);

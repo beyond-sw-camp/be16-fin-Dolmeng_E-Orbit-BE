@@ -384,29 +384,14 @@ public class WorkspaceService {
 
 //    워크스페이스 참여자 목록 조회
     @Transactional(readOnly = true)
-    public Page<WorkspaceParticipantResDto> getWorkspaceParticipants(String userId, String workspaceId) {
-        // 1. 요청자 유효성 검증
-        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
+    public Page<WorkspaceParticipantResDto> getWorkspaceParticipants(String userId, String workspaceId, Pageable pageable) {
 
-        // 2. 워크스페이스 조회
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스를 찾을 수 없습니다."));
 
-//        // 해당 워크스페이스의 관리자만 가능하도록 방어 코드
-//        WorkspaceParticipant admin = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
-//                .orElseThrow(()->new EntityNotFoundException("참여자 정보가 없습니다."));
-//        if(!admin.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-//            throw new IllegalArgumentException(("해당 워크스페이스의 관리자만 조회 가능합니다."));
-//        }
-
-        // 3. 내부에서 페이지 및 정렬 설정 (createdAt ASC, 8개씩)
-        Pageable pageable = PageRequest.of(0, 8, Sort.by("createdAt").ascending());
-
-        // 4. 참여자 조회 (삭제된 사람 포함)
         Page<WorkspaceParticipant> participantPage =
                 workspaceParticipantRepository.findAllByWorkspaceId(workspaceId, pageable);
 
-        // 5. DTO 변환
         return participantPage.map(p -> WorkspaceParticipantResDto.builder()
                 .userId(p.getUserId())
                 .userName(p.getUserName())
@@ -417,6 +402,7 @@ public class WorkspaceService {
                 .accessGroupName(p.getAccessGroup() != null ? p.getAccessGroup().getAccessGroupName() : null)
                 .build());
     }
+
 
 
     //    워크스페이스 회원 삭제

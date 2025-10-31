@@ -1,6 +1,5 @@
-package com.Dolmeng_E.user.domain.notification.dto;
+package com.Dolmeng_E.workspace.common.dto;
 
-import com.Dolmeng_E.user.domain.notification.entity.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

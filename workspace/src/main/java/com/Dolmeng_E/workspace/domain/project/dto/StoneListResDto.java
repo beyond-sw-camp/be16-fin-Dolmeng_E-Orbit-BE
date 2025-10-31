@@ -10,6 +10,7 @@ import java.util.List;
 @Data
 @Builder
 public class StoneListResDto {
+    private String projectId;
     private String stoneId;
     private String stoneName;
     private LocalDateTime startTime;

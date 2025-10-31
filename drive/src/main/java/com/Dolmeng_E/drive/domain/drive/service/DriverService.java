@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -56,7 +55,7 @@ public class DriverService {
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto, String userId){
         if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderSaveDto.getParentId(), folderSaveDto.getName()).isPresent()){
-            throw new IllegalArgumentException("중복된 폴더명입니다.");
+            throw new IllegalArgumentException("이미 존재하는 폴더명입니다.");
         }
         return folderRepository.save(folderSaveDto.toEntity()).getId();
     }
@@ -382,11 +381,22 @@ public class DriverService {
     }
 
     // 문서 조회
-    public Object findDocument(String documentId){
+    @Transactional(readOnly = true)
+    public DocumentResDto findDocument(String userId, String documentId){
         Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException(("해당 문서가 존재하지 않습니다.")));
         return DocumentResDto.builder()
                 .title(document.getTitle())
                 .build();
+    }
+
+    // 문서 이름 변경
+    public String updateDocument(String documentId, DocumentUpdateDto documentUpdateDto){
+        Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException(("해당 문서가 존재하지 않습니다.")));
+        if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(document.getFolder(), documentUpdateDto.getTitle()).isPresent()){
+            throw new IllegalArgumentException("같은 이름의 파일이 존재합니다.");
+        }
+        document.updateTitle(documentUpdateDto.getTitle());
+        return document.getTitle();
     }
 
     public Long getFilesSize(String workspaceId){

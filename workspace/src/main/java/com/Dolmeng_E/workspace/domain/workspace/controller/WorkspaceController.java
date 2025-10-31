@@ -6,6 +6,9 @@ import com.Dolmeng_E.workspace.domain.workspace.dto.*;
 import com.Dolmeng_E.workspace.domain.workspace.service.WorkspaceService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -119,16 +122,17 @@ public class WorkspaceController {
     @GetMapping("/{workspaceId}/participants")
     public ResponseEntity<?> getWorkspaceParticipants(
             @RequestHeader("X-User-Id") String userId,
-            @PathVariable String workspaceId
+            @PathVariable String workspaceId,
+            @PageableDefault(size = 8, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("워크스페이스 참여자 목록 조회 성공")
-                .result(workspaceService.getWorkspaceParticipants(userId, workspaceId))
+                .result(workspaceService.getWorkspaceParticipants(userId, workspaceId, pageable))
                 .build(),
                 HttpStatus.OK);
     }
+
 
 
 //    워크스페이스 회원 삭제

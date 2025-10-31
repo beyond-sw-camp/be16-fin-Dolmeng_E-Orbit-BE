@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.stone.service;
 
+import com.Dolmeng_E.workspace.common.dto.NotificationCreateReqDto;
 import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
 import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
@@ -195,6 +196,31 @@ public class StoneService {
                                 .build();
                     }).toList();
             stoneParticipantRepository.saveAll(participantEntities);
+
+
+
+            // 스톤 참여자에게 알림 발송
+
+            List<UUID> participantList = participantEntities.stream().map(stone->stone.getWorkspaceParticipant()
+                    .getUserId()).toList();
+            // 테스트 코드
+            List<UUID> userIdList = new ArrayList<>(participantList);
+            // 알림받을 인원들 list에 담고
+            //  userIdList.add(task.getTaskManager().getUserId());
+
+            // 객체 생성
+            NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
+                    // 워크스페이스명 수동으로 넣어줘야 해요
+                    .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
+                    .content("태스크가 배정되었습니다! 🎉")
+                    .userIdList(userIdList)
+                    // 위에서 추가한 알림 타입 String으로 주입
+                    .type("TASK_MESSAGE")
+                    // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
+                    // 즉시알림이라면 null (채팅같은)
+                    .sendAt(null)
+                    .stoneId(childStone.getId())
+                    .build();
         }
 
         // 12. 프로젝트/마일스톤 반영
@@ -311,9 +337,39 @@ public class StoneService {
             }
         }
 
+
+
         if (!newParticipants.isEmpty()) {
             stoneParticipantRepository.saveAll(newParticipants);
         }
+
+        // 알림용 참여자 ID 리스트 조립
+        List<UUID> participantIdList = newParticipants.stream()
+                .map(sp -> sp.getWorkspaceParticipant().getUserId())
+                .distinct()
+                .toList();
+
+        // 스톤 참여자에게 알림 발송
+
+        // 테스트 코드
+
+        List<UUID> userIdList = new ArrayList<>(participantIdList);
+        // 알림받을 인원들 list에 담고
+        // userIdList.add(task.getTaskManager().getUserId());
+
+        // 객체 생성
+        NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
+                // 워크스페이스명 수동으로 넣어줘야 해요
+                .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 등록")
+                .content("스톤 참여자로 등록되었습니다! 🎉")
+                .userIdList(userIdList)
+                // 위에서 추가한 알림 타입 String으로 주입
+                .type("STONE_MESSAGE")
+                // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
+                // 즉시알림이라면 null (채팅같은)
+                .sendAt(null)
+                .stoneId(stone.getId())
+                .build();
     }
 
 
@@ -672,6 +728,32 @@ public class StoneService {
             stoneRepository.findById(stone.getParentStoneId())
                     .ifPresent(milestoneCalculator::updateStoneAndParents);
         }
+
+        // 상위스톤 담당자에게 알림 발송
+
+        // 테스트 코드
+
+        List<UUID> userIdList = new ArrayList<>();
+        // 알림받을 인원들 list에 담고
+        if (stone.getParentStoneId() != null) {
+            Stone topStone = stoneRepository.findById(stone.getParentStoneId())
+                    .orElseThrow(() -> new EntityNotFoundException("상위 스톤이 없습니다."));
+            userIdList.add(topStone.getStoneManager().getUserId());
+        }
+
+        // 객체 생성
+        NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
+                // 워크스페이스명 수동으로 넣어줘야 해요
+                .title("[" + workspace.getWorkspaceName() + "]" + "하위스톤 완료")
+                .content("하위 스톤이 완료되었습니다! 🎉")
+                .userIdList(userIdList)
+                // 위에서 추가한 알림 타입 String으로 주입
+                .type("STONE_MESSAGE")
+                // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
+                // 즉시알림이라면 null (채팅같은)
+                .sendAt(null)
+                .stoneId(stone.getId())
+                .build();
     }
 
 

@@ -1,4 +1,4 @@
-package com.Dolmeng_E.user.domain.notification.entity;
+package com.Dolmeng_E.workspace.common.domain;
 
 public enum NotificationType {
     PROJECT_CONFIRMED,

@@ -124,6 +124,17 @@ public class ProjectService {
             project.changeManager(newManager);
         }
 
+        // 5. 최상위 스톤명 변경
+        if (dto.getProjectName() != null && !dto.getProjectName().isBlank()) {
+            Stone topStone = project.getStones().stream()
+                    .filter(stone -> stone.getParentStoneId() == null)
+                    .findFirst()
+                    .orElseThrow(() -> new EntityNotFoundException("최상위 스톤이 없습니다."));
+
+            topStone.setStoneName(dto.getProjectName());
+            stoneRepository.save(topStone);
+        }
+
         project.update(dto);
         return project.getId();
     }
@@ -268,6 +279,7 @@ public class ProjectService {
                 .collect(Collectors.toMap(
                         Stone::getId,
                         s -> StoneListResDto.builder()
+                                .projectId(projectId)
                                 .stoneId(s.getId())
                                 .stoneName(s.getStoneName())
                                 .startTime(s.getStartTime())
@@ -314,10 +326,13 @@ public class ProjectService {
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
         // 3. 권한 검증
-        // 관리자이거나 프로젝트 담당자인 경우는 바로 통과
-        if (!participant.getWorkspaceRole().equals(ADMIN) &&
-                !project.getWorkspaceParticipant().getId().equals(participant.getId())) {
-            accessCheckService.validateAccess(participant, "ws_acc_list_1"); // 프로젝트 관련 접근 권한
+        // 관리자이거나 프로젝트 참여자면 통과
+        boolean isAdmin = participant.getWorkspaceRole().equals(ADMIN);
+        boolean isProjectParticipant = projectParticipantRepository
+                .existsByProjectAndWorkspaceParticipant(project, participant);
+
+        if (!isAdmin && !isProjectParticipant) {
+            accessCheckService.validateAccess(participant, "ws_acc_list_1"); // 프로젝트 접근 권한 체크
         }
 
         // 4. DTO 변환 및 반환
