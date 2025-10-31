@@ -594,11 +594,6 @@ public class StoneService {
             boolean next = dto.getChatCreation();    // 수정 요청 값
 
             // 이미 true인데 false로 바꾸려 하면 막기
-            if (prev && !next) {
-                throw new IllegalStateException("이미 생성된 채팅방은 비활성화할 수 없습니다.");
-            }
-
-            // false → true 전환만 허용 (채팅방 새로 생성)
             if (!prev && next) {
                 stone.setChatCreation(true);
 
@@ -613,15 +608,21 @@ public class StoneService {
 
                 List<UUID> distinctUserList = userIdList.stream().distinct().toList();
 
-                ChatInviteReqDto chatInviteReqDto = ChatInviteReqDto.builder()
+                // 1. 채팅방 생성 (roomName은 스톤 이름 기반으로)
+                ChatCreateReqDto createDto = ChatCreateReqDto.builder()
                         .workspaceId(workspace.getId())
                         .projectId(project.getId())
                         .stoneId(stone.getId())
+                        .roomName(stone.getStoneName())
                         .userIdList(distinctUserList)
                         .build();
 
-                chatFeign.inviteChatParticipants(chatInviteReqDto);
+                chatFeign.createChatRoom(createDto);  // 생성 호출
+
+                // 2. (선택) 이미 참여자 목록이 있다면, 이후 초대 로직도 가능
+                // chatFeign.inviteChatParticipants(chatInviteReqDto);
             }
+
         }
         if (dto.getEndTime() != null) {
             stone.setEndTime(dto.getEndTime());
