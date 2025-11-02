@@ -204,4 +204,34 @@ public class DriveController {
                 .statusMessage("루트 이름 가져오기 성공")
                 .build(), HttpStatus.OK);
     }
+    
+    // 문서 상세 정보 페이지 불러오기
+    @GetMapping("/document/{documentId}/info")
+    public ResponseEntity<?> getDocumentInfo(@PathVariable String documentId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getDocumentInfoPage(documentId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 정보 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 폴더 상세 정보 페이지 불러오기
+    @GetMapping("/folder/{folderId}/info")
+    public ResponseEntity<?> getFolderInfo(@PathVariable String folderId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFolderInfoPage(folderId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 정보 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 파일 상세 정보 페이지 불러오기
+    @GetMapping("/file/{fileId}/info")
+    public ResponseEntity<?> getFileInfo(@PathVariable String fileId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFileInfoPage(fileId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("파일 정보 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
 }

@@ -468,4 +468,51 @@ public class DriverService {
                     .projectId(rootId).build()).getName();
         }
     }
+
+    // 문서 상세 정보 
+    public DocumentInfoPage getDocumentInfoPage(String documentId){
+        Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException("존재하지 않은 문서입니다."));
+        Map<String, String> userInfo = hashOperations.entries("user:"+document.getCreatedBy());
+        return DocumentInfoPage.builder()
+                .name(document.getTitle())
+                .creatorName(userInfo.get("name"))
+                .createdBy(document.getCreatedBy())
+                .folderName((document.getFolder() != null) ? document.getFolder().getName() : "최상위 문서")
+                .updatedAt(document.getUpdatedAt())
+                .createdAt(document.getCreatedAt())
+                .build();
+    }
+    
+    // 폴더 상세 정보
+    public FolderInfoPage getFolderInfoPage(String folderId){
+        Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("존재하지 않은 폴더입니다."));
+        Map<String, String> userInfo = hashOperations.entries("user:"+folder.getCreatedBy());
+        Folder parentFolder = null;
+        if(folder.getParentId()!=null){
+            parentFolder = folderRepository.findById(folder.getParentId()).orElseThrow(()->new EntityNotFoundException("상위 폴더가 존재하지 않습니다."));
+        }
+        return FolderInfoPage.builder()
+                .name(folder.getName())
+                .creatorName(userInfo.get("name"))
+                .createdBy(folder.getCreatedBy())
+                .parentFolderName((parentFolder != null) ? parentFolder.getName() : "최상위 폴더")
+                .updatedAt(folder.getUpdatedAt())
+                .createdAt(folder.getCreatedAt())
+                .build();
+    }
+
+    // 파일 상세 정보
+    public FileInfoPage getFileInfoPage(String fileId){
+        File file = fileRepository.findById(fileId).orElseThrow(()->new EntityNotFoundException("존재하지 않은 파일입니다."));
+        Map<String, String> userInfo = hashOperations.entries("user:"+file.getCreatedBy());
+        return FileInfoPage.builder()
+                .name(file.getName())
+                .creatorName(userInfo.get("name"))
+                .createdBy(file.getCreatedBy())
+                .folderName((file.getFolder() != null) ? file.getFolder().getName() : "최상위 파일")
+                .updatedAt(file.getUpdatedAt())
+                .createdAt(file.getCreatedAt())
+                .fileSize(file.getSize())
+                .build();
+    }
 }
