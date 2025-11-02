@@ -1067,6 +1067,47 @@ public class WorkspaceService {
     }
 
 
+    // 워크스페이스id, 프젝id, 스톤id 중 하나 넘겼을 때 해당 이름 받아오는 api
+    public EntityNameResDto getEntityName(EntityNameReqDto dto) {
+
+        if (dto.getWorkspaceId() != null) {
+            return workspaceRepository.findById(dto.getWorkspaceId())
+                    .filter(ws -> !ws.getIsDelete())
+                    .map(ws -> EntityNameResDto.builder()
+                            .type("workspace")
+                            .id(ws.getId())
+                            .name(ws.getWorkspaceName())
+                            .build())
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
+        }
+
+        if (dto.getProjectId() != null) {
+            return projectRepository.findById(dto.getProjectId())
+                    .filter(p -> !p.getIsDelete())
+                    .map(p -> EntityNameResDto.builder()
+                            .type("project")
+                            .id(p.getId())
+                            .name(p.getProjectName())
+                            .build())
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 프로젝트입니다."));
+        }
+
+        if (dto.getStoneId() != null) {
+            return stoneRepository.findById(dto.getStoneId())
+                    .filter(s -> !s.getIsDelete())
+                    .map(s -> EntityNameResDto.builder()
+                            .type("stone")
+                            .id(s.getId())
+                            .name(s.getStoneName())
+                            .build())
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 스톤입니다."));
+        }
+
+        throw new IllegalArgumentException("workspaceId, projectId, stoneId 중 하나는 반드시 필요합니다.");
+    }
+
+
+
 
 
 

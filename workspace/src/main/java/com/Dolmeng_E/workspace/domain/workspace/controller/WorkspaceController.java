@@ -453,6 +453,15 @@ public class WorkspaceController {
         return workspaceService.checkWorkspaceOrProjectManager(stoneId, userId);
     }
 
+    // 워크스페이스id, 프젝id, 스톤id 중 하나 넘겼을 때 해당 이름 받아오는 api
+    @PostMapping("/entity/name")
+    public EntityNameResDto getEntityName(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody EntityNameReqDto dto
+    ) {
+        return workspaceService.getEntityName(dto);
+    }
+
 
 
 
