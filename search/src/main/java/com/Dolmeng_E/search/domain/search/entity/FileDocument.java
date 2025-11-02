@@ -1,5 +1,6 @@
 package com.Dolmeng_E.search.domain.search.entity;
 
+import com.Dolmeng_E.search.domain.search.dto.EventDto;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -72,4 +73,8 @@ public class FileDocument {
     // 루트 ID
     @Field(type = FieldType.Keyword, index = false)
     private String rootId;
+
+    public void updateFile(EventDto.EventPayload eventPayload){
+        this.searchTitle = eventPayload.getSearchTitle();
+    }
 }
