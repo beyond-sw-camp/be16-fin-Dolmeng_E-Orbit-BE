@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentKafkaDto {
+public class DocumentKafkaUpdateDto {
     private String eventType;
     private EventPayload eventPayload;
 
@@ -24,8 +24,6 @@ public class DocumentKafkaDto {
         private String id;
         private String searchTitle;
         private String searchContent;
-        private String createdBy;
         private List<String> viewableUserIds;
-        private LocalDateTime createdAt;
     }
 }

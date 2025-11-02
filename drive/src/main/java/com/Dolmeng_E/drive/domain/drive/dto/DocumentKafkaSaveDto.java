@@ -1,4 +1,4 @@
-package com.Dolmeng_E.search.domain.search.dto;
+package com.Dolmeng_E.drive.domain.drive.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EventDto {
+public class DocumentKafkaSaveDto {
     private String eventType;
     private EventPayload eventPayload;
 
@@ -31,4 +31,3 @@ public class EventDto {
         private String rootId;
     }
 }
-

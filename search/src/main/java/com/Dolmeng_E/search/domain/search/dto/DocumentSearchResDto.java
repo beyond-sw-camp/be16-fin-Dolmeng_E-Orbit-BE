@@ -12,8 +12,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentResDto {
+public class DocumentSearchResDto {
     private String id;
+    private String docType;
     private String searchTitle;
     private String searchContent;
     private List<participantInfo> participants;
@@ -24,6 +25,8 @@ public class DocumentResDto {
     private String profileImageUrl;
 //  파일, 문서는 생성일, 스톤과 테스크는 마감일
     private LocalDate dateTime;
+    private String rootType;
+    private String rootId;
 
     @Data
     @NoArgsConstructor

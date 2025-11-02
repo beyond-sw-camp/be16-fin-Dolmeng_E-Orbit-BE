@@ -14,18 +14,18 @@ public class UnifiedSearchController {
     private final UnifiedSearchService unifiedSearchService;
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchDocument(@RequestParam String keyword) {
+    public ResponseEntity<?> searchDocument(@RequestHeader("X-User-Id") String userId, @RequestParam String keyword) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(unifiedSearchService.search(keyword, "2eb87833-c2dd-47ec-9799-be958953e2e6"))
+                .result(unifiedSearchService.search(keyword, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("검색 성공")
                 .build(), HttpStatus.OK);
     }
 
     @GetMapping("/suggest")
-    public ResponseEntity<?> suggestDocument(@RequestParam String keyword) {
+    public ResponseEntity<?> suggestDocument(@RequestHeader("X-User-Id") String userId, @RequestParam String keyword) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(unifiedSearchService.suggest(keyword, "2eb87833-c2dd-47ec-9799-be958953e2e6"))
+                .result(unifiedSearchService.suggest(keyword, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("검색어 제안")
                 .build(), HttpStatus.OK);

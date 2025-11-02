@@ -1,7 +1,8 @@
 package com.Dolmeng_E.search.domain.search.service;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
-import com.Dolmeng_E.search.domain.search.dto.DocumentResDto;
+import com.Dolmeng_E.search.domain.search.dto.DocumentSearchResDto;
+import com.Dolmeng_E.search.domain.search.dto.DocumentSuggestResDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,7 +36,7 @@ public class UnifiedSearchService {
      * ✅ 통합 검색 수행 (변경 없음)
      * (검색: searchTitle.ngram (N-gram) OR searchContent (Nori))
      */
-    public List<DocumentResDto> search(String keyword, String currentUserId) {
+    public List<DocumentSearchResDto> search(String keyword, String currentUserId) {
 
         Pageable pageable = PageRequest.of(0, 20);
 
@@ -56,7 +57,7 @@ public class UnifiedSearchService {
 
 
         // ✅ HighlightQuery 생성
-        HighlightQuery highlightQuery = new HighlightQuery(highlight, DocumentResDto.class);
+        HighlightQuery highlightQuery = new HighlightQuery(highlight, DocumentSearchResDto.class);
 
         // ✅ 2. NativeQuery
         NativeQuery query = NativeQuery.builder()
@@ -98,16 +99,16 @@ public class UnifiedSearchService {
                 .build();
 
         // ✅ 3. 검색 실행
-        SearchHits<DocumentResDto> searchHits = elasticsearchOperations.search(
+        SearchHits<DocumentSearchResDto> searchHits = elasticsearchOperations.search(
                 query,
-                DocumentResDto.class,
+                DocumentSearchResDto.class,
                 ALL_INDICES
         );
 
         // ✅ 4. 결과 처리
         return searchHits.stream()
                 .map(hit -> {
-                    DocumentResDto dto = hit.getContent();
+                    DocumentSearchResDto dto = hit.getContent();
                     Map<String, List<String>> highlights = hit.getHighlightFields();
 
                     if (highlights.containsKey("searchTitle")) {
@@ -129,10 +130,10 @@ public class UnifiedSearchService {
     }
 
     /**
-     * ✅ 통합 검색어 자동완성 (수정됨)
-     * (자동완성: searchTitle.ngram (N-gram) OR searchContent (Nori))
+     * ✅ 통합 검색어 자동완성 (수정됨: DocumentSuggestResDto 객체 리스트 반환)
+     * (자동완성: searchTitle.ngram (N-gram) - 제목으로만 검색)
      */
-    public List<String> suggest(String keyword, String currentUserId) {
+    public List<DocumentSuggestResDto> suggest(String keyword, String currentUserId) {
 
         String suggestField = "searchTitle.ngram";
         Pageable pageable = PageRequest.of(0, 10);
@@ -140,29 +141,15 @@ public class UnifiedSearchService {
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
-                                // 1. [수정] N-gram(제목)과 Nori(내용)를 OR로 묶음
+                                // 1. [수정됨] 제목(searchTitle.ngram)으로만 검색 (이전 대화 반영)
                                 .must(m -> m
-                                        .bool(bShould -> bShould
-                                                .should(s -> s
-                                                        // 1-1. searchTitle.ngram (N-gram) 자동완성
-                                                        .matchBoolPrefix(mbp -> mbp
-                                                                .field(suggestField)
-                                                                .query(keyword)
-                                                                .analyzer("nori_search_analyzer")
-                                                        )
-                                                )
-                                                .should(s -> s
-                                                        // 1-2. searchContent (Nori) 자동완성
-                                                        .matchBoolPrefix(mbp -> mbp
-                                                                .field("searchContent")
-                                                                .query(keyword)
-                                                                .analyzer("nori") // nori 분석기 사용
-                                                        )
-                                                )
-                                                .minimumShouldMatch("1") // 둘 중 하나만 일치해도 됨
+                                        .matchBoolPrefix(mbp -> mbp
+                                                .field(suggestField)
+                                                .query(keyword)
+                                                .analyzer("nori_search_analyzer")
                                         )
                                 )
-                                // 2. 사용자 필터 조건
+                                // 2. 사용자 필터 조건 (변경 없음)
                                 .filter(f -> f
                                         .term(t -> t
                                                 .field("viewableUserIds")
@@ -172,19 +159,23 @@ public class UnifiedSearchService {
                         )
                 )
                 .withPageable(pageable)
+                // [수정] DTO 필드에 맞게 _source 필터링
+                // (id는 metadata, searchTitle/docType은 _source에서 가져옴)
                 .withSourceFilter(new FetchSourceFilter(
                         new String[]{"searchTitle", "docType"}, null))
                 .build();
 
-        SearchHits<DocumentResDto> searchHits = elasticsearchOperations.search(
+        // [수정 1] DTO 클래스 변경
+        SearchHits<DocumentSuggestResDto> searchHits = elasticsearchOperations.search(
                 query,
-                DocumentResDto.class,
+                DocumentSuggestResDto.class, // <-- 반환 DTO 클래스 지정
                 ALL_INDICES
         );
 
+        // [수정 2] DTO 객체 자체를 리스트로 변환
         return searchHits.stream()
-                .map(hit -> hit.getContent().getSearchTitle())
-                .distinct()
+                .map(hit -> hit.getContent()) // <-- DTO 객체 추출
+                // .distinct()는 제거 (DTO 객체는 ID별로 고유하므로)
                 .collect(Collectors.toList());
     }
 }
