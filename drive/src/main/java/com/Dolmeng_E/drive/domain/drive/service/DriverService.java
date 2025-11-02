@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -129,11 +128,13 @@ public class DriverService {
             folderContentsDtos.add(FolderContentsDto.builder()
                     .size(file.getSize())
                     .createBy(file.getCreatedBy())
+                    .updateAt(file.getUpdatedAt().toString())
                     .name(file.getName())
                     .type(file.getType())
                     .id(file.getId())
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
+                    .url(file.getUrl())
                     .build());
         }
         // 문서 불러오기
@@ -141,7 +142,7 @@ public class DriverService {
             if(document.getIsDelete().equals(true)) continue;
             folderContentsDtos.add(FolderContentsDto.builder()
                     .createBy(document.getCreatedBy())
-                    .updateAt(document.getUpdatedBy())
+                    .updateAt(document.getUpdatedAt().toString())
                     .name(document.getTitle())
                     .type("document")
                     .id(document.getId())
@@ -230,11 +231,13 @@ public class DriverService {
             rootContentsDtos.add(RootContentsDto.builder()
                     .size(file.getSize())
                     .createBy(file.getCreatedBy())
+                    .updateAt(file.getUpdatedAt().toString())
                     .name(file.getName())
                     .type(file.getType())
                     .id(file.getId())
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
+                    .url(file.getUrl())
                     .build());
         }
         // 문서 불러오기
@@ -244,7 +247,7 @@ public class DriverService {
             Map<String, String> userInfo = hashOperations.entries("user:"+getUserId);
             rootContentsDtos.add(RootContentsDto.builder()
                     .createBy(document.getCreatedBy())
-                    .updateAt(document.getUpdatedBy())
+                    .updateAt(document.getUpdatedAt().toString())
                     .name(document.getTitle())
                     .type("document")
                     .id(document.getId())
@@ -255,6 +258,7 @@ public class DriverService {
         return rootContentsDtos;
     }
 
+    // 폴더 옮기기
     public String updateFolderStruct(String folderId, FolderMoveDto folderMoveDto){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
         if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderMoveDto.getParentId(), folder.getName()).isPresent()){
@@ -264,8 +268,12 @@ public class DriverService {
         return folder.getParentId();
     }
 
+    // 파일/문서 옮기기
     public String updateElementStruct(String elementId, ElementMoveDto elementMoveDto){
-        Optional<Folder> folder = folderRepository.findById(elementMoveDto.getFolderId());
+        Optional<Folder> folder = Optional.empty();
+        if(elementMoveDto.getFolderId()!=null){
+            folder = folderRepository.findById(elementMoveDto.getFolderId());
+        }
         if(elementMoveDto.getType().equals("document")){
             Document document = documentRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
             document.updateFolder(folder.orElse(null));
@@ -384,8 +392,13 @@ public class DriverService {
     @Transactional(readOnly = true)
     public DocumentResDto findDocument(String userId, String documentId){
         Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException(("해당 문서가 존재하지 않습니다.")));
+        String getFolderName = null;
+        if(document.getFolder()!=null){
+            getFolderName = document.getFolder().getName();
+        }
         return DocumentResDto.builder()
                 .title(document.getTitle())
+                .folderName(getFolderName)
                 .build();
     }
 
@@ -399,8 +412,44 @@ public class DriverService {
         return document.getTitle();
     }
 
+    // 파일 이름 변경
+    public String updateFile(String fileId, FileUpdateDto fileUpdateDto){
+        File file = fileRepository.findById(fileId).orElseThrow(()->new EntityNotFoundException(("해당 파일이 존재하지 않습니다.")));
+        if(fileRepository.findByFolderAndNameAndIsDeleteFalse(file.getFolder(), fileUpdateDto.getName()).isPresent()){
+            throw new IllegalArgumentException("같은 이름의 파일이 존재합니다.");
+        }
+        file.updateName(fileUpdateDto.getName());
+        return file.getName();
+    }
+
     public Long getFilesSize(String workspaceId){
         Long totalSize = fileRepository.findTotalSizeByWorkspaceId(workspaceId);
         return (totalSize != null) ? totalSize : 0L;
+    }
+    
+    // 루트 하위 폴더 불러오기
+    public List<FolderResDto> getRootFolders(String rootId, String rootType){
+        List<FolderResDto> folderResDtos = new ArrayList<>();
+        List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+        for(Folder folder : folders){
+            folderResDtos.add(FolderResDto.builder()
+                    .folderName(folder.getName())
+                    .folderId(folder.getId())
+                    .build());
+        }
+        return folderResDtos;
+    }
+
+    // 폴더 하위 폴더 불러오기
+    public List<FolderResDto> getFolders(String folderId){
+        List<FolderResDto> folderResDtos = new ArrayList<>();
+        List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
+        for(Folder folder : folders){
+            folderResDtos.add(FolderResDto.builder()
+                    .folderName(folder.getName())
+                    .folderId(folder.getId())
+                    .build());
+        }
+        return folderResDtos;
     }
 }

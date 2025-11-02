@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentResDto {
-    private String title;
-    private String folderName;
+public class FolderResDto {
+    String folderId;
+    String folderName;
 }
