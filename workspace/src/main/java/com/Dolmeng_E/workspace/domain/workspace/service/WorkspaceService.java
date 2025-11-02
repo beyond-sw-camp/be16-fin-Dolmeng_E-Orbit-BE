@@ -15,6 +15,7 @@ import com.Dolmeng_E.workspace.domain.stone.dto.MilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
@@ -1104,6 +1105,38 @@ public class WorkspaceService {
         }
 
         throw new IllegalArgumentException("workspaceId, projectId, stoneId 중 하나는 반드시 필요합니다.");
+    }
+
+    // 워크스페이스 내 나의 스톤 목록 조회 (루트스톤 제외)
+    @Transactional(readOnly = true)
+    public List<MyStoneResDto> getMyStonesInWorkspace(String userId, String workspaceId) {
+
+        // 1. 워크스페이스 참가자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 참가자가 아닙니다."));
+
+        // 2. 내가 참여 중인 스톤 전부 조회 (루트 스톤 제외, isDelete=false)
+        List<StoneParticipant> myStoneParticipants =
+                stoneParticipantRepository.findAllActiveWithStoneByWorkspaceParticipant(participant);
+
+        // 3. 루트 스톤 제외 (parentStoneId != null)
+        List<Stone> filteredStones = myStoneParticipants.stream()
+                .map(StoneParticipant::getStone)
+                .filter(stone -> stone.getParentStoneId() != null) // 루트 스톤 제외
+                .toList();
+
+        // 4. DTO 변환
+        return filteredStones.stream()
+                .map(stone -> MyStoneResDto.builder()
+                        .stoneId(stone.getId())
+                        .stoneName(stone.getStoneName())
+                        .projectName(stone.getProject().getProjectName())
+                        .milestone(stone.getMilestone() != null ? stone.getMilestone() : BigDecimal.ZERO)
+                        .startTime(stone.getStartTime())
+                        .endTime(stone.getEndTime())
+                        .build())
+                .toList();
     }
 
 

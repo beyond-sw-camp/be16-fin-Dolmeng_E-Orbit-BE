@@ -462,6 +462,24 @@ public class WorkspaceController {
         return workspaceService.getEntityName(dto);
     }
 
+    // 워크스페이스에서 나의 스톤 목록 가져오기 (루트스톤 제외)
+    @GetMapping("/{workspaceId}/my-stones")
+    public ResponseEntity<?> getMyStonesInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<MyStoneResDto> result = workspaceService.getMyStonesInWorkspace(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 내 내 스톤 목록 조회 성공")
+                        .result(result)
+                        .build(),
+                HttpStatus.OK
+        );
+    }
+
 
 
 
