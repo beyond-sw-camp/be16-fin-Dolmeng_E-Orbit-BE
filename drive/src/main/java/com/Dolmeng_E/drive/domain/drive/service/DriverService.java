@@ -18,6 +18,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.util.*;
 
 @Service
@@ -40,6 +42,7 @@ public class DriverService {
     private final ObjectMapper objectMapper;
     private final HashOperations<String, String, String> hashOperations;
     private final WorkspaceServiceClient workspaceServiceClient;
+    private final Tika tika = new Tika();
 
     public DriverService(FolderRepository folderRepository, S3Uploader s3Uploader, FileRepository fileRepository, DocumentRepository documentRepository, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, @Qualifier("userInventory") RedisTemplate<String, String> redisTemplate, WorkspaceServiceClient workspaceServiceClient) {
         this.folderRepository = folderRepository;
@@ -51,6 +54,20 @@ public class DriverService {
         this.hashOperations = redisTemplate.opsForHash();
         this.workspaceServiceClient = workspaceServiceClient;
     }
+
+    private static final Set<String> PARSEABLE_MIME_TYPES = Set.of(
+            "application/pdf",
+            "application/msword", // .doc
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+            "application/vnd.ms-excel", // .xls
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+            "application/vnd.ms-powerpoint", // .ppt
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+            "text/plain", // .txt
+            "text/csv",
+            "text/html"
+            // (hwp 등 필요한 문서 타입이 있다면 MIME 타입을 확인하여 추가)
+    );
 
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto, String userId){
@@ -316,10 +333,58 @@ public class DriverService {
                     .rootId(fileSaveDto.getRootId())
                     .rootType(RootType.valueOf(fileSaveDto.getRootType()))
                     .build();
-            fileRepository.save(fileEntity).getId();
+            File savedFile = fileRepository.saveAndFlush(fileEntity);
+
+            String extractedContent = extractText(file);
+            // kafka 메시지 발행
+            List<String> viewableUserIds = new ArrayList<>();
+            viewableUserIds.add(savedFile.getCreatedBy());
+            DocumentKafkaSaveDto documentKafkaSaveDto = DocumentKafkaSaveDto.builder()
+                    .eventType("FILE_CREATED")
+                    .eventPayload(DocumentKafkaSaveDto.EventPayload.builder()
+                            .id(savedFile.getId())
+                            .createdBy(savedFile.getCreatedBy())
+                            .searchTitle(savedFile.getName())
+                            .createdAt(savedFile.getCreatedAt())
+                            .rootId(savedFile.getRootId())
+                            .rootType(savedFile.getRootType().toString())
+                            .viewableUserIds(viewableUserIds)
+                            .searchContent(extractedContent)
+                            .build())
+                    .build();
+            try {
+                // 3. DTO를 JSON 문자열로 변환
+                String message = objectMapper.writeValueAsString(documentKafkaSaveDto);
+
+                // 4. Kafka 토픽으로 이벤트 발행
+                kafkaTemplate.send("file-topic", message);
+
+            } catch (JsonProcessingException e) {
+                // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+                throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+            }
         }
 
         return "파일 업로드 성공";
+    }
+
+    // 파일 내용 추출
+    public String extractText(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        String mimeType = file.getContentType();
+        if (mimeType == null || !PARSEABLE_MIME_TYPES.contains(mimeType)) {
+            // "image/jpeg", "video/mp4" 등은 여기서 걸러짐
+            return null; // 문서 타입이 아니면 null 반환
+        }
+        try (InputStream stream = file.getInputStream()) {
+            return tika.parseToString(stream);
+        } catch (Exception e) {
+            // Tika 파싱 중 에러 발생 시
+            System.err.println("Tika 파싱 실패 (문서 타입: " + mimeType + "): " + e.getMessage());
+            return null;
+        }
     }
 
     // 파일 삭제(소프트)
@@ -328,6 +393,24 @@ public class DriverService {
         String fileName = file.getName();
         s3Uploader.delete(file.getUrl());
         file.updateIsDelete();
+        // kafka 메시지 발행
+        DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                .eventType("FILE_DELETED")
+                .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                        .id(file.getId())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("file-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
         return fileName;
     }
 
@@ -354,9 +437,9 @@ public class DriverService {
                 .rootType(RootType.valueOf(documentSaveDto.getRootType()))
                 .build();
         Document savedDocument = documentRepository.saveAndFlush(document);
+        // kafka 메시지 발행
         List<String> viewableUserIds = new ArrayList<>();
         viewableUserIds.add(savedDocument.getCreatedBy());
-        // kafka 메시지 발행
         DocumentKafkaSaveDto documentKafkaSaveDto = DocumentKafkaSaveDto.builder()
                 .eventType("DOCUMENT_CREATED")
                 .eventPayload(DocumentKafkaSaveDto.EventPayload.builder()
