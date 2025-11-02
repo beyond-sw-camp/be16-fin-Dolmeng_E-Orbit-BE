@@ -906,6 +906,8 @@ public class WorkspaceService {
                         .isDone(task.getIsDone())
                         .startTime(task.getStartTime())
                         .endTime(task.getEndTime())
+                        .stoneMilestone(task.getStone().getMilestone())
+                        .stoneId(task.getStone().getId())
                         .build())
                 .toList();
     }
