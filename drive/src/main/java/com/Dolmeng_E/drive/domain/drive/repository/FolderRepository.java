@@ -13,6 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface FolderRepository extends JpaRepository<Folder, String> {
+    Optional<Folder> findByParentIdAndNameAndIsDeleteIsFalseAndRootId(String parentId, String name, String rootId);
     Optional<Folder> findByParentIdAndNameAndIsDeleteIsFalse(String parentId, String name);
     List<Folder> findAllByParentIdAndIsDeleteIsFalse(String parentId);
     List<Folder> findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType rootType, String rootId);

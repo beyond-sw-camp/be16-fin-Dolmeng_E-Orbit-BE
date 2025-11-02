@@ -54,7 +54,7 @@ public class DriverService {
 
     // 폴더 생성
     public String createFolder(FolderSaveDto folderSaveDto, String userId){
-        if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderSaveDto.getParentId(), folderSaveDto.getName()).isPresent()){
+        if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalseAndRootId(folderSaveDto.getParentId(), folderSaveDto.getName(), folderSaveDto.getRootId()).isPresent()){
             throw new IllegalArgumentException("이미 존재하는 폴더명입니다.");
         }
         return folderRepository.save(folderSaveDto.toEntity()).getId();
@@ -295,7 +295,7 @@ public class DriverService {
             Optional<Folder> folder = folderRepository.findById(folderId);
             // 폴더가 있을 경우
             if(folder.isPresent()){
-                if(fileRepository.findByFolderAndNameAndIsDeleteFalse(folder.get(), file.getOriginalFilename()).isPresent()){
+                if(fileRepository.findByFolderAndNameAndIsDeleteFalseAndRootId(folder.get(), file.getOriginalFilename(), fileSaveDto.getRootId()).isPresent()){
                     throw new IllegalArgumentException("동일한 이름의 파일이 존재합니다.");
                 }
             }
@@ -336,7 +336,7 @@ public class DriverService {
         Optional<Folder> folder = folderRepository.findById(folderId);
         // 폴더가 있을 경우
         if(folder.isPresent()){
-            if(documentRepository.findByFolderAndTitleAndIsDeleteFalse(folder.get(), documentSaveDto.getName()).isPresent()){
+            if(documentRepository.findByFolderAndTitleAndIsDeleteFalseAndRootId(folder.get(), documentSaveDto.getName(), documentSaveDto.getRootId()).isPresent()){
                 throw new IllegalArgumentException("동일한 이름의 문서가 존재합니다.");
             }
         }

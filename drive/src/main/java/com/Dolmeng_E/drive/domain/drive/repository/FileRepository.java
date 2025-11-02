@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FileRepository extends JpaRepository<File, String> {
+    Optional<File> findByFolderAndNameAndIsDeleteFalseAndRootId(Folder folder, String name, String rootId);
     Optional<File> findByFolderAndNameAndIsDeleteFalse(Folder folder, String name);
 
     @Query("SELECT SUM(f.size) FROM File f WHERE f.workspaceId = :workspaceId")
