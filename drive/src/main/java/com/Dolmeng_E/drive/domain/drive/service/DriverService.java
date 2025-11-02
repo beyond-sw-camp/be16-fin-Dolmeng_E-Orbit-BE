@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -259,6 +258,7 @@ public class DriverService {
         return rootContentsDtos;
     }
 
+    // 폴더 옮기기
     public String updateFolderStruct(String folderId, FolderMoveDto folderMoveDto){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
         if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderMoveDto.getParentId(), folder.getName()).isPresent()){
@@ -268,8 +268,12 @@ public class DriverService {
         return folder.getParentId();
     }
 
+    // 파일/문서 옮기기
     public String updateElementStruct(String elementId, ElementMoveDto elementMoveDto){
-        Optional<Folder> folder = folderRepository.findById(elementMoveDto.getFolderId());
+        Optional<Folder> folder = Optional.empty();
+        if(elementMoveDto.getFolderId()!=null){
+            folder = folderRepository.findById(elementMoveDto.getFolderId());
+        }
         if(elementMoveDto.getType().equals("document")){
             Document document = documentRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
             document.updateFolder(folder.orElse(null));
@@ -416,5 +420,31 @@ public class DriverService {
     public Long getFilesSize(String workspaceId){
         Long totalSize = fileRepository.findTotalSizeByWorkspaceId(workspaceId);
         return (totalSize != null) ? totalSize : 0L;
+    }
+    
+    // 루트 하위 폴더 불러오기
+    public List<FolderResDto> getRootFolders(String rootId, String rootType){
+        List<FolderResDto> folderResDtos = new ArrayList<>();
+        List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
+        for(Folder folder : folders){
+            folderResDtos.add(FolderResDto.builder()
+                    .folderName(folder.getName())
+                    .folderId(folder.getId())
+                    .build());
+        }
+        return folderResDtos;
+    }
+
+    // 폴더 하위 폴더 불러오기
+    public List<FolderResDto> getFolders(String folderId){
+        List<FolderResDto> folderResDtos = new ArrayList<>();
+        List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
+        for(Folder folder : folders){
+            folderResDtos.add(FolderResDto.builder()
+                    .folderName(folder.getName())
+                    .folderId(folder.getId())
+                    .build());
+        }
+        return folderResDtos;
     }
 }
