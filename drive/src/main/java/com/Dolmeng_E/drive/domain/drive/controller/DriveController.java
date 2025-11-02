@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/drive")
@@ -152,7 +151,7 @@ public class DriveController {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.updateDocument(documentId, documentUpdateDto))
                 .statusCode(HttpStatus.OK.value())
-                .statusMessage("문서 조회 성공")
+                .statusMessage("문서 수정 성공")
                 .build(), HttpStatus.OK);
     }
     
@@ -163,6 +162,36 @@ public class DriveController {
                 .result(driverService.getFilesSize(workspaceId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("스토리지 사용량 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 파일 수정
+    @PutMapping("/file/{fileId}")
+    public ResponseEntity<?> updateFile(@PathVariable String fileId, @RequestBody FileUpdateDto fileUpdateDto) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.updateFile(fileId, fileUpdateDto))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 위치 별 하위 폴더들 가져오기(폴더트리구조)
+    @GetMapping("/{rootType}/{rootId}/folders")
+    public ResponseEntity<?> getContents(@PathVariable String rootId, @PathVariable String rootType) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getRootFolders(rootId, rootType))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage(rootType+"하위 폴더 목록 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 폴더 하위 요소들 조회
+    @GetMapping("/folder/{folderId}/folders")
+    public ResponseEntity<?> getFolderContents(@PathVariable String folderId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFolders(folderId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 하위 폴더 목록 조회 성공")
                 .build(), HttpStatus.OK);
     }
 }

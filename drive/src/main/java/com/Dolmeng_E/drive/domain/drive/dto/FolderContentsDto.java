@@ -20,5 +20,6 @@ public class FolderContentsDto {
     private String id;
     private String creatorName;
     private String profileImage;
+    private String url;
     private List<FolderInfoDto> ancestors;
 }

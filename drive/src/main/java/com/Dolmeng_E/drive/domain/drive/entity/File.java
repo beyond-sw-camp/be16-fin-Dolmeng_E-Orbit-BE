@@ -64,4 +64,5 @@ public class File extends BaseTimeEntity {
 
     public void updateIsDelete() {this.isDelete = true;}
     public void updateFolder(Folder folder) {this.folder = folder;}
+    public void updateName(String name) {this.name = name;}
 }

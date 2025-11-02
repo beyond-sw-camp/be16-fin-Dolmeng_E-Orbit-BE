@@ -21,4 +21,5 @@ public class RootContentsDto {
     private String creatorName;
     private String profileImage;
     private List<FolderInfoDto> ancestors;
+    private String url;
 }
