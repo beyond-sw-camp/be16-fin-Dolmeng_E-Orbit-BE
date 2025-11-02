@@ -34,29 +34,29 @@ public class MilestoneCalculator {
         log.info("🟡 [START] 스톤({}) 마일스톤 계산 시작 (parent={})",
                 stone.getStoneName(), stone.getParentStoneId());
 
-        // 1️⃣ 본인 및 하위 스톤 태스크 기반으로 milestone 계산
+        // 1. 본인 및 하위 스톤 태스크 기반으로 milestone 계산
         updateStoneMilestone(stone);
 
-        // 2️⃣ 부모가 있으면 상향 전파
+        // 2. 부모가 있으면 상향 전파
         if (stone.getParentStoneId() != null) {
             Stone parent = stoneRepository.findById(stone.getParentStoneId()).orElse(null);
             if (parent != null) {
-                log.info("⬆️ [PARENT] 상위 스톤({}) 마일스톤 갱신", parent.getStoneName());
+                log.info(" [PARENT] 상위 스톤({}) 마일스톤 갱신", parent.getStoneName());
                 updateStoneAndParents(parent);
                 return;
             }
         }
 
-        // 3️⃣ 루트면 프로젝트 마일스톤 업데이트
+        // 3. 루트면 프로젝트 마일스톤 업데이트
         if (stone.getParentStoneId() == null) {
             Project project = stone.getProject();
             BigDecimal rootMilestone = stone.getMilestone();
             project.setMilestone(rootMilestone);
             projectRepository.saveAndFlush(project);
-            log.info("🔵 [PROJECT] 프로젝트({}) 마일스톤 = {}%", project.getProjectName(), rootMilestone);
+            log.info(" [PROJECT] 프로젝트({}) 마일스톤 = {}%", project.getProjectName(), rootMilestone);
         }
 
-        log.info("✅ [DONE] 스톤({}) milestone={}%, total={}, done={}",
+        log.info(" [DONE] 스톤({}) milestone={}%, total={}, done={}",
                 stone.getStoneName(), stone.getMilestone(), stone.getTaskCount(), stone.getCompletedCount());
     }
 
@@ -96,7 +96,7 @@ public class MilestoneCalculator {
         stone.setMilestone(milestone);
         stoneRepository.saveAndFlush(stone);
 
-        log.debug("🌿 [STONE] {} → total={}, done={}, milestone={}%",
+        log.debug(" [STONE] {} → total={}, done={}, milestone={}%",
                 stone.getStoneName(), total, done, milestone);
     }
 }
