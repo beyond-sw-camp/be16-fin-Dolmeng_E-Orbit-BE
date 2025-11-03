@@ -25,5 +25,6 @@ public class DocumentKafkaUpdateDto {
         private String searchTitle;
         private String searchContent;
         private List<String> viewableUserIds;
+        private String parentId;
     }
 }

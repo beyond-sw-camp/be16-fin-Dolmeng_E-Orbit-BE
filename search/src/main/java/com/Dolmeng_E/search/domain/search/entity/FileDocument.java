@@ -74,6 +74,13 @@ public class FileDocument {
     @Field(type = FieldType.Keyword, index = false)
     private String rootId;
 
+    // 상위 폴더
+    @Field(type = FieldType.Keyword, index = false)
+    private String parentId;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String fileUrl;
+
     public void updateFile(EventDto.EventPayload eventPayload){
         this.searchTitle = eventPayload.getSearchTitle();
     }

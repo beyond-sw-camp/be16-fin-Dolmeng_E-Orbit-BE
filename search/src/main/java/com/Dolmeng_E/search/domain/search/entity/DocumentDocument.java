@@ -74,6 +74,10 @@ public class DocumentDocument {
     @Field(type = FieldType.Keyword, index = false)
     private String rootId;
 
+    // 상위 폴더
+    @Field(type = FieldType.Keyword, index = false)
+    private String parentId;
+
     public void updateDocument(EventDto.EventPayload eventPayload){
         if (eventPayload.getSearchTitle() != null) {
             this.searchTitle = eventPayload.getSearchTitle();

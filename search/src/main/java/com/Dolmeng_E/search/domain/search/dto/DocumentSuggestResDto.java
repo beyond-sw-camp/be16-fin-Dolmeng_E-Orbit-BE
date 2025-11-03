@@ -11,8 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class DocumentSuggestResDto {
     private String id;
+    private String fileUrl;
     private String docType;
     private String searchTitle;
-    private String rootType;
-    private String rootId;
 }

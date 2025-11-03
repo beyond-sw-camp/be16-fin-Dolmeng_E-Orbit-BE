@@ -29,5 +29,7 @@ public class DocumentKafkaSaveDto {
         private LocalDateTime createdAt;
         private String rootType;
         private String rootId;
+        private String parentId;
+        private String fileUrl;
     }
 }

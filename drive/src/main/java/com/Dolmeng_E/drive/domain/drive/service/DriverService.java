@@ -295,11 +295,49 @@ public class DriverService {
         if(elementMoveDto.getType().equals("document")){
             Document document = documentRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
             document.updateFolder(folder.orElse(null));
+            // kafka 메시지 발행
+            DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                    .eventType("DOCUMENT_UPDATED")
+                    .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                            .id(document.getId())
+                            .parentId(elementMoveDto.getFolderId() != null ? elementMoveDto.getFolderId() : null)
+                            .build())
+                    .build();
+            try {
+                // 3. DTO를 JSON 문자열로 변환
+                String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+                // 4. Kafka 토픽으로 이벤트 발행
+                kafkaTemplate.send("document-topic", message);
+
+            } catch (JsonProcessingException e) {
+                // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+                throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+            }
             return document.getTitle();
         }
-        if(elementMoveDto.getType().equals("file")){
+        else if(elementMoveDto.getType().equals("file")){
             File file = fileRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 파일이 존재하지 않습니다."));
             file.updateFolder(folder.orElse(null));
+            // kafka 메시지 발행
+            DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                    .eventType("FILE_UPDATED")
+                    .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                            .id(file.getId())
+                            .parentId(elementMoveDto.getFolderId() != null ? elementMoveDto.getFolderId() : null)
+                            .build())
+                    .build();
+            try {
+                // 3. DTO를 JSON 문자열로 변환
+                String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+                // 4. Kafka 토픽으로 이벤트 발행
+                kafkaTemplate.send("file-topic", message);
+
+            } catch (JsonProcessingException e) {
+                // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+                throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+            }
             return file.getName();
         }
         else throw new IllegalArgumentException("예기치 못한 오류 발생");
@@ -350,6 +388,8 @@ public class DriverService {
                             .rootType(savedFile.getRootType().toString())
                             .viewableUserIds(viewableUserIds)
                             .searchContent(extractedContent)
+                            .fileUrl(savedFile.getUrl())
+                            .parentId(savedFile.getFolder()!=null?savedFile.getFolder().getId():null)
                             .build())
                     .build();
             try {
@@ -450,6 +490,7 @@ public class DriverService {
                         .rootId(savedDocument.getRootId())
                         .rootType(savedDocument.getRootType().toString())
                         .viewableUserIds(viewableUserIds)
+                        .parentId(savedDocument.getFolder() != null ? savedDocument.getFolder().getId() : null)
                         .build())
                 .build();
         try {
@@ -542,6 +583,7 @@ public class DriverService {
                 .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
                         .id(document.getId())
                         .searchTitle(documentUpdateDto.getTitle())
+                        .parentId(document.getFolder() != null ? document.getFolder().getId() : null)
                         .build())
                 .build();
         try {

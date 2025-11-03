@@ -27,6 +27,8 @@ public class DocumentSearchResDto {
     private LocalDate dateTime;
     private String rootType;
     private String rootId;
+    private String parentId;
+    private String fileUrl;
 
     @Data
     @NoArgsConstructor
