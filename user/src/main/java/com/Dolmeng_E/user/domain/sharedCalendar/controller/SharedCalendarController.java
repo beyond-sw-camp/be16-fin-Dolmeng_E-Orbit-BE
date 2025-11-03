@@ -5,8 +5,11 @@ import com.Dolmeng_E.user.domain.sharedCalendar.dto.GetSchedulesForChatBotReqDto
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.SharedCalendarResDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.UpdateScheduleReqDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.service.SharedCalendarService;
+import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -27,12 +30,28 @@ public class SharedCalendarController {
         return sharedCalendarService.createSchedule(UUID.fromString(userId), dto);
     }
 
-    // 일정 조회
+    // 일정 전체 조회
     @GetMapping("/{workspaceId}")
     public List<SharedCalendarResDto> getSchedules(@RequestHeader("X-User-Id") String userId,
                                                    @PathVariable String workspaceId) {
         return sharedCalendarService.getSchedules(UUID.fromString(userId), workspaceId);
     }
+
+    // 일정 단건 조회
+    @GetMapping("/detail/{calendarId}")
+    public ResponseEntity<?> getScheduleDetail(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable String calendarId,
+            @RequestParam String workspaceId
+    ) {
+        SharedCalendarResDto schedule = sharedCalendarService.getScheduleById(userId, workspaceId, calendarId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("일정 단건 조회 성공")
+                .result(schedule)
+                .build(), HttpStatus.OK);
+    }
+
 
     // 일정 수정
     @PutMapping("/{calendarId}")

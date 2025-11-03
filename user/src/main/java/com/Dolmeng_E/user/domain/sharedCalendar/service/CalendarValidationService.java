@@ -4,6 +4,7 @@ import com.Dolmeng_E.user.common.service.WorkspaceFeign;
 import com.Dolmeng_E.user.domain.user.entity.User;
 import com.Dolmeng_E.user.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -11,6 +12,7 @@ import java.util.UUID;
 // 일정 검증 로직
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class CalendarValidationService {
 
     private final UserRepository userRepository;
@@ -42,5 +44,15 @@ public class CalendarValidationService {
         validateWorkspace(workspaceId);
         validateMember(workspaceId, userId);
         return user;
+    }
+
+    public void safeValidateWorkspace(String workspaceId) {
+        try {
+            if (!workspaceFeign.checkWorkspaceExists(workspaceId)) {
+                log.warn("⚠️ 존재하지 않는 워크스페이스 ID: {}", workspaceId);
+            }
+        } catch (Exception e) {
+            log.error("⚠️ 워크스페이스 검증 실패 (Feign 오류): {}", e.getMessage());
+        }
     }
 }
