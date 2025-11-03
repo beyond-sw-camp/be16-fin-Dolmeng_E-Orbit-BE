@@ -4,85 +4,99 @@ import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
-import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.Optional;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class MilestoneCalculator {
 
-    private final TaskRepository taskRepository;
     private final StoneRepository stoneRepository;
+    private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
 
-    // 스톤 및 상위스톤, 프로젝트까지 마일스톤 갱신
+    /**
+     * 태스크 완료/생성 등 상태 변경 시
+     * 현재 스톤 기준으로 상위 스톤과 프로젝트까지 마일스톤 전파
+     */
     public void updateStoneAndParents(Stone stone) {
-        BigDecimal milestone = calculateStoneMilestone(stone);
-        stone.setMilestone(milestone);
-        stoneRepository.save(stone);
+        if (stone == null || Boolean.TRUE.equals(stone.getIsDelete())) return;
 
+        log.info("🟡 [START] 스톤({}) 마일스톤 계산 시작 (parent={})",
+                stone.getStoneName(), stone.getParentStoneId());
+
+        // 1. 본인 및 하위 스톤 태스크 기반으로 milestone 계산
+        updateStoneMilestone(stone);
+
+        // 2. 부모가 있으면 상향 전파
         if (stone.getParentStoneId() != null) {
-            Stone parent = stoneRepository.findById(stone.getParentStoneId())
-                    .orElseThrow(() -> new EntityNotFoundException("상위 스톤을 찾을 수 없습니다."));
-            updateStoneAndParents(parent);
-        } else {
-            Project project = stone.getProject();
-            project.setMilestone(stone.getMilestone());
-            projectRepository.save(project);
+            Stone parent = stoneRepository.findById(stone.getParentStoneId()).orElse(null);
+            if (parent != null) {
+                log.info(" [PARENT] 상위 스톤({}) 마일스톤 갱신", parent.getStoneName());
+                updateStoneAndParents(parent);
+                return;
+            }
         }
+
+        // 3. 루트면 프로젝트 마일스톤 업데이트
+        if (stone.getParentStoneId() == null) {
+            Project project = stone.getProject();
+            BigDecimal rootMilestone = stone.getMilestone();
+            project.setMilestone(rootMilestone);
+            projectRepository.saveAndFlush(project);
+            log.info(" [PROJECT] 프로젝트({}) 마일스톤 = {}%", project.getProjectName(), rootMilestone);
+        }
+
+        log.info(" [DONE] 스톤({}) milestone={}%, total={}, done={}",
+                stone.getStoneName(), stone.getMilestone(), stone.getTaskCount(), stone.getCompletedCount());
     }
 
-    // 마일스톤 계산 로직
-    public BigDecimal calculateStoneMilestone(Stone stone) {
-        if (stone.getIsDelete() != null && stone.getIsDelete()) {
-            return BigDecimal.ZERO;
+    /**
+     * 특정 스톤의 milestone 계산 (본인 + 모든 하위 스톤의 태스크 기준)
+     */
+    private void updateStoneMilestone(Stone stone) {
+        long total = 0;
+        long done = 0;
+
+        // 본인 태스크 수
+        long ownTotal = taskRepository.countByStone(stone);
+        long ownDone = taskRepository.countByStoneAndIsDoneTrue(stone);
+        total += ownTotal;
+        done += ownDone;
+
+        // 하위 스톤(1 depth) 태스크 합산
+        List<Stone> children = stoneRepository.findAllByParentStoneIdAndIsDeleteFalse(stone.getId());
+        for (Stone child : children) {
+            total += child.getTaskCount() != null ? child.getTaskCount() : 0;
+            done += child.getCompletedCount() != null ? child.getCompletedCount() : 0;
         }
 
-        List<Task> ownTasks = taskRepository.findAllByStone(stone);
-        long totalTaskCount = ownTasks.size();
-        long completedTaskCount = ownTasks.stream()
-                .filter(Task::getIsDone)
-                .count();
-
-        List<Stone> childStones = stoneRepository.findAllByParentStoneIdAndIsDeleteFalse(stone.getId());
-
-        // 자식스톤이 있는 경우: 자식스톤 마일스톤 평균 + 자신의 태스크 진척도 병합
-        if (!childStones.isEmpty()) {
-            BigDecimal totalMilestone = BigDecimal.ZERO;
-
-            for (Stone child : childStones) {
-                BigDecimal childMilestone = calculateStoneMilestone(child);
-                totalMilestone = totalMilestone.add(childMilestone);
-            }
-
-            BigDecimal childAvg = totalMilestone
-                    .divide(BigDecimal.valueOf(childStones.size()), 2, RoundingMode.HALF_UP);
-
-            if (totalTaskCount > 0) {
-                double ownRate = (double) completedTaskCount / totalTaskCount * 100;
-                return childAvg.add(BigDecimal.valueOf(ownRate))
-                        .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-            } else {
-                return childAvg;
-            }
+        // 계산
+        BigDecimal milestone;
+        if (total == 0) {
+            milestone = BigDecimal.ZERO;
+            stone.setTaskCount(0);
+            stone.setCompletedCount(0);
+        } else {
+            milestone = BigDecimal.valueOf((done * 100.0) / total)
+                    .setScale(1, RoundingMode.HALF_UP);
+            stone.setTaskCount((int) total);
+            stone.setCompletedCount((int) done);
         }
 
-        // 자식스톤이 없고 태스크도 없는 경우
-        if (totalTaskCount == 0 && completedTaskCount == 0) {
-            return BigDecimal.valueOf(100);
-        }
+        stone.setMilestone(milestone);
+        stoneRepository.saveAndFlush(stone);
 
-        double ratio = (double) completedTaskCount / totalTaskCount * 100;
-        return BigDecimal.valueOf(ratio).setScale(2, RoundingMode.HALF_UP);
+        log.debug(" [STONE] {} → total={}, done={}, milestone={}%",
+                stone.getStoneName(), total, done, milestone);
     }
 }

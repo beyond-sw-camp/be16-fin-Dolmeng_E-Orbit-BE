@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,15 +123,48 @@ public class Stone extends BaseTimeEntity {
         this.completedCount = (this.completedCount == null ? 1 : this.completedCount + 1);
     }
 
-    // 마일스톤 계산 (완료된 태스크 / 전체 태스크 * 100)
     public void updateMilestone() {
-        if (this.taskCount == null || this.taskCount == 0) {
+        if (Boolean.TRUE.equals(this.isDelete)) {
             this.milestone = BigDecimal.ZERO;
+            this.taskCount = 0;
+            this.completedCount = 0;
             return;
         }
 
-        BigDecimal ratio = BigDecimal.valueOf((double) this.completedCount / this.taskCount * 100);
-        this.milestone = ratio.setScale(1, BigDecimal.ROUND_HALF_UP); // 예: 62.5%
+        // 1. 본인 태스크 수 계산
+        int totalTasks = (tasks != null) ? tasks.size() : 0;
+        int completedTasks = (tasks != null)
+                ? (int) tasks.stream().filter(Task::getIsDone).count()
+                : 0;
+
+        // 2. 자식 스톤의 태스크도 누적
+        for (ChildStoneList childRelation : childStoneLists) {
+            Stone child = childRelation.getChildStone();
+            if (!Boolean.TRUE.equals(child.getIsDelete())) {
+                // 자식 먼저 최신화
+                child.updateMilestone();
+
+                // 자식의 태스크 수와 완료 수를 합산
+                totalTasks += (child.getTaskCount() != null ? child.getTaskCount() : 0);
+                completedTasks += (child.getCompletedCount() != null ? child.getCompletedCount() : 0);
+            }
+        }
+
+        // 3. 태스크가 전혀 없으면 0%
+        if (totalTasks == 0) {
+            this.milestone = BigDecimal.ZERO;
+            this.taskCount = 0;
+            this.completedCount = 0;
+            return;
+        }
+
+        // 4. 본인 + 자식 태스크 기준으로 계산
+        BigDecimal ratio = BigDecimal.valueOf((double) completedTasks / totalTasks * 100)
+                .setScale(1, RoundingMode.HALF_UP);
+
+        this.milestone = ratio;
+        this.taskCount = totalTasks;
+        this.completedCount = completedTasks;
     }
 
 }

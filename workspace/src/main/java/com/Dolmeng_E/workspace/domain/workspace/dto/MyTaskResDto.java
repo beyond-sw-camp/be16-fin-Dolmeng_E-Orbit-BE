@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -19,5 +20,6 @@ public class MyTaskResDto {
     private boolean isDone;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private BigDecimal stoneMilestone;
     private String stoneId;
 }

@@ -16,6 +16,8 @@ import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.dto.TopStoneCreateDto;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.stone.service.StoneService;
+import com.Dolmeng_E.workspace.domain.task.entity.Task;
+import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
@@ -39,16 +41,14 @@ import static com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole.ADMI
 @RequiredArgsConstructor
 public class ProjectService {
     private final ProjectRepository projectRepository;
-    private final StoneParticipantRepository projectCalendarRepository;
     private final ProjectParticipantRepository projectParticipantRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
-    private final AccessDetailRepository accessDetailRepository;
-    private final AccessGroupRepository accessGroupRepository;
     private final WorkspaceRepository workspaceRepository;
     private final AccessCheckService accessCheckService;
     private final StoneService stoneService;
     private final StoneRepository stoneRepository;
     private final StoneParticipantRepository stoneParticipantRepository;
+    private final TaskRepository taskRepository;
 
 // 프로젝트 생성
 
@@ -173,19 +173,20 @@ public class ProjectService {
     }
 
 
-// 프로젝트 삭제
+    // 프로젝트 삭제
     public void deleteProject(String userId, String projectId) {
 
         // 1. 프로젝트 조회
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new EntityNotFoundException("프로젝트를 찾을 수 없습니다."));
         Workspace workspace = project.getWorkspace();
+
         // 2. 참여자 검증
         WorkspaceParticipant participant = workspaceParticipantRepository
                 .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
-        // 3. 권한 검증: 관리자 or 프로젝트 담당자 or 권한그룹
+        // 3. 권한 검증
         if (participant.getWorkspaceRole() != ADMIN &&
                 !project.getWorkspaceParticipant().getId().equals(participant.getId())) {
             accessCheckService.validateAccess(participant, "ws_acc_list_1");
@@ -203,7 +204,13 @@ public class ProjectService {
             // 5-1. 스톤 논리 삭제
             stone.setIsDelete(true);
 
-            // 5-2. 스톤 참여자 하드삭제
+            // 5-2. 태스크 하드삭제
+            List<Task> tasks = taskRepository.findAllByStone(stone);
+            if (!tasks.isEmpty()) {
+                taskRepository.deleteAll(tasks);
+            }
+
+            // 5-3. 스톤 참여자 하드삭제
             List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(stone);
             if (!stoneParticipants.isEmpty()) {
                 stoneParticipantRepository.deleteAll(stoneParticipants);

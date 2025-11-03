@@ -32,4 +32,8 @@ public interface TaskRepository extends JpaRepository<Task, String> {
     // 기존 findAllByTaskManager_Id 대신 명시적 쿼리 작성
     @Query("SELECT t FROM Task t WHERE t.taskManager.Id = :taskManagerId")
     List<Task> findAllByTaskManagerId(@Param("taskManagerId") String taskManagerId);
+
+    long countByStone(Stone stone);
+
+    long countByStoneAndIsDoneTrue(Stone stone);
 }

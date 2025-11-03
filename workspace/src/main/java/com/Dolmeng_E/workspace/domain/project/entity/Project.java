@@ -2,6 +2,7 @@ package com.Dolmeng_E.workspace.domain.project.entity;
 
 import com.Dolmeng_E.workspace.domain.project.dto.ProjectModifyDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.example.modulecommon.domain.BaseTimeEntity;
@@ -104,20 +105,34 @@ public class Project extends BaseTimeEntity {
     }
 
     public void updateMilestone() {
-        if (stoneCount == null || stoneCount == 0) {
-            this.milestone = BigDecimal.ZERO;
+        if (stones == null || stones.isEmpty()) {
+            this.milestone = BigDecimal.valueOf(100);
+            this.stoneCount = 0;
+            this.completedCount = 0;
             return;
         }
 
-        BigDecimal completed = BigDecimal.valueOf(completedCount == null ? 0 : completedCount);
-        BigDecimal total = BigDecimal.valueOf(stoneCount);
+        Stone root = stones.stream()
+                .filter(s -> s.getParentStoneId() == null && !Boolean.TRUE.equals(s.getIsDelete()))
+                .findFirst()
+                .orElse(null);
 
-        // (완료 / 전체) * 100 → 소수점 1자리 반올림
-        this.milestone = completed
-                .divide(total, 3, RoundingMode.HALF_UP) // 내부 계산 정밀도 확보용 3자리
-                .multiply(BigDecimal.valueOf(100))
-                .setScale(1, RoundingMode.HALF_UP);
+        if (root == null) {
+            this.milestone = BigDecimal.valueOf(100);
+            this.stoneCount = 0;
+            this.completedCount = 0;
+            return;
+        }
+
+        root.updateMilestone();
+
+        this.milestone = root.getMilestone();
+        this.completedCount = root.getCompletedCount();
+        this.stoneCount = (int) stones.stream()
+                .filter(s -> !Boolean.TRUE.equals(s.getIsDelete()))
+                .count();
     }
+
 
     public void incrementStoneCount() {
         if (stoneCount == null) stoneCount = 0;

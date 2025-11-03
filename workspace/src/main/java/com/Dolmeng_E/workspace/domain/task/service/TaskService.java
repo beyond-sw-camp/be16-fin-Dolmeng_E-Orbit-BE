@@ -375,4 +375,67 @@ public class TaskService {
 
         return result;
     }
+
+    // 태스크 취소
+    public String cancelTask(String userId, String taskId) {
+        // 1. 태스크 조회
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new EntityNotFoundException("태스크를 찾을 수 없습니다."));
+
+        Stone stone = task.getStone();
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 2. 요청자 조회
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자 정보를 찾을 수 없습니다."));
+
+        // 3. 권한검증 (관리자, 프로젝트 담당자, 스톤 담당자, 태스크 담당자 허용)
+        boolean isAdmin = requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN);
+        boolean isProjectManager = project.getWorkspaceParticipant().equals(requester);
+        boolean isStoneManager = stone.getStoneManager().equals(requester);
+        boolean isTaskManager = task.getTaskManager().equals(requester);
+
+        if (!isAdmin && !isProjectManager && !isStoneManager && !isTaskManager) {
+            throw new IllegalArgumentException("태스크 취소 권한이 없습니다.");
+        }
+
+        // 4. 이미 미완료 상태면 취소 불필요
+        if (!task.getIsDone()) {
+            throw new IllegalArgumentException("이미 미완료 상태의 태스크입니다.");
+        }
+
+        // 5. 태스크 상태 변경
+        task.setIsDone(false);
+        taskRepository.save(task);
+
+        // 6. 스톤 완료된 태스크 수 감소
+        stone.decrementTaskCount();
+        stoneRepository.save(stone);
+
+        // 7. 마일스톤 재계산
+        milestoneCalculator.updateStoneAndParents(stone);
+
+        // 8. 알림 전송 (스톤 담당자에게)
+        List<UUID> userIdList = new ArrayList<>();
+        userIdList.add(stone.getStoneManager().getUserId());
+
+        NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
+                .title("[" + workspace.getWorkspaceName() + "] 태스크 취소 알림")
+                .content("태스크가 취소되었습니다. (" + task.getTaskName() + ")")
+                .userIdList(userIdList)
+                .type("TASK_MESSAGE")
+                .sendAt(null)
+                .workspaceId(workspace.getId())
+                .projectId(project.getId())
+                .stoneId(stone.getId())
+                .taskId(task.getId())
+                .build();
+
+        notificationKafkaService.kafkaNotificationPublish(notificationCreateReqDto);
+
+        return task.getId();
+    }
+
 }
