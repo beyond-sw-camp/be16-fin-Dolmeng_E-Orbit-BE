@@ -21,5 +21,5 @@ public class MyTaskResDto {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BigDecimal stoneMilestone;
-    private String stoneId; // 라우팅용 스톤id리턴
+    private String stoneId;
 }

@@ -160,7 +160,10 @@ public class ChatbotMessageService {
                     .findByWorkspaceIdAndUserId(reqDto.getWorkspaceId(), UUID.fromString(reqDto.getUserId()))
                     .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
-            project = projectParticipantRepository.findLatestProjectByParticipant(workspaceParticipant).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
+            List<Project> projectList = projectParticipantRepository.findLatestProjectByParticipant(workspaceParticipant);
+            if(!projectList.isEmpty()) {
+                project = projectList.get(0);
+            }
         } else {
             project = projectRepository.findByProjectName(reqDto.getProjectName()).orElseThrow(() -> new EntityNotFoundException("없는 프로젝트입니다."));
         }

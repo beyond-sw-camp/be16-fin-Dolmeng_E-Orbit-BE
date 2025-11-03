@@ -17,6 +17,11 @@ public class NotificationListResDto {
     private String title;
     private String content;
     private String readStatus;
+    private String notificationType;
+    private String workspaceId;
+    private String projectId;
+    private String stoneId;
+    private String taskId;
     private LocalDateTime createdAt;
 
     public static NotificationListResDto fromEntiry(Notification notification) {
@@ -26,6 +31,11 @@ public class NotificationListResDto {
                 .content(notification.getContent())
                 .createdAt(notification.getCreatedAt())
                 .readStatus(String.valueOf(notification.getReadStatus()))
+                .notificationType(String.valueOf(notification.getType()))
+                .workspaceId(notification.getWorkspaceId())
+                .projectId(notification.getProjectId())
+                .stoneId(notification.getStoneId())
+                .taskId(notification.getStoneId())
                 .build();
     }
 }
