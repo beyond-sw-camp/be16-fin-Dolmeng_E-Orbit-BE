@@ -1,13 +1,16 @@
 package com.Dolmeng_E.workspace.domain.project.service;
 
+import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
+import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
-import com.Dolmeng_E.workspace.domain.access_group.repository.AccessDetailRepository;
-import com.Dolmeng_E.workspace.domain.access_group.repository.AccessGroupRepository;
+import com.Dolmeng_E.workspace.common.service.UserFeign;
 import com.Dolmeng_E.workspace.domain.project.dto.*;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectStatus;
-import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
+import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMemberOverviewDto;
+import com.Dolmeng_E.workspace.domain.stone.dto.ProjectPeopleOverviewResDto;
+import com.Dolmeng_E.workspace.domain.stone.dto.SimpleStoneRefDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
@@ -28,10 +31,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole.ADMIN;
@@ -49,6 +49,7 @@ public class ProjectService {
     private final StoneRepository stoneRepository;
     private final StoneParticipantRepository stoneParticipantRepository;
     private final TaskRepository taskRepository;
+    private final UserFeign userFeign;
 
 // 프로젝트 생성
 
@@ -356,6 +357,115 @@ public class ProjectService {
                 .stoneCount(project.getStoneCount())
                 .completedCount(project.getCompletedCount())
                 .projectManagerName(project.getWorkspaceParticipant().getUserName())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectPeopleOverviewResDto getProjectPeopleOverview(String userId, String projectId) {
+
+        // 1. 프로젝트 조회 + 삭제 체크
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 프로젝트가 존재하지 않습니다."));
+        if (Boolean.TRUE.equals(project.getIsDelete())) {
+            throw new IllegalArgumentException("삭제된 프로젝트입니다.");
+        }
+
+        // 2. 프로젝트의 스톤(삭제 제외) 수집
+        List<Stone> stones = project.getStones().stream()
+                .filter(s -> !Boolean.TRUE.equals(s.getIsDelete()))
+                .toList();
+
+        // 3. 사람 수집(담당 + 참여)
+        Map<UUID, List<SimpleStoneRefDto>> ownedMap = new HashMap<>();
+        Map<UUID, List<SimpleStoneRefDto>> partMap  = new HashMap<>();
+
+        for (Stone s : stones) {
+            // 3-1) 담당자: 루트 스톤(parentStoneId == null)은 제외
+            if (s.getParentStoneId() != null
+                    && s.getStoneManager() != null
+                    && !Boolean.TRUE.equals(s.getStoneManager().getIsDelete())) {
+                UUID uid = s.getStoneManager().getUserId();
+                ownedMap.computeIfAbsent(uid, k -> new ArrayList<>())
+                        .add(SimpleStoneRefDto.builder()
+                                .stoneId(s.getId())
+                                .stoneName(s.getStoneName())
+                                .build());
+            }
+
+            // 3-2) 참여자: 그대로(루트 포함, 삭제되지 않은 참여자만)
+            List<StoneParticipant> sps = stoneParticipantRepository
+                    .findAllByStoneAndWorkspaceParticipant_IsDeleteFalse(s);
+            for (StoneParticipant sp : sps) {
+                UUID uid = sp.getWorkspaceParticipant().getUserId();
+                partMap.computeIfAbsent(uid, k -> new ArrayList<>())
+                        .add(SimpleStoneRefDto.builder()
+                                .stoneId(s.getId())
+                                .stoneName(s.getStoneName())
+                                .build());
+            }
+        }
+
+        // 4. 전체 유저 집합
+        Set<UUID> allUserIds = new HashSet<>();
+        allUserIds.addAll(ownedMap.keySet());
+        allUserIds.addAll(partMap.keySet());
+        if (allUserIds.isEmpty()) {
+            return ProjectPeopleOverviewResDto.builder()
+                    .totalPeopleCount(0).managerCount(0).participantOnlyCount(0)
+                    .people(List.of()).build();
+        }
+
+        // 5. 유저 프로필 일괄 조회
+        Map<UUID, UserInfoResDto> userMap = userFeign
+                .fetchUserListInfo(new UserIdListDto(new ArrayList<>(allUserIds)))
+                .getUserInfoList().stream()
+                .collect(Collectors.toMap(UserInfoResDto::getUserId, u -> u));
+
+        // 6. 프로젝트 내 태스크 담당자별 집계
+        List<Task> tasksInProject = taskRepository.findAllByProjectId(project.getId());
+        Map<UUID, Integer> taskTotalByUser = new HashMap<>();
+        Map<UUID, Integer> taskDoneByUser  = new HashMap<>();
+        for (Task t : tasksInProject) {
+            if (t.getTaskManager() == null || Boolean.TRUE.equals(t.getTaskManager().getIsDelete())) continue;
+            UUID uid = t.getTaskManager().getUserId();
+            taskTotalByUser.merge(uid, 1, Integer::sum);
+            if (Boolean.TRUE.equals(t.getIsDone())) taskDoneByUser.merge(uid, 1, Integer::sum);
+        }
+
+        // 7. DTO 조립
+        List<ProjectMemberOverviewDto> people = new ArrayList<>();
+        for (UUID uid : allUserIds) {
+            var user = userMap.get(uid);
+            List<SimpleStoneRefDto> owned = ownedMap.getOrDefault(uid, List.of());
+            List<SimpleStoneRefDto> part  = partMap.getOrDefault(uid, List.of());
+
+            people.add(ProjectMemberOverviewDto.builder()
+                    .user(user)
+                    .ownedStoneCount(owned.size())
+                    .participatingStoneCount(part.size())
+                    .ownedStones(owned)
+                    .participatingStones(part)
+                    .myTaskTotal(taskTotalByUser.getOrDefault(uid, 0))
+                    .myTaskCompleted(taskDoneByUser.getOrDefault(uid, 0))
+                    .build());
+        }
+
+        int managerCount = (int) people.stream()
+                .filter(p -> p.getOwnedStoneCount() != null && p.getOwnedStoneCount() > 0)
+                .count();
+        int total = people.size();
+
+        return ProjectPeopleOverviewResDto.builder()
+                .totalPeopleCount(total)
+                .managerCount(managerCount)
+                .participantOnlyCount(total - managerCount)
+                .people(people.stream()
+                        .sorted(Comparator
+                                .comparing(ProjectMemberOverviewDto::getOwnedStoneCount,
+                                        Comparator.nullsFirst(Comparator.reverseOrder()))
+                                .thenComparing(p -> Optional.ofNullable(p.getUser())
+                                        .map(UserInfoResDto::getUserName).orElse("")))
+                        .toList())
                 .build();
     }
 
