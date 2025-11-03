@@ -117,7 +117,7 @@ public class TaskService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
-                .content("태스크가 배정되었습니다! 🎉")
+                .content(task.getTaskName() + " 태스크가 배정되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("TASK_MESSAGE")
@@ -204,7 +204,7 @@ public class TaskService {
             NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                     // 워크스페이스명 수동으로 넣어줘야 해요
                     .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
-                    .content("태스크가 배정되었습니다! 🎉")
+                    .content(task.getTaskName() + " 태스크가 배정되었습니다! 🎉")
                     .userIdList(userIdList)
                     // 위에서 추가한 알림 타입 String으로 주입
                     .type("TASK_MESSAGE")
@@ -306,7 +306,7 @@ public class TaskService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "하위 태스크 완료")
-                .content("태스크가 완료되었습니다! 🎉")
+                .content(task.getTaskName() + " 태스크가 완료되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("TASK_MESSAGE")

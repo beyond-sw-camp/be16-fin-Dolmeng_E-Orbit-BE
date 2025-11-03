@@ -211,11 +211,11 @@ public class StoneService {
             // 객체 생성
             NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                     // 워크스페이스명 수동으로 넣어줘야 해요
-                    .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
-                    .content("태스크가 배정되었습니다! 🎉")
+                    .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 추가")
+                    .content(childStone.getStoneName() + " 스톤 참여자에 추가되었습니다! 🎉")
                     .userIdList(userIdList)
                     // 위에서 추가한 알림 타입 String으로 주입
-                    .type("TASK_MESSAGE")
+                    .type("STONE_MESSAGE")
                     // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
                     // 즉시알림이라면 null (채팅같은)
                     .sendAt(null)
@@ -403,7 +403,7 @@ public class StoneService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 등록")
-                .content("스톤 참여자로 등록되었습니다! 🎉")
+                .content(stone.getStoneName() +  " 스톤 참여자로 등록되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("STONE_MESSAGE")
@@ -827,7 +827,7 @@ public class StoneService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "하위스톤 완료")
-                .content("하위 스톤이 완료되었습니다! 🎉")
+                .content(stone.getStoneName() + " 스톤이 완료되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("STONE_MESSAGE")
