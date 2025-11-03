@@ -493,8 +493,32 @@ public class DriverService {
 
     // 문서 조회
     @Transactional(readOnly = true)
-    public DocumentResDto findDocument(String userId, String documentId){
+    public DocumentResDto findDocument(String userId, String documentId, String workspaceId){
         Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException(("해당 문서가 존재하지 않습니다.")));
+        if(document.getRootType().toString().equals("PROJECT")){
+            try {
+                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(document.getRootId(), userId).getBody()).getResult().equals(false)
+                        &&Objects.requireNonNull(workspaceServiceClient.checkWorkspaceManager(workspaceId, userId).getBody()).getResult().equals(false)){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }else if(document.getRootType().toString().equals("STONE")){
+            try {
+                WorkspaceOrProjectManagerCheckDto workspaceOrProjectManagerCheckDto = workspaceServiceClient.checkWorkspaceOrProjectManager(document.getRootId(), userId);
+                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(document.getRootId(), userId).getBody()).getResult().equals(false)
+                        && !workspaceOrProjectManagerCheckDto.isProjectManager() && !workspaceOrProjectManagerCheckDto.isWorkspaceManager()
+                        && Objects.requireNonNull(workspaceServiceClient.checkStoneManagership(document.getRootId(), userId).getBody()).getResult().equals(false)
+                ){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }
         String getFolderName = null;
         if(document.getFolder()!=null){
             getFolderName = document.getFolder().getName();

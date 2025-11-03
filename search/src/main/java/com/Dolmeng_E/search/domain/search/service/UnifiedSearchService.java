@@ -63,29 +63,30 @@ public class UnifiedSearchService {
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
-                                // 1. N-gram(제목)과 Nori(내용)를 OR로 묶음
                                 .must(m -> m
                                         .bool(bShould -> bShould
                                                 .should(s -> s
-                                                        // 2-1. searchTitle.ngram (N-gram 검색)
+                                                        // 2-1. searchTitle.ngram (변경 없음)
                                                         .match(mt -> mt
                                                                 .field("searchTitle.ngram")
                                                                 .query(keyword)
                                                         )
                                                 )
+                                                // ▼▼▼ [수정] match -> matchPhrase ▼▼▼
                                                 .should(s -> s
-                                                        // 2-2. searchContent (Nori 검색)
-                                                        .match(mt -> mt
-                                                                .field("searchContent")
-                                                                .query(keyword)
-                                                                .analyzer("nori")
-                                                                .operator(Operator.And)
+                                                        // 2-2. searchContent (Nori + "구문 검색"으로 변경)
+                                                        .matchPhrase(mp -> mp // .match 대신 .matchPhrase
+                                                                        .field("searchContent")
+                                                                        .query(keyword)
+                                                                        .analyzer("nori")
+                                                                // .operator(Operator.And) // <-- 구문 검색에서는 제거
                                                         )
                                                 )
-                                                .minimumShouldMatch("1") // 둘 중 하나만 맞아도 됨
+                                                // ▲▲▲ [수정] 끝 ▲▲▲
+                                                .minimumShouldMatch("1")
                                         )
                                 )
-                                // 3. 사용자 필터 조건 (bool/filter)
+                                // 3. 사용자 필터 (변경 없음)
                                 .filter(f -> f
                                         .term(t -> t
                                                 .field("viewableUserIds")

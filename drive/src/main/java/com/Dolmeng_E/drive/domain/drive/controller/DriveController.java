@@ -137,9 +137,9 @@ public class DriveController {
 
     // 문서 조회
     @GetMapping("/document/{documentId}")
-    public ResponseEntity<?> getDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
+    public ResponseEntity<?> getDocument(@RequestHeader("X-Workspace-Id") String workspaceId, @RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.findDocument(userId, documentId))
+                .result(driverService.findDocument(userId, documentId, workspaceId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("문서 조회 성공")
                 .build(), HttpStatus.OK);
