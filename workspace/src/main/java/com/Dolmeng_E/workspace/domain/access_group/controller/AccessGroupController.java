@@ -173,4 +173,18 @@ public class AccessGroupController {
                 HttpStatus.OK);
     }
 
+    // 본인 권한 목록 조회 API
+    @GetMapping("/my-access")
+    public ResponseEntity<?> myAccess(
+            @RequestHeader("X-User-Id") String userId
+    ) {
+        // 서비스 구현 필요
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("나의 권한 조회 완료")
+                .result(HttpStatus.OK)
+                .statusCode(HttpStatus.OK.value())
+                .build(),
+                HttpStatus.OK);
+    }
+
 }

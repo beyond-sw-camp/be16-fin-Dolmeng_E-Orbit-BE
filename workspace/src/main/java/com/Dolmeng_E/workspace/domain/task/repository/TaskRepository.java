@@ -36,4 +36,25 @@ public interface TaskRepository extends JpaRepository<Task, String> {
     long countByStone(Stone stone);
 
     long countByStoneAndIsDoneTrue(Stone stone);
+
+    // 3) 프로젝트 내 전체 태스크 수 (삭제된 스톤 소속 태스크 제외)
+    @Query("""
+           select count(t)
+           from Task t
+           join t.stone s
+           where s.project.id = :projectId
+             and s.isDelete = false
+           """)
+    long countTasksByProjectId(@Param("projectId") String projectId);
+
+    // 4) 프로젝트 내 완료 태스크 수
+    @Query("""
+           select count(t)
+           from Task t
+           join t.stone s
+           where s.project.id = :projectId
+             and s.isDelete = false
+             and t.isDone = true
+           """)
+    long countDoneTasksByProjectId(@Param("projectId") String projectId);
 }

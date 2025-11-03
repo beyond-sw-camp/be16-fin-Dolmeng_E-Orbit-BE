@@ -30,4 +30,25 @@ public interface StoneRepository extends JpaRepository<Stone, String> {
     """)
     List<Stone> findAllByWorkspaceId(@Param("workspaceId") String workspaceId);
 
+    // 1) 루트 제외 + 삭제 제외 전체 스톤 수
+    @Query("""
+           select count(s)
+           from Stone s
+           where s.project.id = :projectId
+             and s.isDelete = false
+             and s.parentStoneId is not null
+           """)
+    long countActiveNonRootByProjectId(@Param("projectId") String projectId);
+
+    // 2) 루트 제외 + 삭제 제외 + 완료 상태 스톤 수
+    @Query("""
+           select count(s)
+           from Stone s
+           where s.project.id = :projectId
+             and s.isDelete = false
+             and s.parentStoneId is not null
+             and s.status = com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus.COMPLETED
+           """)
+    long countCompletedNonRootByProjectId(@Param("projectId") String projectId);
+
 }

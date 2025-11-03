@@ -1,15 +1,16 @@
 package com.Dolmeng_E.workspace.domain.stone.dto;
 
+import jakarta.annotation.security.DenyAll;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
+@Data
 @Builder
-public class StoneParticipantResDto {
-    private String participantId;
-    private String userId;
+public class SimpleStoneRefDto {
+    private String stoneId;
+    private String stoneName;
 }

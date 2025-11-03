@@ -1,5 +1,7 @@
 package com.Dolmeng_E.workspace.domain.stone.controller;
 
+import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
+import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.*;
 import com.Dolmeng_E.workspace.domain.stone.service.StoneService;
 import com.example.modulecommon.dto.CommonSuccessDto;
@@ -216,4 +218,5 @@ public class StoneController {
                 .build(),
                 HttpStatus.OK);
     }
+
 }
