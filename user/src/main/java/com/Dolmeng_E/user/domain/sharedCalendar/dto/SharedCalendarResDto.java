@@ -16,6 +16,7 @@ public class SharedCalendarResDto {
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private Boolean isShared;
+    private String userName;
 
     public static SharedCalendarResDto fromEntity(SharedCalendar cal) {
         return SharedCalendarResDto.builder()
@@ -26,6 +27,7 @@ public class SharedCalendarResDto {
                 .startedAt(cal.getStartedAt())
                 .endedAt(cal.getEndedAt())
                 .isShared(cal.getIsShared())
+                .userName(cal.getUserId().getName())
                 .build();
     }
 }

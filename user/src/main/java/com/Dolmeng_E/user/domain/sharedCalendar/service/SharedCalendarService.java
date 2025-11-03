@@ -8,6 +8,7 @@ import com.Dolmeng_E.user.domain.sharedCalendar.entity.CalendarType;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.RepeatCycle;
 import com.Dolmeng_E.user.domain.sharedCalendar.entity.SharedCalendar;
 import com.Dolmeng_E.user.domain.sharedCalendar.repository.SharedCalendarRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -112,7 +113,7 @@ public class SharedCalendarService {
     // 일정 조회
     public List<SharedCalendarResDto> getSchedules(UUID userId, String workspaceId) {
         // 1. 검증
-        validationService.validateUserAndWorkspace(userId, workspaceId);
+        validationService.safeValidateWorkspace(workspaceId);
 
         // 2. 일정 조회
         List<SharedCalendar> calendars = sharedCalendarRepository.findByUserIdAndWorkspaceIdAndCalendarType(userId, workspaceId, CalendarType.SCHEDULE);
@@ -151,6 +152,23 @@ public class SharedCalendarService {
                         (existing, duplicate) -> existing // 중복일 경우 첫 번째 유지
                 ))
                 .values().stream().toList();
+    }
+
+    // 특정 일정 조회
+    public SharedCalendarResDto getScheduleById(UUID userId, String workspaceId, String calendarId) {
+        // 1. 안전 검증
+        validationService.safeValidateWorkspace(workspaceId);
+
+        // 2. 일정 조회
+        SharedCalendar calendar = sharedCalendarRepository.findById(calendarId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 일정이 존재하지 않습니다."));
+
+        // 3. 유저/워크스페이스 일치 여부 체크 (보안 목적)
+        if (!calendar.getWorkspaceId().equals(workspaceId)) {
+            throw new IllegalArgumentException("해당 일정은 워크스페이스에 속하지 않습니다.");
+        }
+
+        return SharedCalendarResDto.fromEntity(calendar);
     }
 
     // 일정 수정
