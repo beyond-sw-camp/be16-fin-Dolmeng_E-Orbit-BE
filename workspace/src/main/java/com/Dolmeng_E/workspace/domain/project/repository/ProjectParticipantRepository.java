@@ -2,7 +2,6 @@ package com.Dolmeng_E.workspace.domain.project.repository;
 
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
-import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -49,7 +48,7 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
             "WHERE p.workspaceParticipant = :participant " +
             "AND p.project.isDelete = false " +
             "ORDER BY p.project.startTime DESC")
-    Optional<Project> findLatestProjectByParticipant(@Param("participant") WorkspaceParticipant participant);
+    List<Project> findLatestProjectByParticipant(@Param("participant") WorkspaceParticipant participant);
 
     List<ProjectParticipant> findAllByWorkspaceParticipantIn(List<WorkspaceParticipant> participants);
 
