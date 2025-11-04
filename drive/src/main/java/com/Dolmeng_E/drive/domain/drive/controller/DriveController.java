@@ -234,4 +234,10 @@ public class DriveController {
                 .statusMessage("파일 정보 가져오기 성공")
                 .build(), HttpStatus.OK);
     }
+
+    // 워크스페이스/프로젝트/스톤 삭제 시 문서함 삭제
+    @DeleteMapping("/{rootType}/{rootId}/all")
+    public void deleteAll(@PathVariable String rootType, @PathVariable String rootId) {
+        driverService.deleteAll(rootType, rootId);
+    }
 }

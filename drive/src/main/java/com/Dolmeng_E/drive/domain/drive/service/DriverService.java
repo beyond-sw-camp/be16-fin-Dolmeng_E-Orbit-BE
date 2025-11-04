@@ -107,9 +107,45 @@ public class DriverService {
         }
         for(File file : folder.getFiles()){
             file.updateIsDelete();
+            // kafka 메시지 발행
+            DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                    .eventType("FILE_DELETED")
+                    .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                            .id(file.getId())
+                            .build())
+                    .build();
+            try {
+                // 3. DTO를 JSON 문자열로 변환
+                String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+                // 4. Kafka 토픽으로 이벤트 발행
+                kafkaTemplate.send("file-topic", message);
+
+            } catch (JsonProcessingException e) {
+                // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+                throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+            }
         }
         for(Document document : folder.getDocuments()){
             document.updateIsDelete();
+            // kafka 메시지 발행
+            DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                    .eventType("DOCUMENT_DELETED")
+                    .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                            .id(document.getId())
+                            .build())
+                    .build();
+            try {
+                // 3. DTO를 JSON 문자열로 변환
+                String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+                // 4. Kafka 토픽으로 이벤트 발행
+                kafkaTemplate.send("document-topic", message);
+
+            } catch (JsonProcessingException e) {
+                // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+                throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+            }
         }
     }
 
@@ -833,36 +869,41 @@ public class DriverService {
     
     // 루트id와 type의 모든 폴더/파일/문서 삭제
     public void deleteAll(String rootId, String rootType){
-        if(rootType.equals("WORKSPACE")){
-            documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            List<SubProjectResDto> subProjectResDtos = workspaceServiceClient.getSubProjectsByWorkspace(rootId);
-            for(SubProjectResDto subProjectResDto : subProjectResDtos){
-                documentRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
-                fileRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
-                folderRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
-                List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(subProjectResDto.getProjectId()).getStones();
+        try{
+            if(rootType.equals("WORKSPACE")){
+                documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                List<SubProjectResDto> subProjectResDtos = workspaceServiceClient.getSubProjectsByWorkspace(rootId);
+                for(SubProjectResDto subProjectResDto : subProjectResDtos){
+                    documentRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
+                    fileRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
+                    folderRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
+                    List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(subProjectResDto.getProjectId()).getStones();
+                    for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+                        documentRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                        fileRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                        folderRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                    }
+                }
+            }else if(rootType.equals("STONE")){
+                documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            }else if(rootType.equals("PROJECT")){
+                documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+                List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(rootId).getStones();
                 for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
                     documentRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
                     fileRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
                     folderRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
                 }
             }
-        }else if(rootType.equals("STONE")){
-            documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-        }else if(rootType.equals("PROJECT")){
-            documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
-            List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(rootId).getStones();
-            for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
-                documentRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
-                fileRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
-                folderRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
-            }
+        }catch (Exception e){
+            throw new IllegalArgumentException("삭제에 실패했습니다. 잠시후 다시 시도해주세요.");
         }
+
     }
 }
