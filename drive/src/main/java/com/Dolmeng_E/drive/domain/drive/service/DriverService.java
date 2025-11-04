@@ -138,6 +138,8 @@ public class DriverService {
                             .creatorName(userInfo.get("name"))
                             .profileImage(userInfo.get("profileImageUrl"))
                             .ancestors(ancestors)
+                            .rootType(childfolder.getRootType().toString())
+                            .rootId(childfolder.getRootId())
                     .build());
         }
         // 파일 불러오기
@@ -153,6 +155,8 @@ public class DriverService {
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
                     .url(file.getUrl())
+                    .rootId(file.getRootId())
+                    .rootType(file.getRootType().toString())
                     .build());
         }
         // 문서 불러오기
@@ -166,6 +170,8 @@ public class DriverService {
                     .id(document.getId())
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
+                    .rootType(document.getRootType().toString())
+                    .rootId(document.getRootId())
                     .build());
         }
         return folderContentsDtos;
@@ -239,6 +245,8 @@ public class DriverService {
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
                     .ancestors(ancestors)
+                    .rootId(folder.getRootId())
+                    .rootType(folder.getRootType().toString())
                     .build());
         }
         // 파일 불러오기
@@ -256,6 +264,8 @@ public class DriverService {
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
                     .url(file.getUrl())
+                    .rootType(file.getRootType().toString())
+                    .rootId(file.getRootId())
                     .build());
         }
         // 문서 불러오기
@@ -271,36 +281,67 @@ public class DriverService {
                     .id(document.getId())
                     .creatorName(userInfo.get("name"))
                     .profileImage(userInfo.get("profileImageUrl"))
+                    .rootId(document.getRootId())
+                    .rootType(document.getRootType().toString())
                     .build());
         }
         return rootContentsDtos;
     }
 
     // 폴더 옮기기
-    public String updateFolderStruct(String folderId, FolderMoveDto folderMoveDto){
+    public String updateFolderStruct(String workspaceId, String userId, String folderId, FolderMoveDto folderMoveDto){
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더는 존재하지 않습니다"));
-        if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalse(folderMoveDto.getParentId(), folder.getName()).isPresent()){
+        if(folderRepository.findByParentIdAndNameAndIsDeleteIsFalseAndRootId(folderMoveDto.getParentId(), folder.getName(), folderMoveDto.getRootId()).isPresent()){
             throw new IllegalArgumentException("중복된 폴더명입니다.");
         }
+        try {
+            if(folderMoveDto.getRootType().equals("PROJECT")){
+                checkProject(workspaceId, folderMoveDto.getRootId(), userId);
+            }else if(folderMoveDto.getRootType().equals("STONE")){
+                checkStone(folderMoveDto.getRootId(), userId);
+            }
+        }catch (Exception e){
+            throw new IllegalArgumentException("권한이 없습니다.");
+        }
         folder.updateParentId(folderMoveDto.getParentId());
+        folder.setRootId(folderMoveDto.getRootId());
+        folder.setRootType(RootType.valueOf(folderMoveDto.getRootType()));
         return folder.getParentId();
     }
 
     // 파일/문서 옮기기
-    public String updateElementStruct(String elementId, ElementMoveDto elementMoveDto){
+    public String updateElementStruct(String workspaceId, String userId, String elementId, ElementMoveDto elementMoveDto){
         Optional<Folder> folder = Optional.empty();
         if(elementMoveDto.getFolderId()!=null){
             folder = folderRepository.findById(elementMoveDto.getFolderId());
         }
+        try {
+            if(elementMoveDto.getRootType().equals("PROJECT")){
+                checkProject(workspaceId, elementMoveDto.getRootId(), userId);
+            }else if(elementMoveDto.getRootType().equals("STONE")){
+                checkStone(elementMoveDto.getRootId(), userId);
+            }
+        }catch (Exception e){
+            throw new IllegalArgumentException("권한이 없거나 예상치 못한 오류가 발생하였습니다.");
+        }
+
         if(elementMoveDto.getType().equals("document")){
             Document document = documentRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
+            if(documentRepository.findByFolderAndTitleAndIsDeleteFalseAndRootId(folder.orElse(null), document.getTitle(), elementMoveDto.getRootId()).isPresent()){
+                throw new IllegalArgumentException("중복된 문서가 존재힙니다.");
+            };
             document.updateFolder(folder.orElse(null));
+            document.setRootId(elementMoveDto.getRootId());
+            document.setRootType(RootType.valueOf(elementMoveDto.getRootType()));
+
             // kafka 메시지 발행
             DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
                     .eventType("DOCUMENT_UPDATED")
                     .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
                             .id(document.getId())
                             .parentId(elementMoveDto.getFolderId() != null ? elementMoveDto.getFolderId() : null)
+                            .rootId(document.getRootId())
+                            .rootType(document.getRootType().toString())
                             .build())
                     .build();
             try {
@@ -318,13 +359,20 @@ public class DriverService {
         }
         else if(elementMoveDto.getType().equals("file")){
             File file = fileRepository.findById(elementId).orElseThrow(()->new EntityNotFoundException("해당 파일이 존재하지 않습니다."));
+            if(fileRepository.findByFolderAndNameAndIsDeleteFalseAndRootId(folder.orElse(null), file.getName(), elementMoveDto.getRootId()).isPresent()){
+                throw new IllegalArgumentException("중복된 문서가 존재힙니다.");
+            };
             file.updateFolder(folder.orElse(null));
+            file.setRootId(elementMoveDto.getRootId());
+            file.setRootType(RootType.valueOf(elementMoveDto.getRootType()));
             // kafka 메시지 발행
             DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
                     .eventType("FILE_UPDATED")
                     .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
                             .id(file.getId())
                             .parentId(elementMoveDto.getFolderId() != null ? elementMoveDto.getFolderId() : null)
+                            .rootId(file.getRootId())
+                            .rootType(file.getRootType().toString())
                             .build())
                     .build();
             try {
@@ -370,6 +418,7 @@ public class DriverService {
                     .workspaceId(fileSaveDto.getWorkspaceId())
                     .rootId(fileSaveDto.getRootId())
                     .rootType(RootType.valueOf(fileSaveDto.getRootType()))
+                    .size(file.getSize())
                     .build();
             File savedFile = fileRepository.saveAndFlush(fileEntity);
 
@@ -390,6 +439,7 @@ public class DriverService {
                             .searchContent(extractedContent)
                             .fileUrl(savedFile.getUrl())
                             .parentId(savedFile.getFolder()!=null?savedFile.getFolder().getId():null)
+                            .size(savedFile.getSize())
                             .build())
                     .build();
             try {
@@ -616,13 +666,62 @@ public class DriverService {
     }
     
     // 루트 하위 폴더 불러오기
-    public List<FolderResDto> getRootFolders(String rootId, String rootType){
+    public List<FolderResDto> getRootFolders(String workspaceId, String userId, String rootId, String rootType){
         List<FolderResDto> folderResDtos = new ArrayList<>();
+        if(rootType.equals("WORKSPACE")){
+            try {
+                List<SubProjectResDto> subProjectResDtos = workspaceServiceClient.getSubProjectsByWorkspace(rootId);
+                for(SubProjectResDto subProjectResDto : subProjectResDtos){
+                    folderResDtos.add(FolderResDto.builder()
+                            .rootType("PROJECT")
+                            .rootId(subProjectResDto.getProjectId())
+                            .rootName(subProjectResDto.getProjectName())
+                            .build());
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }else if(rootType.equals("PROJECT")) {
+            try {
+                if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)
+                        && Objects.requireNonNull(workspaceServiceClient.checkWorkspaceManager(workspaceId, userId).getBody()).getResult().equals(false)) {
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+                List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(rootId).getStones();
+                for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+                    folderResDtos.add(FolderResDto.builder()
+                            .rootType("STONE")
+                            .rootId(stoneInfo.getStoneId())
+                            .rootName(stoneInfo.getStoneName())
+                            .build());
+                }
+
+            } catch (FeignException e) {
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }else if (rootType.equals("STONE")) {
+            try {
+                WorkspaceOrProjectManagerCheckDto workspaceOrProjectManagerCheckDto = workspaceServiceClient.checkWorkspaceOrProjectManager(rootId, userId);
+                if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)
+                        && !workspaceOrProjectManagerCheckDto.isProjectManager() && !workspaceOrProjectManagerCheckDto.isWorkspaceManager()
+                        && Objects.requireNonNull(workspaceServiceClient.checkStoneManagership(rootId, userId).getBody()).getResult().equals(false)
+                ){
+                    throw new IllegalArgumentException("권한이 없습니다.");
+                }
+            }catch (FeignException e){
+                System.out.println(e.getMessage());
+                throw new IllegalArgumentException("예상치못한오류 발생");
+            }
+        }
         List<Folder> folders = folderRepository.findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType.valueOf(rootType),rootId);
         for(Folder folder : folders){
             folderResDtos.add(FolderResDto.builder()
                     .folderName(folder.getName())
                     .folderId(folder.getId())
+                    .rootId(folder.getRootId())
+                    .rootType(folder.getRootType().toString())
                     .build());
         }
         return folderResDtos;
@@ -701,5 +800,30 @@ public class DriverService {
                 .createdAt(file.getCreatedAt())
                 .fileSize(file.getSize())
                 .build();
+    }
+    public void checkProject(String workspaceId, String rootId ,String userId){
+        try {
+            if (Objects.requireNonNull(workspaceServiceClient.checkProjectMembership(rootId, userId).getBody()).getResult().equals(false)
+                    &&Objects.requireNonNull(workspaceServiceClient.checkWorkspaceManager(workspaceId, userId).getBody()).getResult().equals(false)){
+                throw new IllegalArgumentException("권한이 없습니다.");
+            }
+        }catch (FeignException e){
+            System.out.println(e.getMessage());
+            throw new IllegalArgumentException("예상치못한오류 발생");
+        }
+    }
+    public void checkStone(String rootId, String userId){
+        try {
+            WorkspaceOrProjectManagerCheckDto workspaceOrProjectManagerCheckDto = workspaceServiceClient.checkWorkspaceOrProjectManager(rootId, userId);
+            if(Objects.requireNonNull(workspaceServiceClient.checkStoneMembership(rootId, userId).getBody()).getResult().equals(false)
+                    && !workspaceOrProjectManagerCheckDto.isProjectManager() && !workspaceOrProjectManagerCheckDto.isWorkspaceManager()
+                    && Objects.requireNonNull(workspaceServiceClient.checkStoneManagership(rootId, userId).getBody()).getResult().equals(false)
+            ){
+                throw new IllegalArgumentException("권한이 없습니다.");
+            }
+        }catch (FeignException e){
+            System.out.println(e.getMessage());
+            throw new IllegalArgumentException("예상치못한오류 발생");
+        }
     }
 }

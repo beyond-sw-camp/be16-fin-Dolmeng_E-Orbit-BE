@@ -81,6 +81,9 @@ public class FileDocument {
     @Field(type = FieldType.Keyword, index = false)
     private String fileUrl;
 
+    @Field(type = FieldType.Keyword, index = false)
+    private Long size;
+
     public void updateFile(EventDto.EventPayload eventPayload){
         this.searchTitle = eventPayload.getSearchTitle();
     }

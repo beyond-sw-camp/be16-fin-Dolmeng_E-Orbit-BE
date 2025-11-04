@@ -55,6 +55,7 @@ public class FileEventConsumer {
                             .rootType(eventPayload.getRootType())
                             .parentId(eventPayload.getParentId())
                             .fileUrl(eventPayload.getFileUrl())
+                            .size(eventPayload.getSize())
                             .build();
                     fileDocumentRepository.save(fileDocument); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + fileDocument.getId());
@@ -66,6 +67,12 @@ public class FileEventConsumer {
                         FileDocument documentToUpdate = optionalFile.get();
                         if(eventPayload.getSearchTitle()!=null){
                             documentToUpdate.updateFile(eventPayload);
+                        }
+                        if(eventPayload.getRootId()!=null){
+                            documentToUpdate.setRootId(eventPayload.getRootId());
+                        }
+                        if(eventPayload.getRootType()!=null){
+                            documentToUpdate.setRootType(eventPayload.getRootType());
                         }
                         documentToUpdate.setParentId(eventPayload.getParentId());
                         fileDocumentRepository.save(documentToUpdate);
