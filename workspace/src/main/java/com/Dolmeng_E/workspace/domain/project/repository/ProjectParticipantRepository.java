@@ -79,4 +79,14 @@ public interface ProjectParticipantRepository extends JpaRepository<ProjectParti
             @Param("userId") UUID userId
     );
 
+
+    // ProjectParticipantRepository
+    @Query("""
+  select count(pp)
+  from ProjectParticipant pp
+  where pp.project.id = :projectId
+    and pp.workspaceParticipant.isDelete = false
+""")
+    long countActiveByProjectId(@Param("projectId") String projectId);
+
 }

@@ -539,7 +539,7 @@ public class ProjectService {
         long reopened = taskRepository.sumReopenedByProjectId(projectId);
 
         // 평균 완료시간(초 → 일)
-        Long avgSec = taskRepository.avgCompletionSecondsByProjectId(projectId);
+        Double avgSec = taskRepository.avgCompletionSecondsByProjectId(projectId);
         double avgDays = (avgSec == null ? 0d : avgSec / 86400.0); // 86400초 = 1일
 
         long last7 = taskRepository.countCompletedBetween(projectId, now.minusDays(7), now.plusSeconds(1));
@@ -562,7 +562,7 @@ public class ProjectService {
 
         // 3. 프로젝트 참여자 정보 dto
         int totalMembers = projectParticipantRepository.findAllByProject(project).size();
-        int activeMembers = stoneParticipantRepository.findAllActiveWithStoneByWorkspaceParticipant(workspaceParticipant).size();
+        long activeMembers = projectParticipantRepository.countActiveByProjectId(project.getId());
 
         // 담당자별 완료율 평균(%) = 각 담당자 (완료/전체)의 산술평균
         List<Object[]> rows = taskRepository.countTotalsAndCompletedByManager(project.getId()); // [managerId, totalCnt, completedCnt]
@@ -607,16 +607,24 @@ public class ProjectService {
 
         ProjectSnapshotDto.TeamDto teamDto = ProjectSnapshotDto.TeamDto.builder()
                 .totalMembers(totalMembers)
-                .activeMembers(activeMembers)                 // 간단 버전: 참여자=활성자
+                .activeMembers((int)activeMembers)
                 .averageTasksPerMember(averageTaskPerMember)  // 예: 42 (%)
                 .workloadDeviation(covRounded)                // 예: 0.25
+                .build();
+
+
+
+        ProjectSnapshotDto.ContextDto contextDto = ProjectSnapshotDto.ContextDto.builder()
+                .weekendsExcluded(true)
                 .build();
 
         ProjectSnapshotDto dto = ProjectSnapshotDto.builder()
                 .project(projectDto)
                 .team(teamDto)
                 .progress(progressDto)
+                .context(contextDto)
                 .build();
+
 
 
         return dto;

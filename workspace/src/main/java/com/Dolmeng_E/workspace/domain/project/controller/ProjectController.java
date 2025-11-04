@@ -152,7 +152,7 @@ public class ProjectController {
     }
 
     // LLM을 위한 프로젝트 요약 DTO 반환 API
-    @GetMapping("llm/{projectId}")
+    @GetMapping("/llm/{projectId}")
     public ResponseEntity<?> getProjectLLM(
             @RequestHeader("X-User-Id") String userId,
             @PathVariable String projectId
