@@ -11,6 +11,7 @@ import com.Dolmeng_E.drive.domain.drive.entity.Document;
 import com.Dolmeng_E.drive.domain.drive.entity.File;
 import com.Dolmeng_E.drive.domain.drive.entity.Folder;
 import com.Dolmeng_E.drive.domain.drive.entity.RootType;
+import com.Dolmeng_E.drive.domain.drive.repository.DocumentLineRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FolderRepository;
@@ -43,8 +44,9 @@ public class DriverService {
     private final HashOperations<String, String, String> hashOperations;
     private final WorkspaceServiceClient workspaceServiceClient;
     private final Tika tika = new Tika();
+    private final DocumentLineRepository documentLineRepository;
 
-    public DriverService(FolderRepository folderRepository, S3Uploader s3Uploader, FileRepository fileRepository, DocumentRepository documentRepository, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, @Qualifier("userInventory") RedisTemplate<String, String> redisTemplate, WorkspaceServiceClient workspaceServiceClient) {
+    public DriverService(FolderRepository folderRepository, S3Uploader s3Uploader, FileRepository fileRepository, DocumentRepository documentRepository, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, @Qualifier("userInventory") RedisTemplate<String, String> redisTemplate, WorkspaceServiceClient workspaceServiceClient, DocumentLineRepository documentLineRepository) {
         this.folderRepository = folderRepository;
         this.s3Uploader = s3Uploader;
         this.fileRepository = fileRepository;
@@ -53,6 +55,7 @@ public class DriverService {
         this.objectMapper = objectMapper;
         this.hashOperations = redisTemplate.opsForHash();
         this.workspaceServiceClient = workspaceServiceClient;
+        this.documentLineRepository = documentLineRepository;
     }
 
     private static final Set<String> PARSEABLE_MIME_TYPES = Set.of(
@@ -560,6 +563,7 @@ public class DriverService {
     // 문서 삭제(소프트)
     public String deleteDocument(String documentId){
         Document document = documentRepository.findById(documentId).orElseThrow(()->new EntityNotFoundException("해당 문서가 존재하지 않습니다."));
+        documentLineRepository.deleteAllByDocument(document);
         document.updateIsDelete();
         // kafka 메시지 발행
         DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
@@ -824,6 +828,41 @@ public class DriverService {
         }catch (FeignException e){
             System.out.println(e.getMessage());
             throw new IllegalArgumentException("예상치못한오류 발생");
+        }
+    }
+    
+    // 루트id와 type의 모든 폴더/파일/문서 삭제
+    public void deleteAll(String rootId, String rootType){
+        if(rootType.equals("WORKSPACE")){
+            documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            List<SubProjectResDto> subProjectResDtos = workspaceServiceClient.getSubProjectsByWorkspace(rootId);
+            for(SubProjectResDto subProjectResDto : subProjectResDtos){
+                documentRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
+                fileRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
+                folderRepository.softDeleteByRootInfo(RootType.PROJECT, subProjectResDto.getProjectId());
+                List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(subProjectResDto.getProjectId()).getStones();
+                for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+                    documentRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                    fileRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                    folderRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                }
+            }
+        }else if(rootType.equals("STONE")){
+            documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+        }else if(rootType.equals("PROJECT")){
+            documentRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            fileRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            folderRepository.softDeleteByRootInfo(RootType.valueOf(rootType), rootId);
+            List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(rootId).getStones();
+            for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+                documentRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                fileRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+                folderRepository.softDeleteByRootInfo(RootType.STONE, stoneInfo.getStoneId());
+            }
         }
     }
 }

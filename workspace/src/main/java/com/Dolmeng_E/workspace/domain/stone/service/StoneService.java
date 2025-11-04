@@ -19,13 +19,17 @@ import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
+import com.Dolmeng_E.workspace.domain.workspace.dto.DriveKafkaReqDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.Dolmeng_E.workspace.domain.stone.dto.TaskResDto;
@@ -50,6 +54,8 @@ public class StoneService {
     private final UserFeign userFeign;
     private final MilestoneCalculator milestoneCalculator;
     private final ChatFeign chatFeign;
+    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
 // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
@@ -765,6 +771,23 @@ public class StoneService {
 
         // 11. 변경 저장
         stoneRepository.save(stone);
+
+        // kafka 메시지 발행
+        DriveKafkaReqDto driveKafkaReqDto = DriveKafkaReqDto.builder()
+                .rootId(stone.getId())
+                .rootType("STONE")
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(driveKafkaReqDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("drive-delete-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
     // 스톤 완료 처리

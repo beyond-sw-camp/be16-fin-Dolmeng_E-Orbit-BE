@@ -21,13 +21,17 @@ import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.stone.service.StoneService;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
+import com.Dolmeng_E.workspace.domain.workspace.dto.DriveKafkaReqDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +54,8 @@ public class ProjectService {
     private final StoneParticipantRepository stoneParticipantRepository;
     private final TaskRepository taskRepository;
     private final UserFeign userFeign;
+    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
 // 프로젝트 생성
 
@@ -229,6 +235,23 @@ public class ProjectService {
 
         // 8. 저장
         projectRepository.save(project);
+
+        // kafka 메시지 발행
+        DriveKafkaReqDto driveKafkaReqDto = DriveKafkaReqDto.builder()
+                .rootId(project.getId())
+                .rootType("PROJECT")
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(driveKafkaReqDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("drive-delete-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
 

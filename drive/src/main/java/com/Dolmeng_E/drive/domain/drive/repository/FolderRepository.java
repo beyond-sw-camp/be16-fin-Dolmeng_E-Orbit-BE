@@ -4,9 +4,11 @@ import com.Dolmeng_E.drive.domain.drive.dto.FolderInfoDto;
 import com.Dolmeng_E.drive.domain.drive.entity.Folder;
 import com.Dolmeng_E.drive.domain.drive.entity.RootType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,4 +39,9 @@ public interface FolderRepository extends JpaRepository<Folder, String> {
         SELECT id AS folderId, name AS folderName FROM Ancestors;
     """, nativeQuery = true)
     List<FolderInfoDto> findAncestors(@Param("id") String id);
+
+    @Modifying(clearAutomatically = true) // (중요) 쿼리 실행 후 1차 캐시(영속성 컨텍스트)를 클리어합니다.
+    @Transactional // (중요) 업데이트/삭제 쿼리는 트랜잭션 내에서 실행되어야 합니다.
+    @Query("UPDATE Folder e SET e.isDelete = true WHERE e.rootType = :rootType AND e.rootId = :rootId")
+    void softDeleteByRootInfo(@Param("rootType") RootType rootType, @Param("rootId") String rootId);
 }

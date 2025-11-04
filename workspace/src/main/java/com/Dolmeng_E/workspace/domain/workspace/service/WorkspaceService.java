@@ -31,6 +31,8 @@ import com.Dolmeng_E.workspace.domain.workspace.entity.*;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceInviteRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,6 +69,8 @@ public class WorkspaceService {
     private final StoneRepository stoneRepository;
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
 //    워크스페이스 생성(PRO,ENTERPRISE)
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
@@ -421,12 +426,29 @@ public class WorkspaceService {
             throw new IllegalArgumentException("관리자가 아니면 워크스페이스 삭제 불가능합니다.");
         }
 
-        // 5. 삭ㅂ제
+        // 5. 삭제
         workspace.deleteWorkspace();
 
         // 6. 워크스페이스 참여자들도 함께 비활성화
         List<WorkspaceParticipant> participants = workspaceParticipantRepository.findAllByWorkspace(workspace);
         participants.forEach(p -> p.deleteParticipant());
+
+        // kafka 메시지 발행
+        DriveKafkaReqDto driveKafkaReqDto = DriveKafkaReqDto.builder()
+                .rootId(workspaceId)
+                .rootType("WORKSPACE")
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(driveKafkaReqDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("drive-delete-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
     // 워크스페이스 정보 반환
