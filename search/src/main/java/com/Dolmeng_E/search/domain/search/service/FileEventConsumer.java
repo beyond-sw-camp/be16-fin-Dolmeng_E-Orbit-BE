@@ -56,6 +56,7 @@ public class FileEventConsumer {
                             .parentId(eventPayload.getParentId())
                             .fileUrl(eventPayload.getFileUrl())
                             .size(eventPayload.getSize())
+                            .workspaceId(eventPayload.getWorkspaceId())
                             .build();
                     fileDocumentRepository.save(fileDocument); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + fileDocument.getId());

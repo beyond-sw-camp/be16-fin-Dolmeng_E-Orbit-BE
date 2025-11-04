@@ -68,4 +68,13 @@ public class TaskDocument {
     // 생성자 이름
     @Field(type = FieldType.Keyword, index = false)
     private String creatorName;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String workspaceId;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String rootId;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String rootType;
 }

@@ -17,7 +17,7 @@ public class DocumentSearchResDto {
     private String docType;
     private String searchTitle;
     private String searchContent;
-    private List<participantInfo> participants;
+    private List<participantInfo> participantInfos;
     private Boolean isDone;
     private String stoneStatus;
     private String creatorName;
@@ -38,6 +38,6 @@ public class DocumentSearchResDto {
     public static class participantInfo{
         private String id;
         private String name;
-        private String profileImage;
+        private String profileImageUrl;
     }
 }

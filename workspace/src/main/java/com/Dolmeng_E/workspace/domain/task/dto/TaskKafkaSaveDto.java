@@ -1,4 +1,4 @@
-package com.Dolmeng_E.drive.domain.drive.dto;
+package com.Dolmeng_E.workspace.domain.task.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentKafkaSaveDto {
+public class TaskKafkaSaveDto {
     private String eventType;
     private EventPayload eventPayload;
 
@@ -22,16 +22,13 @@ public class DocumentKafkaSaveDto {
     @Builder
     public static class EventPayload{
         private String id;
-        private String searchTitle;
-        private String searchContent;
-        private String createdBy;
+        private String name;
         private List<String> viewableUserIds;
-        private LocalDateTime createdAt;
+        private LocalDateTime endDate;
+        private String stoneId;
         private String rootType;
-        private String rootId;
-        private String parentId;
-        private String fileUrl;
-        private Long size;
+        private String status;
+        private String manager;
         private String workspaceId;
     }
 }

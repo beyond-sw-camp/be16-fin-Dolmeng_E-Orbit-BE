@@ -54,6 +54,7 @@ public class DocumentEventConsumer {
                             .rootId(eventPayload.getRootId())
                             .rootType(eventPayload.getRootType())
                             .parentId(eventPayload.getParentId())
+                            .workspaceId(eventPayload.getWorkspaceId())
                             .build();
                     documentDocumentRepository.save(document); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + document.getId());

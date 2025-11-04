@@ -7,12 +7,17 @@ import com.Dolmeng_E.workspace.common.dto.NotificationCreateReqDto;
 import com.Dolmeng_E.workspace.common.service.MilestoneCalculator;
 import com.Dolmeng_E.workspace.common.service.NotificationKafkaService;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
+import com.Dolmeng_E.workspace.domain.project.entity.ProjectParticipant;
+import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
+import com.Dolmeng_E.workspace.domain.stone.dto.StoneKafkaSaveDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskCreateDto;
+import com.Dolmeng_E.workspace.domain.task.dto.TaskKafkaSaveDto;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskModifyDto;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskResDto;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
@@ -53,6 +58,7 @@ public class TaskService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final DriveServiceClient driveServiceClient;
     private final SearchServiceClient searchServiceClient;
+    private final ProjectParticipantRepository projectParticipantRepository;
 
     // 태스크 생성(생성시 스톤의 task수 반영 필요)
     public String createTask(String userId, TaskCreateDto dto) {
@@ -119,7 +125,41 @@ public class TaskService {
         if (task.getReopenedCount() == null) task.setReopenedCount(0);
         recalcDelay(task);
 
-        taskRepository.save(task);
+        taskRepository.saveAndFlush(task);
+
+        // kafka 메시지 발행
+        List<String> viewableUserIds = new ArrayList<>();
+        List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(stone);
+        for(StoneParticipant sp : stoneParticipants) {
+            viewableUserIds.add(sp.getWorkspaceParticipant().getUserId().toString());
+        }
+        viewableUserIds.add(workspaceParticipantRepository.findByWorkspaceIdAndWorkspaceRole(workspace.getId(), WorkspaceRole.ADMIN).getUserId().toString());
+        viewableUserIds.add(project.getWorkspaceParticipant().getUserId().toString());
+        TaskKafkaSaveDto taskKafkaSaveDto = TaskKafkaSaveDto.builder()
+                .eventType("TASK_CREATED")
+                .eventPayload(TaskKafkaSaveDto.EventPayload.builder()
+                        .id(task.getId())
+                        .name(task.getTaskName())
+                        .viewableUserIds(viewableUserIds)
+                        .endDate(task.getEndTime())
+                        .manager(task.getTaskManager().getUserId().toString())
+                        .rootType("STONE")
+                        .stoneId(task.getStone().getId())
+                        .status(task.getIsDone().toString())
+                        .workspaceId(workspace.getId())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(taskKafkaSaveDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("task-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
 
         // task 담당자에게 알림 발송
 

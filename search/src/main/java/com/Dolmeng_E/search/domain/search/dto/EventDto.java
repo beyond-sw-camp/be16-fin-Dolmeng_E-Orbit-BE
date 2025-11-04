@@ -32,6 +32,7 @@ public class EventDto {
         private String parentId;
         private String fileUrl;
         private Long size;
+        private String workspaceId;
     }
 }
 

@@ -3,6 +3,7 @@ package com.Dolmeng_E.workspace.domain.workspace.repository;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
+import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -47,4 +48,6 @@ public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceP
     List<WorkspaceParticipant> findByWorkspaceAndAccessGroup(Workspace workspace, AccessGroup accessGroup);
 
     List<WorkspaceParticipant> findAllByUserId(UUID userId);
+
+    WorkspaceParticipant findByWorkspaceIdAndWorkspaceRole(String workspaceId, WorkspaceRole workspaceRole);
 }
