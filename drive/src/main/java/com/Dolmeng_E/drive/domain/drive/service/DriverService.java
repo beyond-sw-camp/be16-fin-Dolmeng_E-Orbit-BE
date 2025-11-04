@@ -479,6 +479,7 @@ public class DriverService {
                             .fileUrl(savedFile.getUrl())
                             .parentId(savedFile.getFolder()!=null?savedFile.getFolder().getId():null)
                             .size(savedFile.getSize())
+                            .workspaceId(savedFile.getWorkspaceId())
                             .build())
                     .build();
             try {
@@ -544,7 +545,7 @@ public class DriverService {
     }
 
     // 문서 생성
-    public String createDocument(String userId, String folderId, DocumentSaveDto documentSaveDto){
+    public String createDocument(String userId, String folderId, DocumentSaveDto documentSaveDto, String workspaceId){
         Optional<Folder> folder = folderRepository.findById(folderId);
         // 폴더가 있을 경우
         if(folder.isPresent()){
@@ -564,6 +565,7 @@ public class DriverService {
                 .folder(folder.orElse(null))
                 .rootId(documentSaveDto.getRootId())
                 .rootType(RootType.valueOf(documentSaveDto.getRootType()))
+                .workspaceId(workspaceId)
                 .build();
         Document savedDocument = documentRepository.saveAndFlush(document);
         // kafka 메시지 발행
@@ -580,6 +582,7 @@ public class DriverService {
                         .rootType(savedDocument.getRootType().toString())
                         .viewableUserIds(viewableUserIds)
                         .parentId(savedDocument.getFolder() != null ? savedDocument.getFolder().getId() : null)
+                        .workspaceId(workspaceId)
                         .build())
                 .build();
         try {

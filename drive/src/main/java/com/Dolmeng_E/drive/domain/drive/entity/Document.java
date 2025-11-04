@@ -52,6 +52,9 @@ public class Document extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private RootType rootType;
 
+    @Column(nullable = false)
+    private String workspaceId;
+
     public void updateIsDelete() {this.isDelete = true;}
     public void updateFolder(Folder folder) {this.folder = folder;}
     public void updateTitle(String title) {this.title = title;}

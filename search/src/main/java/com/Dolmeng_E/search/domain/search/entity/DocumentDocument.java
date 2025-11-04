@@ -78,6 +78,10 @@ public class DocumentDocument {
     @Field(type = FieldType.Keyword, index = false)
     private String parentId;
 
+    // 워크스페이스 ID 필터링용
+    @Field(type = FieldType.Keyword, index = false)
+    private String workspaceId;
+
     public void updateDocument(EventDto.EventPayload eventPayload){
         if (eventPayload.getSearchTitle() != null) {
             this.searchTitle = eventPayload.getSearchTitle();

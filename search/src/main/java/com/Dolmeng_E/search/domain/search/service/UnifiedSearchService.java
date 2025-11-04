@@ -33,80 +33,87 @@ public class UnifiedSearchService {
             IndexCoordinates.of("stones", "documents", "files", "tasks");
 
     /**
-     * ✅ 통합 검색 수행 (변경 없음)
-     * (검색: searchTitle.ngram (N-gram) OR searchContent (Nori))
+     * ✅ 통합 검색 수행 (workspaceId 필터 추가됨)
      */
-    public List<DocumentSearchResDto> search(String keyword, String currentUserId) {
+    public List<DocumentSearchResDto> search(String keyword, String currentUserId, String workspaceId) {
 
         Pageable pageable = PageRequest.of(0, 20);
 
-        // 1. HighlightParameters 생성
+        // 1. HighlightParameters 생성 (변경 없음)
         HighlightParameters highlightParameters = HighlightParameters.builder()
                 .withPreTags("<em>")
                 .withPostTags("</em>")
                 .build();
 
-        // 2. HighlightField 목록 생성
+        // 2. HighlightField 목록 생성 (변경 없음)
         List<HighlightField> highlightFields = List.of(
                 new HighlightField("searchTitle"),
                 new HighlightField("searchContent")
         );
 
-        // 3. Highlight 객체 생성
+        // 3. Highlight 객체 생성 (변경 없음)
         Highlight highlight = new Highlight(highlightParameters, highlightFields);
 
 
-        // ✅ HighlightQuery 생성
+        // ✅ HighlightQuery 생성 (변경 없음)
         HighlightQuery highlightQuery = new HighlightQuery(highlight, DocumentSearchResDto.class);
 
         // ✅ 2. NativeQuery
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
-                                .must(m -> m
-                                        .bool(bShould -> bShould
-                                                .should(s -> s
-                                                        // 2-1. searchTitle.ngram (변경 없음)
-                                                        .match(mt -> mt
-                                                                .field("searchTitle.ngram")
-                                                                .query(keyword)
-                                                        )
-                                                )
-                                                // ▼▼▼ [수정] match -> matchPhrase ▼▼▼
-                                                .should(s -> s
-                                                        // 2-2. searchContent (Nori + "구문 검색"으로 변경)
-                                                        .matchPhrase(mp -> mp // .match 대신 .matchPhrase
-                                                                        .field("searchContent")
+                                        .must(m -> m
+                                                .bool(bShould -> bShould
+                                                        .should(s -> s
+                                                                // 2-1. searchTitle.ngram (변경 없음)
+                                                                .match(mt -> mt
+                                                                        .field("searchTitle.ngram")
                                                                         .query(keyword)
-                                                                        .analyzer("nori")
-                                                                // .operator(Operator.And) // <-- 구문 검색에서는 제거
+                                                                )
                                                         )
+                                                        // ▼▼▼ [수정] match -> matchPhrase ▼▼▼
+                                                        .should(s -> s
+                                                                // 2-2. searchContent (Nori + "구문 검색"으로 변경)
+                                                                .matchPhrase(mp -> mp // .match 대신 .matchPhrase
+                                                                                .field("searchContent")
+                                                                                .query(keyword)
+                                                                                .analyzer("nori")
+                                                                        // .operator(Operator.And) // <-- 구문 검색에서는 제거
+                                                                )
+                                                        )
+                                                        // ▲▲▲ [수정] 끝 ▲▲▲
+                                                        .minimumShouldMatch("1")
                                                 )
-                                                // ▲▲▲ [수정] 끝 ▲▲▲
-                                                .minimumShouldMatch("1")
                                         )
-                                )
-                                // 3. 사용자 필터 (변경 없음)
-                                .filter(f -> f
-                                        .term(t -> t
-                                                .field("viewableUserIds")
-                                                .value(currentUserId)
+                                        // 3. 사용자 필터 (변경 없음)
+                                        .filter(f -> f
+                                                .term(t -> t
+                                                        .field("viewableUserIds")
+                                                        .value(currentUserId)
+                                                )
                                         )
-                                )
+                                        // ▼▼▼ [추가] 워크스페이스 ID 필터 ▼▼▼
+                                        .filter(f -> f
+                                                .term(t -> t
+                                                        .field("workspaceId") // Elasticsearch의 필드명
+                                                        .value(workspaceId)
+                                                )
+                                        )
+                                // ▲▲▲ [추가] 끝 ▲▲▲
                         )
                 )
                 .withHighlightQuery(highlightQuery)
                 .withPageable(pageable)
                 .build();
 
-        // ✅ 3. 검색 실행
+        // ✅ 3. 검색 실행 (변경 없음)
         SearchHits<DocumentSearchResDto> searchHits = elasticsearchOperations.search(
                 query,
                 DocumentSearchResDto.class,
                 ALL_INDICES
         );
 
-        // ✅ 4. 결과 처리
+        // ✅ 4. 결과 처리 (변경 없음)
         return searchHits.stream()
                 .map(hit -> {
                     DocumentSearchResDto dto = hit.getContent();
@@ -131,10 +138,9 @@ public class UnifiedSearchService {
     }
 
     /**
-     * ✅ 통합 검색어 자동완성 (수정됨: DocumentSuggestResDto 객체 리스트 반환)
-     * (자동완성: searchTitle.ngram (N-gram) - 제목으로만 검색)
+     * ✅ 통합 검색어 자동완성 (workspaceId 필터 추가됨)
      */
-    public List<DocumentSuggestResDto> suggest(String keyword, String currentUserId) {
+    public List<DocumentSuggestResDto> suggest(String keyword, String currentUserId, String workspaceId) {
 
         String suggestField = "searchTitle.ngram";
         Pageable pageable = PageRequest.of(0, 10);
@@ -142,41 +148,47 @@ public class UnifiedSearchService {
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
-                                // 1. [수정됨] 제목(searchTitle.ngram)으로만 검색 (이전 대화 반영)
-                                .must(m -> m
-                                        .matchBoolPrefix(mbp -> mbp
-                                                .field(suggestField)
-                                                .query(keyword)
-                                                .analyzer("nori_search_analyzer")
+                                        // 1. [수정됨] 제목(searchTitle.ngram)으로만 검색 (이전 대화 반영)
+                                        .must(m -> m
+                                                .matchBoolPrefix(mbp -> mbp
+                                                        .field(suggestField)
+                                                        .query(keyword)
+                                                        .analyzer("nori_search_analyzer")
+                                                )
                                         )
-                                )
-                                // 2. 사용자 필터 조건 (변경 없음)
-                                .filter(f -> f
-                                        .term(t -> t
-                                                .field("viewableUserIds")
-                                                .value(currentUserId)
+                                        // 2. 사용자 필터 조건 (변경 없음)
+                                        .filter(f -> f
+                                                .term(t -> t
+                                                        .field("viewableUserIds")
+                                                        .value(currentUserId)
+                                                )
                                         )
-                                )
+                                        // ▼▼▼ [추가] 워크스페이스 ID 필터 ▼▼▼
+                                        .filter(f -> f
+                                                .term(t -> t
+                                                        .field("workspaceId") // Elasticsearch의 필드명
+                                                        .value(workspaceId)
+                                                )
+                                        )
+                                // ▲▲▲ [추가] 끝 ▲▲▲
                         )
                 )
                 .withPageable(pageable)
-                // [수정] DTO 필드에 맞게 _source 필터링
-                // (id는 metadata, searchTitle/docType은 _source에서 가져옴)
+                // [수정] DTO 필드에 맞게 _source 필터링 (변경 없음)
                 .withSourceFilter(new FetchSourceFilter(
                         new String[]{"searchTitle", "docType", "fileUrl"}, null))
                 .build();
 
-        // [수정 1] DTO 클래스 변경
+        // [수정 1] DTO 클래스 변경 (변경 없음)
         SearchHits<DocumentSuggestResDto> searchHits = elasticsearchOperations.search(
                 query,
                 DocumentSuggestResDto.class, // <-- 반환 DTO 클래스 지정
                 ALL_INDICES
         );
 
-        // [수정 2] DTO 객체 자체를 리스트로 변환
+        // [수정 2] DTO 객체 자체를 리스트로 변환 (변경 없음)
         return searchHits.stream()
                 .map(hit -> hit.getContent()) // <-- DTO 객체 추출
-                // .distinct()는 제거 (DTO 객체는 ID별로 고유하므로)
                 .collect(Collectors.toList());
     }
 }

@@ -55,7 +55,7 @@ public class StoneDocument {
     // --- URL 생성 및 UI 표시용 필드 ---
     // 완료 여부
     @Field(type = FieldType.Keyword)
-    private Status stoneStatus;
+    private String stoneStatus;
 
     // 생성일
     @Field(type = FieldType.Date)
@@ -72,4 +72,15 @@ public class StoneDocument {
     // 참여자 목록 정보
     @Field(type = FieldType.Nested)
     private List<ParticipantInfo> participantInfos;
+
+    // 루트 경로
+    @Field(type = FieldType.Keyword, index = false)
+    private String rootType;
+
+    // 루트 ID
+    @Field(type = FieldType.Keyword, index = false)
+    private String rootId;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String workspaceId;
 }

@@ -84,6 +84,9 @@ public class FileDocument {
     @Field(type = FieldType.Keyword, index = false)
     private Long size;
 
+    @Field(type = FieldType.Keyword, index = false)
+    private String workspaceId;
+
     public void updateFile(EventDto.EventPayload eventPayload){
         this.searchTitle = eventPayload.getSearchTitle();
     }

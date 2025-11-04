@@ -58,6 +58,8 @@ public class StoneService {
     private final ChatFeign chatFeign;
     private final DriveServiceClient driveServiceClient;
     private final SearchServiceClient searchServiceClient;
+    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
@@ -167,7 +169,7 @@ public class StoneService {
         }
 
         // 9. 자식 스톤 생성
-        Stone childStone = stoneRepository.save(
+        Stone childStone = stoneRepository.saveAndFlush(
                 Stone.builder()
                         .stoneName(dto.getStoneName())
                         .startTime(dto.getStartTime())
@@ -277,6 +279,46 @@ public class StoneService {
             chatFeign.inviteChatParticipants(chatInviteReqDto);
         }
 
+        // kafka 메시지 발행
+        List<String> viewableUserIds = new ArrayList<>();
+        List<ProjectParticipant> projectParticipants = projectParticipantRepository.findAllByProject(childStone.getProject());
+        for(ProjectParticipant pp : projectParticipants) {
+            viewableUserIds.add(pp.getWorkspaceParticipant().getUserId().toString());
+        }
+        List<StoneKafkaSaveDto.EventPayload.ParticipantInfo> participantInfos = new ArrayList<>();
+        List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(childStone);
+        for(StoneParticipant sp : stoneParticipants) {
+            participantInfos.add(StoneKafkaSaveDto.EventPayload.ParticipantInfo.builder()
+                    .id(sp.getWorkspaceParticipant().getUserId().toString())
+                    .build());
+        }
+        StoneKafkaSaveDto stoneKafkaSaveDto = StoneKafkaSaveDto.builder()
+                .eventType("STONE_CREATED")
+                .eventPayload(StoneKafkaSaveDto.EventPayload.builder()
+                        .id(childStone.getId())
+                        .name(childStone.getStoneName())
+                        .viewableUserIds(viewableUserIds)
+                        .description(childStone.getStoneDescribe())
+                        .participants(participantInfos)
+                        .endDate(childStone.getEndTime())
+                        .manager(childStone.getStoneManager().getUserId().toString())
+                        .rootType("PROJECT")
+                        .projectId(childStone.getProject().getId())
+                        .status(childStone.getStatus().toString())
+                        .workspaceId(childStone.getProject().getWorkspace().getId())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(stoneKafkaSaveDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("stone-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
 
         return childStone.getId();
     }
