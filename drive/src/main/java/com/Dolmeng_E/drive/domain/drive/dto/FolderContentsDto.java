@@ -22,4 +22,6 @@ public class FolderContentsDto {
     private String profileImage;
     private String url;
     private List<FolderInfoDto> ancestors;
+    private String rootType;
+    private String rootId;
 }

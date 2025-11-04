@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class FolderResDto {
+    String rootType;
+    String rootId;
+    String rootName;
     String folderId;
     String folderName;
 }

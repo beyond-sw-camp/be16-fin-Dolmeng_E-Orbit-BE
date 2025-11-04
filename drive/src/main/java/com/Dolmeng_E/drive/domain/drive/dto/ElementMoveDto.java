@@ -12,4 +12,6 @@ import lombok.NoArgsConstructor;
 public class ElementMoveDto {
     private String folderId;
     private String type;
+    private String rootId;
+    private String rootType;
 }

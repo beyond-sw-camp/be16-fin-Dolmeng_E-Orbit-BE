@@ -66,6 +66,12 @@ public class DocumentEventConsumer {
                         if(eventPayload.getSearchTitle()!=null){
                             documentToUpdate.updateDocument(eventPayload);
                         }
+                        if(eventPayload.getRootId()!=null){
+                            documentToUpdate.setRootId(eventPayload.getRootId());
+                        }
+                        if(eventPayload.getRootType()!=null){
+                            documentToUpdate.setRootType(eventPayload.getRootType());
+                        }
                         documentToUpdate.setParentId(eventPayload.getParentId());
                         documentDocumentRepository.save(documentToUpdate);
                         System.out.println("ES 업데이트(U) 성공: " + documentToUpdate.getId());

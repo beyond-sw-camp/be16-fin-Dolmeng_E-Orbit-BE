@@ -11,4 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class FolderMoveDto {
     private String parentId;
+    private String rootId;
+    private String rootType;
 }
