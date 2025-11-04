@@ -2,6 +2,7 @@ package com.Dolmeng_E.workspace.domain.project.controller;
 
 import com.Dolmeng_E.workspace.domain.project.dto.*;
 import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
+import com.Dolmeng_E.workspace.domain.stone.dto.ProjectPeopleOverviewResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.StoneSettingDto;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
@@ -121,6 +122,35 @@ public class ProjectController {
                 .build()
                 ,HttpStatus.OK);
     }
+
+    // 프로젝트 대시보드용 인원 현황 API
+    @GetMapping("/{projectId}/people-overview")
+    public ResponseEntity<?> getProjectPeopleOverview(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String projectId
+    ) {
+        ProjectPeopleOverviewResDto dto = projectService.getProjectPeopleOverview(userId, projectId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("프로젝트 참여자 개요 조회 완료")
+                .result(dto)
+                .statusCode(HttpStatus.OK.value())
+                .build(), HttpStatus.OK);
+    }
+
+    // 프로젝트 stone, task 수 조회 API
+    @GetMapping("/dashboard/{projectId}")
+    public ResponseEntity<?> getProjectDashboard(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String projectId
+    ) {
+        ProjectDashboardResDto dto = projectService.getProjectDashboard(userId, projectId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("프로젝트 대시보드 조회 완료")
+                .result(dto)
+                .statusCode(HttpStatus.OK.value())
+                .build(), HttpStatus.OK);
+    }
+
 
 
 }

@@ -43,6 +43,9 @@ public class StoneDetailResDto {
     // 추가 : 스톤 설명
     private String stoneDescribe;
 
+    // 추가 : 마일스톤
+    private BigDecimal milestone;
+
     public static StoneDetailResDto fromEntity(Stone stone, List<TaskResDto> taskResDtoList, List<StoneParticipantDto> stoneParticipantDtoList) {
         return StoneDetailResDto.builder()
                 .stoneManagerName(stone.getStoneManager().getUserName())
@@ -54,6 +57,7 @@ public class StoneDetailResDto {
                 .stoneParticipantDtoList(stoneParticipantDtoList)
                 .stoneStatus(stone.getStatus()) // 추가
                 .stoneDescribe(stone.getStoneDescribe()) // 추가
+                .milestone(stone.getMilestone()) // 추가
                 .build();
     }
 
