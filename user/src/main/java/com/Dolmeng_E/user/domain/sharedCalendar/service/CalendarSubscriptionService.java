@@ -148,7 +148,7 @@ public class CalendarSubscriptionService {
             CalendarSubscription sub = calendarSubscriptionRepository.findById(subId)
                     .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 구독입니다."));
 
-            String workspaceId = sub.getWorkspaceId();
+            String workspaceId = dto.getWorkspaceId();
 
             // 2. 워크스페이스 및 소속 검증
             validationService.validateWorkspace(workspaceId);

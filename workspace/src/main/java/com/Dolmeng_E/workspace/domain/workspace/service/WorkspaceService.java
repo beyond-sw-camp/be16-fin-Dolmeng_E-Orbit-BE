@@ -713,9 +713,9 @@ public class WorkspaceService {
                 .findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
 
-        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 조회가 가능합니다.");
-        }
+//        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+//            throw new IllegalArgumentException("관리자만 사용자 조회가 가능합니다.");
+//        }
 
         // 3. 워크스페이스 참여자 목록 조회 (삭제된 사용자 제외)
         List<WorkspaceParticipant> participants =
