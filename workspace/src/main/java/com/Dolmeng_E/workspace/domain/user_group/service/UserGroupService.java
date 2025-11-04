@@ -17,6 +17,7 @@ import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantR
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.common.protocol.types.Field;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -483,6 +484,28 @@ public class UserGroupService {
 
         userGroupRepository.save(userGroup);
         return userGroup.getId();
+    }
+
+    // 나의 사용자 그룹 정보 조회
+    public MyUserGroupDto getMyGroups(String userId, String workspaceId) {
+
+        // 1) 워크스페이스 참여자 찾기
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자 정보가 없습니다."));
+
+        // 2) 참여자의 단일 사용자그룹 조회 (fetch join)
+        UserGroupMapping mapping = userGroupMappingRepository
+                .findOneByWorkspaceParticipantFetchGroup(participant.getId())
+                .orElseThrow(() -> new EntityNotFoundException("사용자그룹 매핑이 없습니다."));
+
+        UserGroup group = mapping.getUserGroup();
+
+        // 3) DTO 매핑
+        return MyUserGroupDto.builder()
+                .userGroupId(group.getId())
+                .userGroupName(group.getUserGroupName())
+                .build();
     }
 
 
