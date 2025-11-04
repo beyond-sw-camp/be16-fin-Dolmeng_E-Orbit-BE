@@ -3,27 +3,28 @@ package com.Dolmeng_E.workspace.domain.workspace.repository;
 import com.Dolmeng_E.workspace.domain.access_group.entity.AccessGroup;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
-import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceParticipant, String> {
 
-//    회원 ID 와 워크스페이스 ID로 참여자 객체 반환
-//    Optional<WorkspaceParticipant> findByWorkspaceIdAndUserId(String workspaceId, UUID userId);
-    @Query("SELECT wp FROM WorkspaceParticipant wp " +
-            "WHERE wp.workspace.id = :workspaceId AND wp.userId = :userId AND wp.isDelete = false")
-    Optional<WorkspaceParticipant> findByWorkspaceIdAndUserId(
-            @Param("workspaceId") String workspaceId,
-            @Param("userId") UUID userId);
-        int countByAccessGroup(AccessGroup accessGroup);
+    // 워크스페이스+유저로 참여자 1명 조회 (서비스에서 많이 사용)
+    Optional<WorkspaceParticipant> findByWorkspaceIdAndUserId(String workspaceId, UUID userId);
+
+    // 활성(삭제되지 않은) 참여자 수 - 파생 쿼리
+    long countByWorkspace_IdAndIsDeleteFalse(String workspaceId);
+
+    // ✅ 호환 유지용: 기존에 사용 중인 메서드 이름 유지 (JPQL 없이 파생 쿼리로 위임)
+    default long countActiveByWorkspaceId(String workspaceId) {
+        return countByWorkspace_IdAndIsDeleteFalse(workspaceId);
+    }
+
+    int countByAccessGroup(AccessGroup accessGroup);
 
     List<WorkspaceParticipant> findByAccessGroup(AccessGroup accessGroup);
 
@@ -46,5 +47,4 @@ public interface WorkspaceParticipantRepository extends JpaRepository<WorkspaceP
     List<WorkspaceParticipant> findByWorkspaceAndAccessGroup(Workspace workspace, AccessGroup accessGroup);
 
     List<WorkspaceParticipant> findAllByUserId(UUID userId);
-
 }

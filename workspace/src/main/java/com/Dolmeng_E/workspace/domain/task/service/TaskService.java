@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime; // [ADD]
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -105,16 +106,20 @@ public class TaskService {
         }
 
         // 5. 태스크 생성 및 저장
-                Task task = Task.builder()
-                        .taskName(dto.getTaskName())
-                        .stone(stone)
-                        .taskManager(taskManager)
-                        .isDone(false)
-                        .startTime(dto.getStartTime())
-                        .endTime(dto.getEndTime())
-                        .build();
+        Task task = Task.builder()
+                .taskName(dto.getTaskName())
+                .stone(stone)
+                .taskManager(taskManager)
+                .isDone(false)
+                .startTime(dto.getStartTime())
+                .endTime(dto.getEndTime())
+                .build();
 
-                taskRepository.save(task);
+        // [ADD] 생성 시 보조 필드 세팅
+        if (task.getReopenedCount() == null) task.setReopenedCount(0);
+        recalcDelay(task);
+
+        taskRepository.save(task);
 
         // task 담당자에게 알림 발송
 
@@ -190,6 +195,9 @@ public class TaskService {
         if (dto.getStartTime() != null) task.setStartTime(dto.getStartTime());
         if (dto.getEndTime() != null) task.setEndTime(dto.getEndTime());
 
+        // [ADD] 기간 변경 가능성이 있으므로 지연 여부 재계산
+        recalcDelay(task);
+
         // 5. 태스크 담당자 교체 (선택적)
         if (dto.getNewManagerUserId() != null) {
             WorkspaceParticipant newManager = workspaceParticipantRepository
@@ -226,6 +234,8 @@ public class TaskService {
                     .stoneId(stone.getId())
                     .projectId(project.getId())
                     .build();
+
+            notificationKafkaService.kafkaNotificationPublish(notificationCreateReqDto); // [ADD]
         }
 
         // 6. 변경사항 저장
@@ -318,7 +328,19 @@ public class TaskService {
 
         // 4. 태스크 완료 상태 변경
         if(!task.getIsDone()) {
+
+            // [ADD] 재완료 시 reopenedCount 증가 로직
+            if (task.getTaskCompletedDate() != null && !Boolean.TRUE.equals(task.getIsDone())) {
+                task.setReopenedCount((task.getReopenedCount() == null ? 0 : task.getReopenedCount()) + 1);
+            }
+
             task.setIsDone(Boolean.TRUE);
+
+            // [ADD] 완료 타임스탬프 및 지연 여부 확정
+            LocalDateTime __now = now();
+            task.setTaskCompletedDate(__now);
+            task.setDelayedTask(task.getEndTime() != null && task.getEndTime().isBefore(__now));
+
         } else {
             throw new IllegalArgumentException("이미 완료된 태스크입니다.");
         }
@@ -345,6 +367,8 @@ public class TaskService {
                 .workspaceId(workspace.getId())
                 .stoneId(stone.getId())
                 .build();
+
+        notificationKafkaService.kafkaNotificationPublish(notificationCreateReqDto);
 
         // 5. 스톤의 완료된 태스크 수 증가
         stone.incrementCompletedCount();
@@ -397,6 +421,10 @@ public class TaskService {
                         .endTime(task.getEndTime())
                         .isDone(task.getIsDone())
                         .taskManagerName(task.getTaskManager().getUserName()) // 담당자 이름 추가
+                        // [ADD] 필요시 응답 확장 (TaskResDto에 필드가 있다면)
+                        // .taskCompletedDate(task.getTaskCompletedDate())
+                        // .reopenedCount(task.getReopenedCount())
+                        // .isDelayedTask(task.getDelayedTask())
                         .build()
                 )
                 .toList();
@@ -436,10 +464,13 @@ public class TaskService {
 
         // 5. 태스크 상태 변경
         task.setIsDone(false);
+        // [ADD] 미완료가 되었으니 지연 여부 재계산
+        recalcDelay(task);
         taskRepository.save(task);
 
         // 6. 스톤 완료된 태스크 수 감소
-        stone.decrementTaskCount();
+        // [FIX] 완료 취소는 총 태스크 수가 아니라 '완료 수'를 줄여야 함
+        stone.decrementCompletedCount();
         stoneRepository.save(stone);
 
         // 7. 마일스톤 재계산
@@ -464,6 +495,18 @@ public class TaskService {
         notificationKafkaService.kafkaNotificationPublish(notificationCreateReqDto);
 
         return task.getId();
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now();
+    }
+
+    private void recalcDelay(Task task) {
+        task.setDelayedTask(
+                !Boolean.TRUE.equals(task.getIsDone()) &&
+                        task.getEndTime() != null &&
+                        task.getEndTime().isBefore(now())
+        );
     }
 
 }

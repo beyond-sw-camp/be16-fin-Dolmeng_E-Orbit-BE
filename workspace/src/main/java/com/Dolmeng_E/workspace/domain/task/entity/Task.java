@@ -51,5 +51,17 @@ public class Task extends BaseTimeEntity {
     @Builder.Default
     private Boolean isDone = false;
 
+    // 추가 : 태스크 완료 날짜 -> 태스크 완료처리 시 현재 날짜를 추가
+    @Column(name = "task_completed_date")
+    private LocalDateTime taskCompletedDate;
+
+    // 추가 : 태스크 reopened count -> 태스크 취소에서 완료로 상태변경 시 1 추가
+    @Column(name = "reopened_count")
+    private Integer reopenedCount;
+
+    // 추가 : 지연된 task 수 -> 조회시 완료날짜보다 오늘 날짜가 지나갔으면 true
+    @Column(name = "is_delayed_task")
+    private boolean isDelayedTask;
+
 
 }

@@ -37,10 +37,12 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole.ADMIN;
+import static redis.clients.jedis.search.aggr.Reducers.stddev;
 
 @Service
 @Transactional
@@ -511,7 +513,134 @@ public class ProjectService {
                 .build();
     }
 
+    // LLM을 위한 프로젝트 요약 DTO 반환 API
+    public ProjectSnapshotDto getProjectLLM(String userId, String projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(()-> new EntityNotFoundException("프로젝트가 없습니다."));
+        Workspace workspace = project.getWorkspace();
+        WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository.findByWorkspaceIdAndUserId(workspace.getId(),UUID.fromString(userId))
+                .orElseThrow(()-> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
 
+        LocalDateTime now = LocalDateTime.now();
+
+        // 1. 프로젝트 관련 dto
+        ProjectSnapshotDto.ProjectDto projectDto = ProjectSnapshotDto.ProjectDto.builder()
+                .name(project.getProjectName())
+                .currentDate(now)
+                .startDate(project.getStartTime())
+                .dueDate(project.getEndTime())
+                .build();
+
+        // 2. 프로젝트 진행률 관련 dto
+        long total = taskRepository.countAllByProjectId(projectId);
+        long completed = taskRepository.countCompletedByProjectId(projectId);
+        long remaining = Math.max(0, total - completed);
+        long delayed = taskRepository.countDelayedOpenByProjectId(projectId, now);
+        long reopened = taskRepository.sumReopenedByProjectId(projectId);
+
+        // 평균 완료시간(초 → 일)
+        Double avgSec = taskRepository.avgCompletionSecondsByProjectId(projectId);
+        double avgDays = (avgSec == null ? 0d : avgSec / 86400.0); // 86400초 = 1일
+
+        long last7 = taskRepository.countCompletedBetween(projectId, now.minusDays(7), now.plusSeconds(1));
+        long last30 = taskRepository.countCompletedBetween(projectId, now.minusDays(30), now.plusSeconds(1));
+
+        ProjectSnapshotDto.ProgressDto progressDto = ProjectSnapshotDto.ProgressDto.builder()
+                .totalTasks((int) total)
+                .completedTasks((int) completed)
+                .remainingTasks((int) remaining)
+                .averageTaskCompletionTimeDays(round1(avgDays))
+                .recentCompletionRate(
+                        ProjectSnapshotDto.ProgressDto.RecentCompletionRateDto.builder()
+                                .last7Days((int) last7)
+                                .last30Days((int) last30)
+                                .build()
+                )
+                .delayedTasks((int) delayed)
+                .reopenedTasks((int) reopened)
+                .build();
+
+        // 3. 프로젝트 참여자 정보 dto
+        int totalMembers = projectParticipantRepository.findAllByProject(project).size();
+        long activeMembers = projectParticipantRepository.countActiveByProjectId(project.getId());
+
+        // 담당자별 완료율 평균(%) = 각 담당자 (완료/전체)의 산술평균
+        List<Object[]> rows = taskRepository.countTotalsAndCompletedByManager(project.getId()); // [managerId, totalCnt, completedCnt]
+        double sumRatios = 0.0;
+        int managerWithTasks = 0;
+        for (Object[] r : rows) {
+            long totalr = (Long) r[1];
+            long done  = (r[2] == null) ? 0L : (Long) r[2];
+            if (totalr > 0) {
+                sumRatios += ((double) done / totalr); // 0.0 ~ 1.0
+                managerWithTasks++;
+            }
+        }
+        double avgCompletionRatePercent = (managerWithTasks == 0)
+                ? 0.0
+                : Math.round((sumRatios / managerWithTasks) * 1000.0) / 10.0; // 소수1자리 %
+
+        // workloadDeviation(CoV) = 멤버별 태스크 수 표준편차 / 평균 태스크 수
+        long totalTasks = taskRepository.countAllByProjectId(project.getId());
+        double avgPerMemberTasks = (totalMembers == 0) ? 0.0 : (double) totalTasks / totalMembers;
+
+        List<Object[]> buckets = taskRepository.countTasksGroupedByManager(project.getId()); // [managerId, cnt]
+        List<Long> counts = buckets.stream().map(r -> (Long) r[1]).toList();
+        double stdev;
+        if (counts.isEmpty()) {
+            stdev = 0.0;
+        } else {
+            double mean = counts.stream().mapToDouble(Long::doubleValue).average().orElse(0.0);
+            double variance = counts.stream()
+                    .mapToDouble(x -> {
+                        double d = x - mean;
+                        return d * d;
+                    })
+                    .sum() / counts.size(); // 모집단 분산
+            stdev = Math.sqrt(variance);
+        }
+        double cov = (avgPerMemberTasks == 0.0) ? 0.0 : (stdev / avgPerMemberTasks);
+        double covRounded = new java.math.BigDecimal(cov).setScale(2, java.math.RoundingMode.HALF_UP).doubleValue();
+
+        // DTO 조립 (averageTasksPerMember를 "담당자별 완료율 평균(%)"의 정수값으로 사용)
+        int averageTaskPerMember = (int) Math.round(avgCompletionRatePercent);
+
+        ProjectSnapshotDto.TeamDto teamDto = ProjectSnapshotDto.TeamDto.builder()
+                .totalMembers(totalMembers)
+                .activeMembers((int)activeMembers)
+                .averageTasksPerMember(averageTaskPerMember)  // 예: 42 (%)
+                .workloadDeviation(covRounded)                // 예: 0.25
+                .build();
+
+
+
+        ProjectSnapshotDto.ContextDto contextDto = ProjectSnapshotDto.ContextDto.builder()
+                .weekendsExcluded(true)
+                .build();
+
+        ProjectSnapshotDto dto = ProjectSnapshotDto.builder()
+                .project(projectDto)
+                .team(teamDto)
+                .progress(progressDto)
+                .context(contextDto)
+                .build();
+
+
+
+        return dto;
+    }
+
+
+
+
+    private static double round1(double v) {
+        return Math.round(v * 10.0) / 10.0;
+    }
+
+    // 소수 2자리 반올림 (workloadDeviation용)
+    private static double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
+    }
 
 
 

@@ -118,6 +118,14 @@ public class Stone extends BaseTimeEntity {
         this.taskCount -= 1;
     }
 
+    public void decrementCompletedCount() {
+        if (this.completedCount == null || this.completedCount == 0) {
+            this.completedCount = 0;
+            return;
+        }
+        this.completedCount -= 1;
+    }
+
     // 완료된 태스크 수 증가
     public void incrementCompletedCount() {
         this.completedCount = (this.completedCount == null ? 1 : this.completedCount + 1);
