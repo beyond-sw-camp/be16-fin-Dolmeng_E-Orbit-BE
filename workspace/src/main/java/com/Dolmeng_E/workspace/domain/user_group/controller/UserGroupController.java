@@ -146,4 +146,21 @@ public class UserGroupController {
                 , HttpStatus.OK);
     }
 
+    // 나의 사용자 그룹 정보 조회
+    @GetMapping("/my-groups/{workspaceId}")
+    public ResponseEntity<?> getMyGroups(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+
+        MyUserGroupDto dto = userGroupService.getMyGroups(userId, workspaceId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("나의 사용자 그룹정보 조회 완료")
+                .result(dto)
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                , HttpStatus.OK);
+
+    }
+
 }

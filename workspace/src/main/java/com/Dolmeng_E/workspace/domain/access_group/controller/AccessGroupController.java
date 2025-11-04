@@ -174,14 +174,16 @@ public class AccessGroupController {
     }
 
     // 본인 권한 목록 조회 API
-    @GetMapping("/my-access")
-    public ResponseEntity<?> myAccess(
-            @RequestHeader("X-User-Id") String userId
+    @GetMapping("/my-access/{workspaceId}")
+    public ResponseEntity<?> getMyAccess(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
     ) {
         // 서비스 구현 필요
+        MyAccessGroupResDto dto = accessGroupService.getMyAccess(userId, workspaceId);
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .statusMessage("나의 권한 조회 완료")
-                .result(HttpStatus.OK)
+                .result(dto)
                 .statusCode(HttpStatus.OK.value())
                 .build(),
                 HttpStatus.OK);

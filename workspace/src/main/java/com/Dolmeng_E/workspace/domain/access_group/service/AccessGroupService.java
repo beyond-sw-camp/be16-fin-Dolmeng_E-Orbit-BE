@@ -24,10 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 
 @Service
@@ -563,5 +560,54 @@ public class AccessGroupService {
         accessDetailRepository.deleteAllByAccessGroup(accessGroup);
         accessGroupRepository.delete(accessGroup);
     }
+
+    // 본인 권한목록 조회 api
+    public MyAccessGroupResDto getMyAccess(String userId, String workspaceId) {
+        // 1) 워크스페이스 검증
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스가 존재하지 않습니다."));
+
+        // 2) 참여자 검증 (userId는 UUID이면 변환 필요)
+        WorkspaceParticipant workspaceParticipant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자가 아닙니다."));
+
+        // 3) 참여자의 AccessGroup 조회 (없으면 전부 false)
+        AccessGroup accessGroup = workspaceParticipant.getAccessGroup();
+        if (accessGroup == null) {
+            return MyAccessGroupResDto.builder()
+                    .isProjectCreate(false)
+                    .isStoneCreate(false)
+                    .isProjectFileView(false)
+                    .isStoneFileView(false)
+                    .isWorkspaceFileView(false)
+                    .build();
+        }
+
+        // 4) 그룹의 AccessDetail 전부 조회 (AccessList 조인됨)
+        List<AccessDetail> details = accessDetailRepository
+                .findAllByAccessGroupIdWithAccessList(accessGroup.getId());
+
+        // 5) AccessType → boolean 매핑 테이블 구축 (기본 false)
+        Map<AccessType, Boolean> map = new EnumMap<>(AccessType.class);
+        for (AccessType t : AccessType.values()) map.put(t, false);
+
+        for (AccessDetail d : details) {
+            // AccessList가 반드시 있어야 함
+            if (d.getAccessList() != null && d.getAccessList().getAccessType() != null) {
+                map.put(d.getAccessList().getAccessType(), Boolean.TRUE.equals(d.getIsAccess()));
+            }
+        }
+
+        // 6) DTO로 변환
+        return MyAccessGroupResDto.builder()
+                .isProjectCreate(map.getOrDefault(AccessType.PROJECT_CREATE, false))
+                .isStoneCreate(map.getOrDefault(AccessType.STONE_CREATE, false))
+                .isProjectFileView(map.getOrDefault(AccessType.PROJECT_FILE_VIEW, false))
+                .isStoneFileView(map.getOrDefault(AccessType.STONE_FILE_VIEW, false))
+                .isWorkspaceFileView(map.getOrDefault(AccessType.WORKSPACE_FILE_VIEW, false))
+                .build();
+    }
+
 
 }
