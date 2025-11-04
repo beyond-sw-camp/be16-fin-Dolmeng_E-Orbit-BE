@@ -35,6 +35,11 @@ public class Notification extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
 
+    private String workspaceId;
+    private String projectId;
+    private String stoneId;
+    private String taskId;
+
     public void updateReadStatus(NotificationReadStatus readStatus) {
         this.readStatus = readStatus;
     }

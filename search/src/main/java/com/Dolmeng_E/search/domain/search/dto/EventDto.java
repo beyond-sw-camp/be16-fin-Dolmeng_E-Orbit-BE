@@ -27,6 +27,11 @@ public class EventDto {
         private String createdBy;
         private List<String> viewableUserIds;
         private LocalDateTime createdAt;
+        private String rootType;
+        private String rootId;
+        private String parentId;
+        private String fileUrl;
+        private Long size;
     }
 }
 

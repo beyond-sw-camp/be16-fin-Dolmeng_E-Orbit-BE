@@ -88,6 +88,18 @@ public class TaskController {
                 ,HttpStatus.OK);
     }
 
+    // 태스크 취소
+    @PatchMapping("cancel/{taskId}")
+    public ResponseEntity<?> cancelTask(@RequestHeader("X-User-Id") String userId,
+                                          @PathVariable String taskId) {
+        String cancelTaskId = taskService.cancelTask(userId, taskId);
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .statusMessage("태스크 완료 처리 성공")
+                .result(cancelTaskId + " 태스크 상태가 취소되었습니다.")
+                .statusCode(HttpStatus.OK.value())
+                .build()
+                ,HttpStatus.OK);
+    }
 
 
 }

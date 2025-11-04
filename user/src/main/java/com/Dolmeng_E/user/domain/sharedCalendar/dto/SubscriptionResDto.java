@@ -19,6 +19,7 @@ public class SubscriptionResDto {
     private String targetUserId;
     private String sharedCalendarId;
     private String calendarName;
+    private String targetUserName;
 
     // 구독 대상 유저의 공유 일정 리스트
     private List<SharedCalendarSubDto> sharedCalendars;
@@ -33,6 +34,7 @@ public class SubscriptionResDto {
                 .subscriberUserId(sub.getSubscriberUserId().getId().toString())
                 .targetUserId(sub.getTargetUserId().getId().toString())
                 .sharedCalendars(sharedCalendars)
+                .targetUserName(sub.getTargetUserId().getName())
                 .build();
     }
 

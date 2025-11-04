@@ -1,10 +1,10 @@
 package com.Dolmeng_E.workspace.domain.workspace.entity;
 
+import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Getter
@@ -12,35 +12,35 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class WorkspaceInvite {
+public class WorkspaceInvite extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String email;
+
+    @Column(name = "invite_code", nullable = false)
+    private String inviteToken;
+
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiredAt;
+
+    @Column(name = "is_used", nullable = false)
+    private Boolean isUsed;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workspace_id", nullable = false)
+    @JoinColumn(name = "workspace_id")
     private Workspace workspace;
 
-    @Column(nullable = false)
-    private String inviteEmail;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inviter_id")
+    private WorkspaceParticipant inviter;
 
-    @Column(nullable = false, unique = true)
-    private String inviteCode;
-
-    @Column(nullable = false)
-    private boolean isAccepted;
-
-    @Column(nullable = false)
-    private boolean isExistingUser;
-
-    @Column(nullable = false)
-    private LocalDateTime expiresAt;
-
-    @Column(nullable = false)
-    private boolean isPendingRegistration; // 비회원 초대용
-
-    public boolean isExpired() {
-        return expiresAt.isBefore(LocalDateTime.now());
+    @PrePersist
+    public void prePersist() {
+        if (expiredAt == null) expiredAt = LocalDateTime.now().plusHours(24);
+        if (isUsed == null) isUsed = false;
     }
 }

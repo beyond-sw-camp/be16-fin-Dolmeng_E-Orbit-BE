@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.domain.user.controller;
 
+import com.Dolmeng_E.user.common.dto.UserEmailListDto;
 import com.Dolmeng_E.user.common.dto.UserIdListDto;
 import com.Dolmeng_E.user.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.user.common.dto.UserInfoResDto;
@@ -47,6 +48,13 @@ public class UserController {
     UserInfoResDto fetchUserInfoById(@RequestHeader("X-User-Id")String userId) {
         UserInfoResDto userInfoResDto = userService.fetchUserInfoById(userId);
         return userInfoResDto;
+    }
+
+    // 유저 ID, 이름, 이메일, 유저 프로필url 반환 API
+    @PostMapping("/return/by-email")
+    UserInfoListResDto fetchUserInfoByEmail(@RequestBody UserEmailListDto userEmailListDto) {
+        UserInfoListResDto userInfoListResDto = userService.fetchUserInfoByEmail(userEmailListDto);
+        return userInfoListResDto;
     }
 
     // 유저 정보 list 반환 API

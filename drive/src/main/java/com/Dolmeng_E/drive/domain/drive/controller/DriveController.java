@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/drive")
@@ -78,9 +77,9 @@ public class DriveController {
 
     // 폴더 옮기기
     @PutMapping("/folder/{folderId}/move")
-    public ResponseEntity<?> updateFolderStruct(@RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestBody FolderMoveDto folderMoveDto) {
+    public ResponseEntity<?> updateFolderStruct(@RequestHeader("X-Workspace-Id") String workspaceId, @RequestHeader("X-User-Id") String userId, @PathVariable String folderId, @RequestBody FolderMoveDto folderMoveDto) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.updateFolderStruct(folderId, folderMoveDto))
+                .result(driverService.updateFolderStruct(workspaceId, userId, folderId, folderMoveDto))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("폴더 위치 변경 성공")
                 .build(), HttpStatus.OK);
@@ -108,9 +107,9 @@ public class DriveController {
 
     // 파일/문서 옮기기
     @PutMapping("/element/{elementId}/move")
-    public ResponseEntity<?> updateElementStruct(@RequestHeader("X-User-Id") String userId, @PathVariable String elementId, @RequestBody ElementMoveDto elementMoveDto) {
+    public ResponseEntity<?> updateElementStruct(@RequestHeader("X-Workspace-Id") String workspaceId, @RequestHeader("X-User-Id") String userId, @PathVariable String elementId, @RequestBody ElementMoveDto elementMoveDto) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.updateElementStruct(elementId, elementMoveDto))
+                .result(driverService.updateElementStruct(workspaceId, userId, elementId, elementMoveDto))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("문서/파일 위치 변경 성공")
                 .build(), HttpStatus.OK);
@@ -138,9 +137,9 @@ public class DriveController {
 
     // 문서 조회
     @GetMapping("/document/{documentId}")
-    public ResponseEntity<?> getDocument(@RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
+    public ResponseEntity<?> getDocument(@RequestHeader("X-Workspace-Id") String workspaceId, @RequestHeader("X-User-Id") String userId, @PathVariable String documentId) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(driverService.findDocument(userId, documentId))
+                .result(driverService.findDocument(userId, documentId, workspaceId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("문서 조회 성공")
                 .build(), HttpStatus.OK);
@@ -152,7 +151,7 @@ public class DriveController {
         return new ResponseEntity<>(CommonSuccessDto.builder()
                 .result(driverService.updateDocument(documentId, documentUpdateDto))
                 .statusCode(HttpStatus.OK.value())
-                .statusMessage("문서 조회 성공")
+                .statusMessage("문서 수정 성공")
                 .build(), HttpStatus.OK);
     }
     
@@ -164,5 +163,81 @@ public class DriveController {
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("스토리지 사용량 조회 성공")
                 .build(), HttpStatus.OK);
+    }
+
+    // 파일 수정
+    @PutMapping("/file/{fileId}")
+    public ResponseEntity<?> updateFile(@PathVariable String fileId, @RequestBody FileUpdateDto fileUpdateDto) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.updateFile(fileId, fileUpdateDto))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 위치 별 하위 폴더들 가져오기(폴더트리구조)
+    @GetMapping("/{rootType}/{rootId}/folders")
+    public ResponseEntity<?> getRootContents(@RequestHeader("X-Workspace-Id") String workspaceId, @RequestHeader("X-User-Id") String userId, @PathVariable String rootId, @PathVariable String rootType) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getRootFolders(workspaceId, userId, rootId, rootType))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage(rootType+"하위 폴더 목록 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 폴더 하위 요소들 조회
+    @GetMapping("/folder/{folderId}/folders")
+    public ResponseEntity<?> getFolderContents(@PathVariable String folderId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFolders(folderId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 하위 폴더 목록 조회 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 문서함 이름 가져오기
+    @GetMapping("/{rootType}/{rootId}/name")
+    public ResponseEntity<?> getRootName(@RequestHeader("X-User-Id") String userId, @PathVariable String rootId, @PathVariable String rootType) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getRootName(userId, rootId, rootType))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("루트 이름 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
+    
+    // 문서 상세 정보 페이지 불러오기
+    @GetMapping("/document/{documentId}/info")
+    public ResponseEntity<?> getDocumentInfo(@PathVariable String documentId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getDocumentInfoPage(documentId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("문서 정보 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 폴더 상세 정보 페이지 불러오기
+    @GetMapping("/folder/{folderId}/info")
+    public ResponseEntity<?> getFolderInfo(@PathVariable String folderId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFolderInfoPage(folderId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("폴더 정보 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 파일 상세 정보 페이지 불러오기
+    @GetMapping("/file/{fileId}/info")
+    public ResponseEntity<?> getFileInfo(@PathVariable String fileId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getFileInfoPage(fileId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("파일 정보 가져오기 성공")
+                .build(), HttpStatus.OK);
+    }
+
+    // 워크스페이스/프로젝트/스톤 삭제 시 문서함 삭제
+    @DeleteMapping("/{rootType}/{rootId}/all")
+    public void deleteAll(@PathVariable String rootType, @PathVariable String rootId) {
+        driverService.deleteAll(rootType, rootId);
     }
 }

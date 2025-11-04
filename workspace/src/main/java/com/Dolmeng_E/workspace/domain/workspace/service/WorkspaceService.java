@@ -1,5 +1,7 @@
 package com.Dolmeng_E.workspace.domain.workspace.service;
 
+import com.Dolmeng_E.workspace.common.controller.DriveServiceClient;
+import com.Dolmeng_E.workspace.common.controller.SearchServiceClient;
 import com.Dolmeng_E.workspace.common.dto.*;
 import com.Dolmeng_E.workspace.common.service.UserFeign;
 import com.Dolmeng_E.workspace.domain.access_group.dto.AccessGroupAddUserDto;
@@ -15,6 +17,7 @@ import com.Dolmeng_E.workspace.domain.stone.dto.MilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
+import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneParticipantRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
@@ -30,6 +33,8 @@ import com.Dolmeng_E.workspace.domain.workspace.entity.*;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceInviteRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +43,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +63,6 @@ public class WorkspaceService {
     private final UserFeign userFeign;
     private final AccessGroupService accessGroupService;
     private final AccessGroupRepository accessGroupRepository;
-    private final EmailService emailService;
     private final WorkspaceInviteRepository workspaceInviteRepository;
     private final ProjectParticipantRepository projectParticipantRepository;
     private final UserGroupRepository userGroupRepository;
@@ -66,8 +71,12 @@ public class WorkspaceService {
     private final StoneRepository stoneRepository;
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
+    private final DriveServiceClient driveServiceClient;
+    private final SearchServiceClient searchServiceClient;
 
-//    워크스페이스 생성(PRO,ENTERPRISE)
+    //    워크스페이스 생성(PRO,ENTERPRISE)
     public String createWorkspace(WorkspaceCreateDto workspaceCreateDto, String userId) {
 
 
@@ -334,54 +343,6 @@ public class WorkspaceService {
 
 
 
-
-    //    워크스페이스 이메일 회원 초대 (ToDo : 로직 반드시 수정 할 것, X-User-Id 로 바뀌어서 그에 맞게!)
-    public void inviteUsers(String userId, String workspaceId, WorkspaceInviteDto dto) throws AccessDeniedException {
-        // 1. 워크스페이스 확인
-        Workspace workspace = workspaceRepository.findById(workspaceId)
-                .orElseThrow(() -> new EntityNotFoundException("워크스페이스를 찾을 수 없습니다."));
-
-        // 2. 요청자 권한 확인
-        UserInfoResDto requester = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant admin = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspaceId, requester.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException("요청자 워크스페이스 참가자 정보가 없습니다."));
-
-        if(admin.getWorkspaceRole()!=WorkspaceRole.ADMIN) {
-            throw new AccessDeniedException("관리자 권한이 필요합니다.");
-        }
-
-        for (String email : dto.getInviteEmails()) {
-
-            // 1. User 서비스에 회원 존재 여부 확인
-            boolean userExists;
-            try {
-                userFeign.fetchUserInfoById(email);
-                userExists = true;
-            } catch (FeignException.NotFound e) {
-                userExists = false;
-            }
-
-            // 초대코드 생성
-            String inviteCode = UUID.randomUUID().toString();
-
-            // 2. 초대 정보 저장 (회원 여부 포함)
-            WorkspaceInvite invite = WorkspaceInvite.builder()
-                    .workspace(workspace)
-                    .inviteEmail(email)
-                    .inviteCode(inviteCode)
-                    .isAccepted(false)
-                    .isExistingUser(userExists)   // 분기 기준 저장
-                    .expiresAt(LocalDateTime.now().plusDays(3))
-                    .build();
-
-            workspaceInviteRepository.save(invite);
-
-            // 3. 이메일 발송
-            emailService.sendInviteMail(email, inviteCode, workspace.getWorkspaceName(), userExists);
-        }
-}
-
 //    워크스페이스 참여자 목록 조회
     @Transactional(readOnly = true)
     public Page<WorkspaceParticipantResDto> getWorkspaceParticipants(String userId, String workspaceId, Pageable pageable) {
@@ -449,6 +410,8 @@ public class WorkspaceService {
 
     // 워크스페이스 삭제
     public void deleteWorkspace(String userId, String workspaceId) {
+        driveServiceClient.deleteAll("WORKSPACE", workspaceId);
+        searchServiceClient.deleteAll("WORKSPACE", workspaceId);
         // 1. 유저 정보 검증 (Feign)
         UserInfoResDto userInfo = userFeign.fetchUserInfoById(userId);
 
@@ -469,7 +432,7 @@ public class WorkspaceService {
             throw new IllegalArgumentException("관리자가 아니면 워크스페이스 삭제 불가능합니다.");
         }
 
-        // 5. 삭ㅂ제
+        // 5. 삭제
         workspace.deleteWorkspace();
 
         // 6. 워크스페이스 참여자들도 함께 비활성화
@@ -532,7 +495,7 @@ public class WorkspaceService {
         // 6. 마일스톤 최신화 및 DTO 변환
         List<ProjectProgressResDto> result = uniqueProjects.stream()
                 .map(project -> {
-                    project.updateMilestone(); // 완료/전체 비율 재계산
+                    project.updateMilestone();
                     return ProjectProgressResDto.fromEntity(project);
                 })
                 .toList();
@@ -761,9 +724,9 @@ public class WorkspaceService {
                 .findByWorkspaceIdAndUserId(dto.getWorkspaceId(), UUID.fromString(userId))
                 .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 접근 권한이 없습니다."));
 
-        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            throw new IllegalArgumentException("관리자만 사용자 조회가 가능합니다.");
-        }
+//        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
+//            throw new IllegalArgumentException("관리자만 사용자 조회가 가능합니다.");
+//        }
 
         // 3. 워크스페이스 참여자 목록 조회 (삭제된 사용자 제외)
         List<WorkspaceParticipant> participants =
@@ -954,6 +917,8 @@ public class WorkspaceService {
                         .isDone(task.getIsDone())
                         .startTime(task.getStartTime())
                         .endTime(task.getEndTime())
+                        .stoneMilestone(task.getStone().getMilestone())
+                        .stoneId(task.getStone().getId())
                         .build())
                 .toList();
     }
@@ -1114,6 +1079,79 @@ public class WorkspaceService {
                 .isProjectManager(isProjectManager)
                 .build();
     }
+
+
+    // 워크스페이스id, 프젝id, 스톤id 중 하나 넘겼을 때 해당 이름 받아오는 api
+    public EntityNameResDto getEntityName(EntityNameReqDto dto) {
+
+        if (dto.getWorkspaceId() != null) {
+            return workspaceRepository.findById(dto.getWorkspaceId())
+                    .filter(ws -> !ws.getIsDelete())
+                    .map(ws -> EntityNameResDto.builder()
+                            .type("workspace")
+                            .id(ws.getId())
+                            .name(ws.getWorkspaceName())
+                            .build())
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
+        }
+
+        if (dto.getProjectId() != null) {
+            return projectRepository.findById(dto.getProjectId())
+                    .filter(p -> !p.getIsDelete())
+                    .map(p -> EntityNameResDto.builder()
+                            .type("project")
+                            .id(p.getId())
+                            .name(p.getProjectName())
+                            .build())
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 프로젝트입니다."));
+        }
+
+        if (dto.getStoneId() != null) {
+            return stoneRepository.findById(dto.getStoneId())
+                    .filter(s -> !s.getIsDelete())
+                    .map(s -> EntityNameResDto.builder()
+                            .type("stone")
+                            .id(s.getId())
+                            .name(s.getStoneName())
+                            .build())
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 스톤입니다."));
+        }
+
+        throw new IllegalArgumentException("workspaceId, projectId, stoneId 중 하나는 반드시 필요합니다.");
+    }
+
+    // 워크스페이스 내 나의 스톤 목록 조회 (루트스톤 제외)
+    @Transactional(readOnly = true)
+    public List<MyStoneResDto> getMyStonesInWorkspace(String userId, String workspaceId) {
+
+        // 1. 워크스페이스 참가자 검증
+        WorkspaceParticipant participant = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspaceId, UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("해당 워크스페이스 참가자가 아닙니다."));
+
+        // 2. 내가 참여 중인 스톤 전부 조회 (루트 스톤 제외, isDelete=false)
+        List<StoneParticipant> myStoneParticipants =
+                stoneParticipantRepository.findAllActiveWithStoneByWorkspaceParticipant(participant);
+
+        // 3. 루트 스톤 제외 (parentStoneId != null)
+        List<Stone> filteredStones = myStoneParticipants.stream()
+                .map(StoneParticipant::getStone)
+                .filter(stone -> stone.getParentStoneId() != null) // 루트 스톤 제외
+                .toList();
+
+        // 4. DTO 변환
+        return filteredStones.stream()
+                .map(stone -> MyStoneResDto.builder()
+                        .stoneId(stone.getId())
+                        .stoneName(stone.getStoneName())
+                        .projectName(stone.getProject().getProjectName())
+                        .milestone(stone.getMilestone() != null ? stone.getMilestone() : BigDecimal.ZERO)
+                        .startTime(stone.getStartTime())
+                        .endTime(stone.getEndTime())
+                        .build())
+                .toList();
+    }
+
 
 
 

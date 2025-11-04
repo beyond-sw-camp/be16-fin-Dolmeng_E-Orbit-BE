@@ -1,5 +1,6 @@
 package com.Dolmeng_E.search.domain.search.entity;
 
+import com.Dolmeng_E.search.domain.search.dto.EventDto;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -64,4 +65,26 @@ public class FileDocument {
     // 생성자 이름
     @Field(type = FieldType.Keyword, index = false)
     private String creatorName;
+
+    // 루트 경로
+    @Field(type = FieldType.Keyword, index = false)
+    private String rootType;
+
+    // 루트 ID
+    @Field(type = FieldType.Keyword, index = false)
+    private String rootId;
+
+    // 상위 폴더
+    @Field(type = FieldType.Keyword, index = false)
+    private String parentId;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String fileUrl;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private Long size;
+
+    public void updateFile(EventDto.EventPayload eventPayload){
+        this.searchTitle = eventPayload.getSearchTitle();
+    }
 }

@@ -101,23 +101,6 @@ public class WorkspaceController {
     }
 
 
-//    To-Do: throw로 던졌지만 공통 에러 코드로 잡아야함
-//    워크스페이스 이메일 회원 초대 (메일 발송)
-    @PostMapping("/{workspaceId}/invite")
-    public ResponseEntity<CommonSuccessDto> inviteUsersToWorkspace(
-            @RequestHeader("X-User-Id") String userId,
-            @PathVariable String workspaceId,
-            @RequestBody WorkspaceInviteDto dto
-    ) throws AccessDeniedException {
-        workspaceService.inviteUsers(userId, workspaceId, dto);
-        return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result("초대 메일 발송 완료")
-                .statusCode(HttpStatus.OK.value())
-                .statusMessage("워크스페이스 이메일 초대 성공")
-                .build(),
-                HttpStatus.OK);
-    }
-
 //    워크스페이스 참여자 목록 조회
     @GetMapping("/{workspaceId}/participants")
     public ResponseEntity<?> getWorkspaceParticipants(
@@ -468,6 +451,32 @@ public class WorkspaceController {
             @PathVariable("stoneId") String stoneId
     ) {
         return workspaceService.checkWorkspaceOrProjectManager(stoneId, userId);
+    }
+
+    // 워크스페이스id, 프젝id, 스톤id 중 하나 넘겼을 때 해당 이름 받아오는 api
+    @PostMapping("/entity/name")
+    public EntityNameResDto getEntityName(
+            @RequestBody EntityNameReqDto dto
+    ) {
+        return workspaceService.getEntityName(dto);
+    }
+
+    // 워크스페이스에서 나의 스톤 목록 가져오기 (루트스톤 제외)
+    @GetMapping("/{workspaceId}/my-stones")
+    public ResponseEntity<?> getMyStonesInWorkspace(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String workspaceId
+    ) {
+        List<MyStoneResDto> result = workspaceService.getMyStonesInWorkspace(userId, workspaceId);
+
+        return new ResponseEntity<>(
+                CommonSuccessDto.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .statusMessage("워크스페이스 내 내 스톤 목록 조회 성공")
+                        .result(result)
+                        .build(),
+                HttpStatus.OK
+        );
     }
 
 

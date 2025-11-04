@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.common.config;
 
+import com.fasterxml.jackson.databind.JsonSerializer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,5 +30,19 @@ public class KafkaConfig {
     @Bean(name = "notificationKafkaTemplate")
     public KafkaTemplate<String, Object> notificationKafkaTemplate() {
         return new KafkaTemplate<>(notificationProducerFactory());
+    }
+
+    @Bean(name = "driveProducerFactory")
+    public ProducerFactory<String, String> kafkaProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean(name = "driveKafkaTemplate")
+    public KafkaTemplate<String, String> kafkaTemplate() {
+        return new KafkaTemplate<>(kafkaProducerFactory());
     }
 }

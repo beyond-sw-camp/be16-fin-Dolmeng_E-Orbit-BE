@@ -2,25 +2,26 @@ package com.Dolmeng_E.search.domain.search.service;
 
 import com.Dolmeng_E.search.domain.search.dto.EventDto;
 import com.Dolmeng_E.search.domain.search.entity.DocumentDocument;
+import com.Dolmeng_E.search.domain.search.entity.FileDocument;
 import com.Dolmeng_E.search.domain.search.repository.DocumentDocumentRepository;
+import com.Dolmeng_E.search.domain.search.repository.FileDocumentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
-public class EventConsumer {
+public class DocumentEventConsumer {
     private final ObjectMapper objectMapper; // JSON 파싱용
-    private final HashOperations<String, String, String> hashOperations;
+    private final HashOperations<String, String, String> hashOperations; // 유저 정보 가져오는 용도
     private final DocumentDocumentRepository documentDocumentRepository;
 
-    public EventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository) {
+    public DocumentEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository, FileDocumentRepository fileDocumentRepository) {
         this.objectMapper = objectMapper;
         this.hashOperations = redisTemplate.opsForHash();
         this.documentDocumentRepository = documentDocumentRepository;
@@ -29,7 +30,6 @@ public class EventConsumer {
     @KafkaListener(topics = "document-topic", groupId = "search-consumer-group")
     public void handleDocument(String eventMessage, Acknowledgment ack) {
         try {
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             // 1. Kafka 메시지(JSON)를 DTO로 파싱
             EventDto eventDto = objectMapper.readValue(eventMessage, EventDto.class);
             String eventType = eventDto.getEventType();
@@ -38,8 +38,7 @@ public class EventConsumer {
             // 2. eventType에 따라 분기 처리
             switch (eventType) {
                 case "DOCUMENT_CREATED":
-                case "DOCUMENT_UPDATED":
-                    // 생성과 수정은 ES에서 동일하게 save()를 사용 (Upsert: 없으면 생성, 있으면 덮어쓰기)
+                    // 생성
                     String key = "user:"+eventPayload.getCreatedBy();
                     Map<String, String> userInfo = hashOperations.entries(key);
                     DocumentDocument document = DocumentDocument.builder()
@@ -52,9 +51,33 @@ public class EventConsumer {
                             .createdBy(eventPayload.getCreatedBy())
                             .creatorName(userInfo.get("name"))
                             .profileImageUrl(userInfo.get("profileImageUrl"))
+                            .rootId(eventPayload.getRootId())
+                            .rootType(eventPayload.getRootType())
+                            .parentId(eventPayload.getParentId())
                             .build();
                     documentDocumentRepository.save(document); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + document.getId());
+                    ack.acknowledge();
+                    break;
+                case "DOCUMENT_UPDATED":
+                    Optional<DocumentDocument> optionalDocument = documentDocumentRepository.findById(eventPayload.getId());
+                    if (optionalDocument.isPresent()) {
+                        DocumentDocument documentToUpdate = optionalDocument.get();
+                        if(eventPayload.getSearchTitle()!=null){
+                            documentToUpdate.updateDocument(eventPayload);
+                        }
+                        if(eventPayload.getRootId()!=null){
+                            documentToUpdate.setRootId(eventPayload.getRootId());
+                        }
+                        if(eventPayload.getRootType()!=null){
+                            documentToUpdate.setRootType(eventPayload.getRootType());
+                        }
+                        documentToUpdate.setParentId(eventPayload.getParentId());
+                        documentDocumentRepository.save(documentToUpdate);
+                        System.out.println("ES 업데이트(U) 성공: " + documentToUpdate.getId());
+                    } else {
+                        System.err.println("ES 업데이트(U) 실패: 원본 문서를 찾을 수 없음 - ID: " + eventPayload.getId());
+                    }
                     ack.acknowledge();
                     break;
 

@@ -1,6 +1,7 @@
 package com.Dolmeng_E.user.domain.user.service;
 
 import com.Dolmeng_E.user.common.auth.JwtTokenProvider;
+import com.Dolmeng_E.user.common.dto.UserEmailListDto;
 import com.Dolmeng_E.user.common.dto.UserIdListDto;
 import com.Dolmeng_E.user.common.dto.UserInfoListResDto;
 import com.Dolmeng_E.user.common.dto.UserInfoResDto;
@@ -109,6 +110,28 @@ public class UserService {
                 .build();
     }
 
+    public UserInfoListResDto fetchUserInfoByEmail(UserEmailListDto userEmailListDto) {
+        List<UserInfoResDto> userInfoList = new ArrayList<>();
+
+        for (String email : userEmailListDto.getUserEmailList()) {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 이메일입니다: " + email));
+
+            UserInfoResDto userInfo = UserInfoResDto.builder()
+                    .userId(user.getId())
+                    .userName(user.getName())
+                    .userEmail(user.getEmail())
+                    .profileImageUrl(user.getProfileImageUrl())
+                    .build();
+
+            userInfoList.add(userInfo);
+        }
+
+        return UserInfoListResDto.builder()
+                .userInfoList(userInfoList)
+                .build();
+    }
+
     // 유저 정보 list 반환 API
     public UserInfoListResDto fetchUserListInfo(UserIdListDto userIdListDto) {
 
@@ -170,6 +193,8 @@ public class UserService {
             userRepository.save(user);
             // 회원가입 시 redis에 저장
             saveUserInfoToRedis(user);
+            // 회원가입 시 워크스페이스 생성 메세지 발송
+            userSignupOrchestrationService.publishSignupEvent(user);
         }
         if(user.isDelete()) throw new IllegalArgumentException("탈퇴한 회원입니다.");
 
@@ -195,6 +220,8 @@ public class UserService {
             userRepository.save(user);
             // 회원가입 시 redis에 저장
             saveUserInfoToRedis(user);
+            // 회원가입 시 워크스페이스 생성 메세지 발송
+            userSignupOrchestrationService.publishSignupEvent(user);
         }
         if(user.isDelete()) throw new IllegalArgumentException("탈퇴한 회원입니다.");
 

@@ -1,5 +1,7 @@
 package com.Dolmeng_E.workspace.domain.task.service;
 
+import com.Dolmeng_E.workspace.common.controller.DriveServiceClient;
+import com.Dolmeng_E.workspace.common.controller.SearchServiceClient;
 import com.Dolmeng_E.workspace.common.domain.NotificationType;
 import com.Dolmeng_E.workspace.common.dto.NotificationCreateReqDto;
 import com.Dolmeng_E.workspace.common.service.MilestoneCalculator;
@@ -15,13 +17,17 @@ import com.Dolmeng_E.workspace.domain.task.dto.TaskModifyDto;
 import com.Dolmeng_E.workspace.domain.task.dto.TaskResDto;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
+import com.Dolmeng_E.workspace.domain.workspace.dto.DriveKafkaReqDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +48,10 @@ public class TaskService {
     private final StoneParticipantRepository stoneParticipantRepository;
     private final MilestoneCalculator milestoneCalculator;
     private final NotificationKafkaService notificationKafkaService;
+    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final DriveServiceClient driveServiceClient;
+    private final SearchServiceClient searchServiceClient;
 
     // 태스크 생성(생성시 스톤의 task수 반영 필요)
     public String createTask(String userId, TaskCreateDto dto) {
@@ -117,14 +127,17 @@ public class TaskService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
-                .content("태스크가 배정되었습니다! 🎉")
+                .content(task.getTaskName() + " 태스크가 배정되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("TASK_MESSAGE")
                 // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
                 // 즉시알림이라면 null (채팅같은)
                 .sendAt(null)
+                .workspaceId(workspace.getId())
                 .taskId(task.getId())
+                .stoneId(stone.getId())
+                .projectId(project.getId())
                 .build();
 
         notificationKafkaService.kafkaNotificationPublish(notificationCreateReqDto);
@@ -201,14 +214,17 @@ public class TaskService {
             NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                     // 워크스페이스명 수동으로 넣어줘야 해요
                     .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
-                    .content("태스크가 배정되었습니다! 🎉")
+                    .content(task.getTaskName() + " 태스크가 배정되었습니다! 🎉")
                     .userIdList(userIdList)
                     // 위에서 추가한 알림 타입 String으로 주입
                     .type("TASK_MESSAGE")
                     // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
                     // 즉시알림이라면 null (채팅같은)
                     .sendAt(null)
+                    .workspaceId(workspace.getId())
                     .taskId(task.getId())
+                    .stoneId(stone.getId())
+                    .projectId(project.getId())
                     .build();
         }
 
@@ -221,6 +237,8 @@ public class TaskService {
 
     // 태스크 삭제(삭제시 스톤의 task수 반영 필요)
     public void deleteTask(String userId, String taskId) {
+        driveServiceClient.deleteAll("TASK", taskId);
+        searchServiceClient.deleteAll("TASK", taskId);
         // 1. 태스크 조회
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new EntityNotFoundException("태스크를 찾을 수 없습니다."));
@@ -252,6 +270,22 @@ public class TaskService {
 
         // 6. 마일스톤 갱신
         milestoneCalculator.updateStoneAndParents(stone);
+
+        // kafka 메시지 발행
+        DriveKafkaReqDto driveKafkaReqDto = DriveKafkaReqDto.builder()
+                .rootId(taskId)
+                .rootType("TASK")
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(driveKafkaReqDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("drive-delete-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+        }
     }
 
 
@@ -300,13 +334,15 @@ public class TaskService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "하위 태스크 완료")
-                .content("태스크가 완료되었습니다! 🎉")
+                .content(task.getTaskName() + " 태스크가 완료되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("TASK_MESSAGE")
                 // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
                 // 즉시알림이라면 null (채팅같은)
                 .sendAt(null)
+                .projectId(project.getId())
+                .workspaceId(workspace.getId())
                 .stoneId(stone.getId())
                 .build();
 
@@ -367,4 +403,67 @@ public class TaskService {
 
         return result;
     }
+
+    // 태스크 취소
+    public String cancelTask(String userId, String taskId) {
+        // 1. 태스크 조회
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new EntityNotFoundException("태스크를 찾을 수 없습니다."));
+
+        Stone stone = task.getStone();
+        Project project = stone.getProject();
+        Workspace workspace = project.getWorkspace();
+
+        // 2. 요청자 조회
+        WorkspaceParticipant requester = workspaceParticipantRepository
+                .findByWorkspaceIdAndUserId(workspace.getId(), UUID.fromString(userId))
+                .orElseThrow(() -> new EntityNotFoundException("워크스페이스 참여자 정보를 찾을 수 없습니다."));
+
+        // 3. 권한검증 (관리자, 프로젝트 담당자, 스톤 담당자, 태스크 담당자 허용)
+        boolean isAdmin = requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN);
+        boolean isProjectManager = project.getWorkspaceParticipant().equals(requester);
+        boolean isStoneManager = stone.getStoneManager().equals(requester);
+        boolean isTaskManager = task.getTaskManager().equals(requester);
+
+        if (!isAdmin && !isProjectManager && !isStoneManager && !isTaskManager) {
+            throw new IllegalArgumentException("태스크 취소 권한이 없습니다.");
+        }
+
+        // 4. 이미 미완료 상태면 취소 불필요
+        if (!task.getIsDone()) {
+            throw new IllegalArgumentException("이미 미완료 상태의 태스크입니다.");
+        }
+
+        // 5. 태스크 상태 변경
+        task.setIsDone(false);
+        taskRepository.save(task);
+
+        // 6. 스톤 완료된 태스크 수 감소
+        stone.decrementTaskCount();
+        stoneRepository.save(stone);
+
+        // 7. 마일스톤 재계산
+        milestoneCalculator.updateStoneAndParents(stone);
+
+        // 8. 알림 전송 (스톤 담당자에게)
+        List<UUID> userIdList = new ArrayList<>();
+        userIdList.add(stone.getStoneManager().getUserId());
+
+        NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
+                .title("[" + workspace.getWorkspaceName() + "] 태스크 취소 알림")
+                .content("태스크가 취소되었습니다. (" + task.getTaskName() + ")")
+                .userIdList(userIdList)
+                .type("TASK_MESSAGE")
+                .sendAt(null)
+                .workspaceId(workspace.getId())
+                .projectId(project.getId())
+                .stoneId(stone.getId())
+                .taskId(task.getId())
+                .build();
+
+        notificationKafkaService.kafkaNotificationPublish(notificationCreateReqDto);
+
+        return task.getId();
+    }
+
 }

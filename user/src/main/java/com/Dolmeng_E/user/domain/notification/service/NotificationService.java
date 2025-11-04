@@ -50,6 +50,10 @@ public class NotificationService {
                     .content(reqDto.getContent())
                     .type(NotificationType.valueOf(reqDto.getType()))
                     .user(user)
+                    .workspaceId(reqDto.getWorkspaceId())
+                    .projectId(reqDto.getProjectId())
+                    .stoneId(reqDto.getStoneId())
+                    .taskId(reqDto.getTaskId())
                     .build();
 
             notificationRepository.save(notification);

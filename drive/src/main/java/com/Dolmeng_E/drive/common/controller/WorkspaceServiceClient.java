@@ -1,14 +1,10 @@
 package com.Dolmeng_E.drive.common.controller;
 
-import com.Dolmeng_E.drive.common.dto.StoneTaskResDto;
-import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
-import com.Dolmeng_E.drive.common.dto.WorkspaceOrProjectManagerCheckDto;
+import com.Dolmeng_E.drive.common.dto.*;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -69,5 +65,12 @@ public interface WorkspaceServiceClient {
     WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
             @PathVariable("stoneId") String stoneId,
             @RequestHeader("X-User-Id") String userId
+    );
+
+    // 워크스페이스id, 프젝id, 스톤id 중 하나 넘겼을 때 해당 이름 받아오는 api
+    @PostMapping("/workspace/entity/name")
+    EntityNameResDto getEntityName(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody EntityNameReqDto dto
     );
 }

@@ -1,10 +1,10 @@
 package com.Dolmeng_E.workspace.domain.stone.service;
 
-import com.Dolmeng_E.workspace.common.dto.NotificationCreateReqDto;
-import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
-import com.Dolmeng_E.workspace.common.dto.UserInfoListResDto;
-import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
+import com.Dolmeng_E.workspace.common.controller.DriveServiceClient;
+import com.Dolmeng_E.workspace.common.controller.SearchServiceClient;
+import com.Dolmeng_E.workspace.common.dto.*;
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
+import com.Dolmeng_E.workspace.common.service.ChatFeign;
 import com.Dolmeng_E.workspace.common.service.MilestoneCalculator;
 import com.Dolmeng_E.workspace.common.service.UserFeign;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
@@ -21,13 +21,17 @@ import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
+import com.Dolmeng_E.workspace.domain.workspace.dto.DriveKafkaReqDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.Dolmeng_E.workspace.domain.stone.dto.TaskResDto;
@@ -51,8 +55,11 @@ public class StoneService {
     private final TaskRepository taskRepository;
     private final UserFeign userFeign;
     private final MilestoneCalculator milestoneCalculator;
+    private final ChatFeign chatFeign;
+    private final DriveServiceClient driveServiceClient;
+    private final SearchServiceClient searchServiceClient;
 
-// 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
+    // 최상위 스톤 생성(프로젝트 생성 시 자동 생성)
     public String createTopStone(TopStoneCreateDto dto) {
 
         // 1. 참여자 검증
@@ -166,6 +173,7 @@ public class StoneService {
                         .startTime(dto.getStartTime())
                         .endTime(dto.getEndTime())
                         .project(project)
+                        .stoneDescribe(dto.getStoneDescribe())
                         .stoneManager(participant)
                         .chatCreation(dto.getChatCreation() != null ? dto.getChatCreation() : false)
                         .parentStoneId(parentStone.getId())
@@ -211,14 +219,16 @@ public class StoneService {
             // 객체 생성
             NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                     // 워크스페이스명 수동으로 넣어줘야 해요
-                    .title("[" + workspace.getWorkspaceName() + "]" + "태스크 배정")
-                    .content("태스크가 배정되었습니다! 🎉")
+                    .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 추가")
+                    .content(childStone.getStoneName() + " 스톤 참여자에 추가되었습니다! 🎉")
                     .userIdList(userIdList)
                     // 위에서 추가한 알림 타입 String으로 주입
-                    .type("TASK_MESSAGE")
+                    .type("STONE_MESSAGE")
                     // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
                     // 즉시알림이라면 null (채팅같은)
                     .sendAt(null)
+                    .projectId(project.getId())
+                    .workspaceId(workspace.getId())
                     .stoneId(childStone.getId())
                     .build();
         }
@@ -227,6 +237,46 @@ public class StoneService {
         project.incrementStoneCount();
         projectRepository.save(project);
         milestoneCalculator.updateStoneAndParents(parentStone);
+
+
+        // 13. 채팅방 생성 및 초대 (chatCreation이 true인 경우)
+        if (Boolean.TRUE.equals(childStone.getChatCreation())) {
+
+            // 1️. 채팅방 생성
+            ChatCreateReqDto chatCreateReqDto = ChatCreateReqDto.builder()
+                    .workspaceId(workspace.getId())
+                    .projectId(project.getId())
+                    .stoneId(childStone.getId())
+                    .roomName(childStone.getStoneName()) // 스톤명 기반 채팅방명
+                    .build();
+
+            chatFeign.createChatRoom(chatCreateReqDto);
+
+            // 2. 채팅방에 초대할 인원 구성
+            List<UUID> userIdList = new ArrayList<>();
+
+            // 스톤 참여자
+            if (dto.getParticipantIds() != null && !dto.getParticipantIds().isEmpty()) {
+                userIdList.addAll(dto.getParticipantIds());
+            }
+
+            // 스톤 담당자(생성자) 포함
+            userIdList.add(participant.getUserId());
+
+            // 중복 제거
+            List<UUID> distinctUserList = userIdList.stream().distinct().toList();
+
+            // 3. 초대 요청
+            ChatInviteReqDto chatInviteReqDto = ChatInviteReqDto.builder()
+                    .workspaceId(workspace.getId())
+                    .projectId(project.getId())
+                    .stoneId(childStone.getId())
+                    .userIdList(distinctUserList)
+                    .build();
+
+            chatFeign.inviteChatParticipants(chatInviteReqDto);
+        }
+
 
         return childStone.getId();
     }
@@ -361,7 +411,7 @@ public class StoneService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 등록")
-                .content("스톤 참여자로 등록되었습니다! 🎉")
+                .content(stone.getStoneName() +  " 스톤 참여자로 등록되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("STONE_MESSAGE")
@@ -369,7 +419,26 @@ public class StoneService {
                 // 즉시알림이라면 null (채팅같은)
                 .sendAt(null)
                 .stoneId(stone.getId())
+                .projectId(project.getId())
+                .workspaceId(workspace.getId())
                 .build();
+
+        // 추가 : 채팅방 인원 추가 (채팅방 생성된 스톤만)
+        if (stone.getChatCreation() != null && stone.getChatCreation() && !newParticipants.isEmpty()) {
+
+            ChatInviteReqDto chatInviteReqDto = ChatInviteReqDto.builder()
+                    .workspaceId(workspace.getId())
+                    .projectId(project.getId())
+                    .stoneId(stone.getId())
+                    .userIdList(newParticipants.stream()
+                            .map(sp -> sp.getWorkspaceParticipant().getUserId())
+                            .distinct()
+                            .toList())
+                    .build();
+
+            // chat-service에 채팅방 초대 요청
+            chatFeign.inviteChatParticipants(chatInviteReqDto);
+        }
     }
 
 
@@ -525,22 +594,43 @@ public class StoneService {
         if (dto.getStoneName() != null) stone.setStoneName(dto.getStoneName());
         if (dto.getStartTime() != null) stone.setStartTime(dto.getStartTime());
         if (dto.getEndTime() != null) stone.setEndTime(dto.getEndTime());
+        if (dto.getStoneDescribe() != null) stone.setStoneDescribe(dto.getStoneDescribe());
 
         // 7. 채팅방 생성 여부 방어 로직
         if (dto.getChatCreation() != null) {
-            boolean prev = stone.getChatCreation();  // 현재 DB에 저장된 상태
-            boolean next = dto.getChatCreation();   // 수정 요청 값
+            boolean prev = stone.getChatCreation();  // 현재 DB 저장 상태
+            boolean next = dto.getChatCreation();    // 수정 요청 값
 
             // 이미 true인데 false로 바꾸려 하면 막기
-            if (prev && !next) {
-                throw new IllegalStateException("이미 생성된 채팅방은 비활성화할 수 없습니다.");
+            if (!prev && next) {
+                stone.setChatCreation(true);
+
+                // 스톤 담당자 포함
+                List<UUID> userIdList = new ArrayList<>(
+                        stoneParticipantRepository.findAllByStone(stone)
+                                .stream()
+                                .map(sp -> sp.getWorkspaceParticipant().getUserId())
+                                .toList()
+                );
+                userIdList.add(stone.getStoneManager().getUserId()); // 담당자 추가
+
+                List<UUID> distinctUserList = userIdList.stream().distinct().toList();
+
+                // 1. 채팅방 생성 (roomName은 스톤 이름 기반으로)
+                ChatCreateReqDto createDto = ChatCreateReqDto.builder()
+                        .workspaceId(workspace.getId())
+                        .projectId(project.getId())
+                        .stoneId(stone.getId())
+                        .roomName(stone.getStoneName())
+                        .userIdList(distinctUserList)
+                        .build();
+
+                chatFeign.createChatRoom(createDto);  // 생성 호출
+
+                // 2. (선택) 이미 참여자 목록이 있다면, 이후 초대 로직도 가능
+                // chatFeign.inviteChatParticipants(chatInviteReqDto);
             }
 
-//            // false → true 전환만 허용
-//            if (!prev && next) {
-//                stone.setChatCreation(true);
-//                // todo 추후에 여기서 chatRoomService.createChatRoom(stone) 붙여야함
-//            }
         }
         if (dto.getEndTime() != null) {
             stone.setEndTime(dto.getEndTime());
@@ -607,6 +697,8 @@ public class StoneService {
 
     // 스톤 삭제
     public void deleteStone(String userId, String stoneId) {
+        driveServiceClient.deleteAll("STONE", stoneId);
+        searchServiceClient.deleteAll("STONE", stoneId);
 
         // 1. 스톤 조회
         Stone stone = stoneRepository.findById(stoneId)
@@ -745,7 +837,7 @@ public class StoneService {
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
                 // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "하위스톤 완료")
-                .content("하위 스톤이 완료되었습니다! 🎉")
+                .content(stone.getStoneName() + " 스톤이 완료되었습니다! 🎉")
                 .userIdList(userIdList)
                 // 위에서 추가한 알림 타입 String으로 주입
                 .type("STONE_MESSAGE")
@@ -753,6 +845,8 @@ public class StoneService {
                 // 즉시알림이라면 null (채팅같은)
                 .sendAt(null)
                 .stoneId(stone.getId())
+                .projectId(project.getId())
+                .workspaceId(workspace.getId())
                 .build();
     }
 
@@ -955,4 +1049,15 @@ public class StoneService {
                 .map(StoneListResDto::fromEntity)
                 .toList();
     }
+
+    // 스톤 ID로 테스크 목록 조회
+    public List<SubTaskResDto> getSubTasksByStone(String stoneId){
+        Stone stone = stoneRepository.findById(stoneId).orElseThrow(()->new EntityNotFoundException("존재하지 않는 스톤입니다."));
+        List<Task> tasks = taskRepository.findAllByStone(stone);
+        return tasks.stream()
+                .map(SubTaskResDto::new)
+                .toList();
+    }
+
+
 }

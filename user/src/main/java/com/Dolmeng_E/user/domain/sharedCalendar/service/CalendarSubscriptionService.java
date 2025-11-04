@@ -1,5 +1,6 @@
 package com.Dolmeng_E.user.domain.sharedCalendar.service;
 
+import com.Dolmeng_E.user.common.dto.UserInfoResDto;
 import com.Dolmeng_E.user.common.service.WorkspaceFeign;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.SubscriptionCreateReqDto;
 import com.Dolmeng_E.user.domain.sharedCalendar.dto.SubscriptionDeleteReqDto;
@@ -85,6 +86,12 @@ public class CalendarSubscriptionService {
 
         for (CalendarSubscription sub : list) {
             // 구독 대상의 일정 중 같은 워크스페이스에 속한 일정만 가져오기
+//            List<SharedCalendar> sharedCalendars =
+//                    sharedCalendarRepository.findSharedCalendarsByUserIdAndWorkspaceIdAndCalendarType(
+//                            sub.getTargetUserId().getId(), workspaceId, CalendarType.SCHEDULE
+//                    );
+
+            // 구독 대상의 공유 일정 중 공유된 일정(isShared = true)만 가져오기
             List<SharedCalendar> sharedCalendars =
                     sharedCalendarRepository.findSharedCalendarsByUserIdAndWorkspaceIdAndCalendarType(
                             sub.getTargetUserId().getId(), workspaceId, CalendarType.SCHEDULE
@@ -141,7 +148,7 @@ public class CalendarSubscriptionService {
             CalendarSubscription sub = calendarSubscriptionRepository.findById(subId)
                     .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 구독입니다."));
 
-            String workspaceId = sub.getWorkspaceId();
+            String workspaceId = dto.getWorkspaceId();
 
             // 2. 워크스페이스 및 소속 검증
             validationService.validateWorkspace(workspaceId);

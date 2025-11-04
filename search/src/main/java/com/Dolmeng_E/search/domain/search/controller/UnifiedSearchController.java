@@ -1,5 +1,6 @@
 package com.Dolmeng_E.search.domain.search.controller;
 
+import com.Dolmeng_E.search.domain.search.service.SearchService;
 import com.Dolmeng_E.search.domain.search.service.UnifiedSearchService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import lombok.RequiredArgsConstructor;
@@ -12,22 +13,29 @@ import org.springframework.web.bind.annotation.*;
 public class UnifiedSearchController {
 
     private final UnifiedSearchService unifiedSearchService;
+    private final SearchService searchService;
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchDocument(@RequestParam String keyword) {
+    public ResponseEntity<?> searchDocument(@RequestHeader("X-User-Id") String userId, @RequestParam String keyword) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(unifiedSearchService.search(keyword, "2eb87833-c2dd-47ec-9799-be958953e2e6"))
+                .result(unifiedSearchService.search(keyword, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("검색 성공")
                 .build(), HttpStatus.OK);
     }
 
     @GetMapping("/suggest")
-    public ResponseEntity<?> suggestDocument(@RequestParam String keyword) {
+    public ResponseEntity<?> suggestDocument(@RequestHeader("X-User-Id") String userId, @RequestParam String keyword) {
         return new ResponseEntity<>(CommonSuccessDto.builder()
-                .result(unifiedSearchService.suggest(keyword, "2eb87833-c2dd-47ec-9799-be958953e2e6"))
+                .result(unifiedSearchService.suggest(keyword, userId))
                 .statusCode(HttpStatus.OK.value())
                 .statusMessage("검색어 제안")
                 .build(), HttpStatus.OK);
+    }
+
+    // 워크스페이스/프로젝트/스톤 삭제 시 문서함 삭제
+    @DeleteMapping("/{rootType}/{rootId}/all")
+    public void deleteAll(@PathVariable String rootType, @PathVariable String rootId) {
+        searchService.deleteAll(rootType, rootId);
     }
 }
