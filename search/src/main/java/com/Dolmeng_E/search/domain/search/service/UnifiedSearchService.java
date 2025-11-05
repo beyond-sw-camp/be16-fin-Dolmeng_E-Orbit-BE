@@ -1,5 +1,8 @@
 package com.Dolmeng_E.search.domain.search.service;
 
+// ▼▼▼ [수정] co.elastic.clients.elasticsearch._types.query_dsl.Query 임포트 추가 ▼▼▼
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+// ▲▲▲ [수정] 끝 ▲▲▲
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.Dolmeng_E.search.domain.search.dto.DocumentSearchResDto;
 import com.Dolmeng_E.search.domain.search.dto.DocumentSuggestResDto;
@@ -45,11 +48,13 @@ public class UnifiedSearchService {
                 .withPostTags("</em>")
                 .build();
 
-        // 2. HighlightField 목록 생성 (변경 없음)
+        // ▼▼▼ [수정] docLines.content 하이라이트 필드 추가 ▼▼▼
         List<HighlightField> highlightFields = List.of(
                 new HighlightField("searchTitle"),
-                new HighlightField("searchContent")
+                new HighlightField("searchContent"),    // 파일/스톤용
+                new HighlightField("docLines.content") // [추가] 문서 라인용
         );
+        // ▲▲▲ [수정] 끝 ▲▲▲
 
         // 3. Highlight 객체 생성 (변경 없음)
         Highlight highlight = new Highlight(highlightParameters, highlightFields);
@@ -58,50 +63,70 @@ public class UnifiedSearchService {
         // ✅ HighlightQuery 생성 (변경 없음)
         HighlightQuery highlightQuery = new HighlightQuery(highlight, DocumentSearchResDto.class);
 
-        // ✅ 2. NativeQuery
+        // --- ▼▼▼ [수정] 쿼리 정의 분리 및 nested 쿼리 추가 ▼▼▼ ---
+
+        // 쿼리 1: searchTitle.ngram (공통 제목)
+        Query titleQuery = Query.of(q -> q
+                .match(mt -> mt
+                        .field("searchTitle.ngram")
+                        .query(keyword)
+                )
+        );
+
+        // 쿼리 2: searchContent (파일/스톤 내용)
+        Query contentQuery = Query.of(q -> q
+                .matchPhrase(mp -> mp
+                        .field("searchContent")
+                        .query(keyword)
+                        .analyzer("nori") // (설정한 default_nori_analyzer 이름으로 변경 가능)
+                )
+        );
+
+        // 쿼리 3: docLines.content (문서 라인 내용 - Nested)
+        Query nestedLinesQuery = Query.of(q -> q
+                .nested(n -> n
+                                .path("docLines")
+                                .query(nq -> nq
+                                        .match(m -> m
+                                                .field("docLines.content")
+                                                .query(keyword)
+                                                // Kafka에서 저장 시 사용한 분석기와 동일하게 지정
+                                                .analyzer("html_strip_nori_analyzer")
+                                        )
+                                )
+                        // inner_hits는 필요 없다고 하셔서 제거
+                )
+        );
+
+        // ✅ 2. NativeQuery (3개 쿼리를 bool.should로 통합)
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
-                                        .must(m -> m
-                                                .bool(bShould -> bShould
-                                                        .should(s -> s
-                                                                // 2-1. searchTitle.ngram (변경 없음)
-                                                                .match(mt -> mt
-                                                                        .field("searchTitle.ngram")
-                                                                        .query(keyword)
-                                                                )
-                                                        )
-                                                        // ▼▼▼ [수정] match -> matchPhrase ▼▼▼
-                                                        .should(s -> s
-                                                                // 2-2. searchContent (Nori + "구문 검색"으로 변경)
-                                                                .matchPhrase(mp -> mp // .match 대신 .matchPhrase
-                                                                                .field("searchContent")
-                                                                                .query(keyword)
-                                                                                .analyzer("nori")
-                                                                        // .operator(Operator.And) // <-- 구문 검색에서는 제거
-                                                                )
-                                                        )
-                                                        // ▲▲▲ [수정] 끝 ▲▲▲
-                                                        .minimumShouldMatch("1")
-                                                )
+                                .must(m -> m
+                                        .bool(bShould -> bShould
+                                                .should(titleQuery)       // 1. 제목
+                                                .should(contentQuery)     // 2. 파일/스톤 내용
+                                                .should(nestedLinesQuery) // 3. [추가] 문서 라인 내용
+                                                .minimumShouldMatch("1")
                                         )
-                                        // 3. 사용자 필터 (변경 없음)
-                                        .filter(f -> f
-                                                .term(t -> t
-                                                        .field("viewableUserIds")
-                                                        .value(currentUserId)
-                                                )
+                                )
+                                // 3. 사용자 필터 (변경 없음)
+                                .filter(f -> f
+                                        .term(t -> t
+                                                .field("viewableUserIds")
+                                                .value(currentUserId)
                                         )
-                                        // ▼▼▼ [추가] 워크스페이스 ID 필터 ▼▼▼
-                                        .filter(f -> f
-                                                .term(t -> t
-                                                        .field("workspaceId") // Elasticsearch의 필드명
-                                                        .value(workspaceId)
-                                                )
+                                )
+                                // 4. 워크스페이스 ID 필터 (변경 없음)
+                                .filter(f -> f
+                                        .term(t -> t
+                                                .field("workspaceId") // Elasticsearch의 필드명
+                                                .value(workspaceId)
                                         )
-                                // ▲▲▲ [추가] 끝 ▲▲▲
+                                )
                         )
                 )
+                // --- ▲▲▲ [수정] 끝 ▲▲▲ ---
                 .withHighlightQuery(highlightQuery)
                 .withPageable(pageable)
                 .build();
@@ -113,7 +138,7 @@ public class UnifiedSearchService {
                 ALL_INDICES
         );
 
-        // ✅ 4. 결과 처리 (변경 없음)
+        // ✅ 4. 결과 처리 (하이라이트 로직 수정)
         return searchHits.stream()
                 .map(hit -> {
                     DocumentSearchResDto dto = hit.getContent();
@@ -123,15 +148,23 @@ public class UnifiedSearchService {
                         dto.setSearchTitle(String.join("", highlights.get("searchTitle")));
                     }
 
+                    // ▼▼▼ [수정] 하이라이트 처리 순서 변경 ▼▼▼
                     if (highlights.containsKey("searchContent")) {
-                        dto.setSearchContent(String.join("", highlights.get("searchContent")));
+                        // 1. 파일/스톤의 내용이 하이라이트된 경우
+                        dto.setSearchContent(String.join(" ... ", highlights.get("searchContent")));
+                    } else if (highlights.containsKey("docLines.content")) {
+                        // 2. [추가] 문서의 라인 내용이 하이라이트된 경우
+                        dto.setSearchContent(String.join(" ... ", highlights.get("docLines.content")));
                     } else if (dto.getSearchContent() != null) {
+                        // 3. (파일/스톤용) 하이라이트 없고 원본 내용이 있을 경우 자르기
                         dto.setSearchContent(
                                 dto.getSearchContent().length() > 200
                                         ? dto.getSearchContent().substring(0, 200) + "..."
                                         : dto.getSearchContent()
                         );
                     }
+                    // ▲▲▲ [수정] 끝 ▲▲▲
+
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -139,6 +172,7 @@ public class UnifiedSearchService {
 
     /**
      * ✅ 통합 검색어 자동완성 (workspaceId 필터 추가됨)
+     * (이 메소드는 제목(searchTitle)만 검색하므로 수정할 필요가 없습니다.)
      */
     public List<DocumentSuggestResDto> suggest(String keyword, String currentUserId, String workspaceId) {
 
@@ -148,7 +182,6 @@ public class UnifiedSearchService {
         NativeQuery query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
-                                        // 1. [수정됨] 제목(searchTitle.ngram)으로만 검색 (이전 대화 반영)
                                         .must(m -> m
                                                 .matchBoolPrefix(mbp -> mbp
                                                         .field(suggestField)
@@ -156,14 +189,12 @@ public class UnifiedSearchService {
                                                         .analyzer("nori_search_analyzer")
                                                 )
                                         )
-                                        // 2. 사용자 필터 조건 (변경 없음)
                                         .filter(f -> f
                                                 .term(t -> t
                                                         .field("viewableUserIds")
                                                         .value(currentUserId)
                                                 )
                                         )
-                                        // ▼▼▼ [추가] 워크스페이스 ID 필터 ▼▼▼
                                         .filter(f -> f
                                                 .term(t -> t
                                                         .field("workspaceId") // Elasticsearch의 필드명
@@ -174,19 +205,16 @@ public class UnifiedSearchService {
                         )
                 )
                 .withPageable(pageable)
-                // [수정] DTO 필드에 맞게 _source 필터링 (변경 없음)
                 .withSourceFilter(new FetchSourceFilter(
                         new String[]{"searchTitle", "docType", "fileUrl"}, null))
                 .build();
 
-        // [수정 1] DTO 클래스 변경 (변경 없음)
         SearchHits<DocumentSuggestResDto> searchHits = elasticsearchOperations.search(
                 query,
                 DocumentSuggestResDto.class, // <-- 반환 DTO 클래스 지정
                 ALL_INDICES
         );
 
-        // [수정 2] DTO 객체 자체를 리스트로 변환 (변경 없음)
         return searchHits.stream()
                 .map(hit -> hit.getContent()) // <-- DTO 객체 추출
                 .collect(Collectors.toList());

@@ -117,7 +117,7 @@ public class DocumentLineService {
                 .eventType("DOCUMENT_UPDATED")
                 .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
                         .id(documentLine.getDocument().getId())
-                        .documentLines(documentLineDtos)
+                        .docLines(documentLineDtos)
                         .build())
                 .build();
         try {
@@ -164,7 +164,7 @@ public class DocumentLineService {
                 .eventType("DOCUMENT_UPDATED")
                 .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
                         .id(newDocumentLine.getDocument().getId())
-                        .documentLines(documentLineDtos)
+                        .docLines(documentLineDtos)
                         .build())
                 .build();
         try {
@@ -198,7 +198,7 @@ public class DocumentLineService {
                 .eventType("DOCUMENT_UPDATED")
                 .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
                         .id(reqDocumentLine.getDocument().getId())
-                        .documentLines(documentLineDtos)
+                        .docLines(documentLineDtos)
                         .build())
                 .build();
         try {
