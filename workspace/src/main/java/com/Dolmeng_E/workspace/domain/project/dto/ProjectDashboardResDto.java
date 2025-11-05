@@ -19,6 +19,8 @@ public class ProjectDashboardResDto {
     private Integer totalTaskCount;
     private Integer completedTaskCount;
 
+    // 추가
+
     public static ProjectDashboardResDto fromEntity(Project project, int totalTaskCount, int completedTaskCount,
                                                     int totalStoneCount, int completedStoneCount) {
         return ProjectDashboardResDto.builder()
