@@ -178,7 +178,7 @@ public interface TaskRepository extends JpaRepository<Task, String> {
             String projectId, LocalDateTime now
     );
 
-    // ⚠️ 완료된 태스크 전부 (완료일 최신순) — 엔티티 필드명에 맞게 정렬 기준 수정 (taskCompletedDate)
+    // 완료된 태스크 전부 (완료일 최신순) — 엔티티 필드명에 맞게 정렬 기준 수정 (taskCompletedDate)
     @Query("""
         select t from Task t
           join t.stone s
