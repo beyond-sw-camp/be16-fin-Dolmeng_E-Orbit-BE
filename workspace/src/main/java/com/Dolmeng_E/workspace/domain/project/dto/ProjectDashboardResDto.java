@@ -1,5 +1,6 @@
 package com.Dolmeng_E.workspace.domain.project.dto;
 
+import com.Dolmeng_E.workspace.common.dto.ElementCountAndSizeResDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,17 +22,13 @@ public class ProjectDashboardResDto {
     private Integer totalTaskCount;
     private Integer completedTaskCount;
 
-    // 추가
-//    // 프로젝트 진행률 - 삭제 : 프로젝트 마일스톤과 동일
-//    private BigDecimal projectProgress;
-
     // 평균 태스크 완료시간
     private Integer avgTaskCompletedTime;
 
     // 태스크 리스크 지수(밀린태스크 수 / 전체 태스크 수)
     private BigDecimal taskRisk;
 
-    // 지연되고 있는 태스크 top3 정보
+    // 지연되고 있는 태스크
     private List<LazyTask> lazyTasklist;
 
     // 완료된 스톤들 정보
@@ -42,6 +39,9 @@ public class ProjectDashboardResDto {
 
     // 예상 완료일 ?
     private LocalDateTime predictCompleteDay;
+
+    // 문서 수 + 용량
+    private ElementCountAndSizeResDto elementCountAndSizeResDto;
 
 
 
@@ -55,7 +55,8 @@ public class ProjectDashboardResDto {
                                             List<LazyTask> lazyTasklist,
                                             List<CompletedStone> completedStoneList,
                                             List<CompletedTask> completedTaskList,
-                                            LocalDateTime predictCompleteDay) {
+                                            LocalDateTime predictCompleteDay,
+                                            ElementCountAndSizeResDto elementCountAndSizeResDto) {
         return ProjectDashboardResDto.builder()
                 .projectMilestone(project != null ? project.getMilestone() : null)
                 .totalStoneCount(totalStoneCount)
@@ -69,6 +70,7 @@ public class ProjectDashboardResDto {
                 .completedStoneList(completedStoneList)
                 .completedTaskList(completedTaskList)
                 .predictCompleteDay(predictCompleteDay)
+                .elementCountAndSizeResDto(elementCountAndSizeResDto)
                 .build();
     }
 
