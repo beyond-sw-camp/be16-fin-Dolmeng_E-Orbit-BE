@@ -31,6 +31,7 @@ public class DocumentSearchResDto {
     private String fileUrl;
     private Long size;
     private String projectId;
+    private List<EventDto.DocumentLineDto> docLines;
 
     @Data
     @NoArgsConstructor

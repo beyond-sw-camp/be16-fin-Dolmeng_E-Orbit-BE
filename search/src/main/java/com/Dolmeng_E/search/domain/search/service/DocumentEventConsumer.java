@@ -2,9 +2,9 @@ package com.Dolmeng_E.search.domain.search.service;
 
 import com.Dolmeng_E.search.domain.search.dto.EventDto;
 import com.Dolmeng_E.search.domain.search.entity.DocumentDocument;
-import com.Dolmeng_E.search.domain.search.entity.FileDocument;
+import com.Dolmeng_E.search.domain.search.entity.DocumentLine;
 import com.Dolmeng_E.search.domain.search.repository.DocumentDocumentRepository;
-import com.Dolmeng_E.search.domain.search.repository.FileDocumentRepository;
+import com.Dolmeng_E.search.domain.search.repository.FileDocumentRepository; // 불필요시 제거
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -12,14 +12,20 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List; // [수정] ArrayList, Regex 관련 import 제거
 import java.util.Map;
 import java.util.Optional;
+// [제거] java.util.regex.Matcher;
+// [제거] java.util.regex.Pattern;
 
 @Component
 public class DocumentEventConsumer {
-    private final ObjectMapper objectMapper; // JSON 파싱용
-    private final HashOperations<String, String, String> hashOperations; // 유저 정보 가져오는 용도
+    private final ObjectMapper objectMapper;
+    private final HashOperations<String, String, String> hashOperations;
     private final DocumentDocumentRepository documentDocumentRepository;
+
+    // [제거] private static final Pattern P_TAG_PATTERN = ...
 
     public DocumentEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository, FileDocumentRepository fileDocumentRepository) {
         this.objectMapper = objectMapper;
@@ -30,22 +36,29 @@ public class DocumentEventConsumer {
     @KafkaListener(topics = "document-topic", groupId = "search-consumer-group")
     public void handleDocument(String eventMessage, Acknowledgment ack) {
         try {
-            // 1. Kafka 메시지(JSON)를 DTO로 파싱
             EventDto eventDto = objectMapper.readValue(eventMessage, EventDto.class);
             String eventType = eventDto.getEventType();
             EventDto.EventPayload eventPayload = eventDto.getEventPayload();
 
-            // 2. eventType에 따라 분기 처리
             switch (eventType) {
                 case "DOCUMENT_CREATED":
-                    // 생성
                     String key = "user:"+eventPayload.getCreatedBy();
                     Map<String, String> userInfo = hashOperations.entries(key);
+                    List<DocumentLine> documentLines = new ArrayList<>();
+//                    List<EventDto.DocumentLineDto> lines = new ArrayList<>();
+//                    lines = eventPayload.getDocLines();
+//                    for(EventDto.DocumentLineDto documentLineDto : lines) {
+//                        documentLines.add(DocumentLine.builder()
+//                                .id(documentLineDto.getId())
+//                                .content(documentLineDto.getContent())
+//                                .build());
+//                    }
+
                     DocumentDocument document = DocumentDocument.builder()
                             .id(eventPayload.getId())
                             .docType("DOCUMENT")
                             .searchTitle(eventPayload.getSearchTitle())
-                            .searchContent(eventPayload.getSearchContent())
+                            .docLines(documentLines)
                             .dateTime(eventPayload.getCreatedAt().toLocalDate())
                             .viewableUserIds(eventPayload.getViewableUserIds())
                             .createdBy(eventPayload.getCreatedBy())
@@ -56,17 +69,45 @@ public class DocumentEventConsumer {
                             .parentId(eventPayload.getParentId())
                             .workspaceId(eventPayload.getWorkspaceId())
                             .build();
-                    documentDocumentRepository.save(document); // ES에 저장 또는 업데이트
+
+                    documentDocumentRepository.save(document);
                     System.out.println("ES 색인(C/U) 성공: " + document.getId());
                     ack.acknowledge();
                     break;
+
                 case "DOCUMENT_UPDATED":
                     Optional<DocumentDocument> optionalDocument = documentDocumentRepository.findById(eventPayload.getId());
                     if (optionalDocument.isPresent()) {
                         DocumentDocument documentToUpdate = optionalDocument.get();
+
                         if(eventPayload.getSearchTitle()!=null){
                             documentToUpdate.updateDocument(eventPayload);
                         }
+                        if (eventPayload.getDocLines() != null) {
+                            List<DocumentLine> documentLineToUpdate =  documentToUpdate.getDocLines();
+                            List<EventDto.DocumentLineDto> docLines = eventPayload.getDocLines();
+                            for(EventDto.DocumentLineDto documentLineDto : docLines) {
+                                // 생성
+                                if(documentLineDto.getType().equals("CREATE")){
+                                    documentLineToUpdate.add(DocumentLine.builder()
+                                            .id(documentLineDto.getId())
+                                            .content(documentLineDto.getContent())
+                                            .build());
+                                // 수정
+                                }else if(documentLineDto.getType().equals("UPDATE")){
+                                    Optional<DocumentLine> found = documentLineToUpdate.stream()
+                                            .filter(documentLine -> documentLine.getId().equals(documentLineDto.getId()))
+                                            .findFirst();
+                                    found.ifPresent(documentLine -> documentLine.setContent(documentLineDto.getContent()));
+                                }else if(documentLineDto.getType().equals("DELETE")){
+                                    Long targetId = documentLineDto.getId();
+                                    documentLineToUpdate.removeIf(documentLine -> documentLine.getId().equals(targetId));
+                                }
+                            }
+                            documentToUpdate.setDocLines(documentLineToUpdate);
+                        }
+
+                        // (기타 메타데이터 업데이트 로직 동일)
                         if(eventPayload.getRootId()!=null){
                             documentToUpdate.setRootId(eventPayload.getRootId());
                         }
@@ -77,6 +118,7 @@ public class DocumentEventConsumer {
                             documentToUpdate.setViewableUserIds(eventPayload.getViewableUserIds());
                         }
                         documentToUpdate.setParentId(eventPayload.getParentId());
+
                         documentDocumentRepository.save(documentToUpdate);
                         System.out.println("ES 업데이트(U) 성공: " + documentToUpdate.getId());
                     } else {
@@ -86,16 +128,14 @@ public class DocumentEventConsumer {
                     break;
 
                 case "DOCUMENT_DELETED":
-                    // 삭제는 ID만 파싱
+                    // (로직 동일)
                     String deletedDocumentId = eventPayload.getId();
-
-                    documentDocumentRepository.deleteById(deletedDocumentId); // ES에서 삭제
+                    documentDocumentRepository.deleteById(deletedDocumentId);
                     ack.acknowledge();
                     System.out.println("ES 삭제(D) 성공: " + deletedDocumentId);
                     break;
 
                 default:
-                    // 알 수 없는 이벤트 타입 로그 처리
                     ack.acknowledge();
                     System.err.println("알 수 없는 이벤트 타입: " + eventType);
                     break;

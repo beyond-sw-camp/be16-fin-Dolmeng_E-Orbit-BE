@@ -7,10 +7,7 @@ import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
 import com.Dolmeng_E.drive.common.dto.WorkspaceOrProjectManagerCheckDto;
 import com.Dolmeng_E.drive.common.service.S3Uploader;
 import com.Dolmeng_E.drive.domain.drive.dto.*;
-import com.Dolmeng_E.drive.domain.drive.entity.Document;
-import com.Dolmeng_E.drive.domain.drive.entity.File;
-import com.Dolmeng_E.drive.domain.drive.entity.Folder;
-import com.Dolmeng_E.drive.domain.drive.entity.RootType;
+import com.Dolmeng_E.drive.domain.drive.entity.*;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentLineRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
@@ -578,6 +575,14 @@ public class DriverService {
         viewableUserIds.add(savedDocument.getCreatedBy());
         Set<String> participants = workspaceServiceClient.getViewableUserIds(savedDocument.getRootId(), savedDocument.getRootType().toString());
         viewableUserIds.addAll(participants);
+        List<DocumentKafkaSaveDto.DocumentLineDto> documentLineDtos = new ArrayList<>();
+        List<DocumentLine> documentLines = documentLineRepository.findAllDocumentLinesByDocumentId(document.getId());
+        for(DocumentLine documentLine : documentLines){
+            documentLineDtos.add(DocumentKafkaSaveDto.DocumentLineDto.builder()
+                    .id(documentLine.getId())
+                    .content(documentLine.getContent())
+                    .build());
+        }
         DocumentKafkaSaveDto documentKafkaSaveDto = DocumentKafkaSaveDto.builder()
                 .eventType("DOCUMENT_CREATED")
                 .eventPayload(DocumentKafkaSaveDto.EventPayload.builder()
@@ -590,6 +595,7 @@ public class DriverService {
                         .viewableUserIds(viewableUserIds)
                         .parentId(savedDocument.getFolder() != null ? savedDocument.getFolder().getId() : null)
                         .workspaceId(workspaceId)
+                        .documentLines(documentLineDtos)
                         .build())
                 .build();
         try {
