@@ -924,6 +924,30 @@ public class DriverService {
         }catch (FeignException e){
             throw new IllegalArgumentException("삭제에 실패했습니다. 잠시후 다시 시도해주세요.");
         }
+    }
 
+    // 프로젝트 ID로 파일/문서 개수 + 파일 용량 조회
+    public ElementCountAndSizeResDto getElementCountAndSize(String projectId){
+        int fileCount = 0;
+        int documentCount = 0;
+        Long totalSize = 0L;
+        // 프로젝트 문서, 파일
+        fileCount+=fileRepository.countByRootIdAndIsDeleteFalse(projectId);
+        documentCount+=documentRepository.countByRootIdAndIsDeleteFalse(projectId);
+        totalSize+=fileRepository.sumSizeByRootId(projectId);
+        // 스톤 문서, 파일
+        StoneTaskResDto stoneTaskResDto = workspaceServiceClient.getSubStonesAndTasks(projectId);
+        List<StoneTaskResDto.StoneInfo> stoneInfos = stoneTaskResDto.getStones();
+        for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+            fileCount+=fileRepository.countByRootIdAndIsDeleteFalse(stoneInfo.getStoneId());
+            documentCount+=documentRepository.countByRootIdAndIsDeleteFalse(stoneInfo.getStoneId());
+            totalSize+=fileRepository.sumSizeByRootId(stoneInfo.getStoneId());
+        }
+
+        return ElementCountAndSizeResDto.builder()
+                .fileCount(fileCount)
+                .documentCount(documentCount)
+                .totalSize(totalSize)
+                .build();
     }
 }

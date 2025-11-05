@@ -27,4 +27,9 @@ public interface FileRepository extends JpaRepository<File, String> {
     @Transactional // (중요) 업데이트/삭제 쿼리는 트랜잭션 내에서 실행되어야 합니다.
     @Query("UPDATE File e SET e.isDelete = true WHERE e.rootType = :rootType AND e.rootId = :rootId")
     void softDeleteByRootInfo(@Param("rootType") RootType rootType, @Param("rootId") String rootId);
+
+    int countByRootIdAndIsDeleteFalse(String rootId);
+
+    @Query("SELECT COALESCE(SUM(f.size), 0) FROM File f WHERE f.rootId = :rootId AND f.isDelete = false")
+    long sumSizeByRootId(@Param("rootId") String rootId);
 }

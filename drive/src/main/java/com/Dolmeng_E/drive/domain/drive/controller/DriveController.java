@@ -240,4 +240,14 @@ public class DriveController {
     public void deleteAll(@PathVariable String rootType, @PathVariable String rootId) {
         driverService.deleteAll(rootType, rootId);
     }
+
+    // 프로젝트 ID로 프로젝트 파일/문서 개수 + 파일 용량
+    @GetMapping("/elements/{projectId}")
+    public ResponseEntity<?> getElements(@PathVariable String projectId) {
+        return new ResponseEntity<>(CommonSuccessDto.builder()
+                .result(driverService.getElementCountAndSize(projectId))
+                .statusCode(HttpStatus.OK.value())
+                .statusMessage("파일/문서 개수 + 파일 용량 조회 성공")
+                .build(), HttpStatus.OK);
+    }
 }
