@@ -69,7 +69,9 @@ public class KafkaService {
         chatMessageDto.setSenderName(senderInfo.getUserName());
         chatMessageDto.setUserProfileImageUrl(senderInfo.getProfileImageUrl());
 
-        if(chatMessageDto.getMessageType() == MessageType.TEXT) {
+        if(chatMessageDto.getMessageType() == MessageType.TEXT ||
+                chatMessageDto.getMessageType() == MessageType.VIDEO_CALL_START ||
+                chatMessageDto.getMessageType() == MessageType.VIDEO_CALL_END) {
             messageTemplate.convertAndSend("/topic/"+key, chatMessageDto);
 
             // 위 작업들 문제없으면 커밋 (offset)

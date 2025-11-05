@@ -171,6 +171,7 @@ public class ChatService {
                     .lastMessage(chatMessage != null ? chatMessage.getContent() : "메시지가 없습니다.")
                     .lastSendTime(chatMessage != null ? chatMessage.getCreatedAt() : null)
                     .unreadCount(unreadCount)
+                    .isVideoCallActive(room.getIsVideoCallActive())
                     .userProfileImageUrlList(userProfileImageUrlList)
                     .build();
 
@@ -241,6 +242,7 @@ public class ChatService {
                     .lastSendTime(dto.getLastSendTime())
                     .lastSenderId(dto.getSenderId())
                     .unreadCount(unreadCount)
+                    // 여기서는 메시지 타입으로 구분
                     .messageType(dto.getMessageType())
                     .build();
 

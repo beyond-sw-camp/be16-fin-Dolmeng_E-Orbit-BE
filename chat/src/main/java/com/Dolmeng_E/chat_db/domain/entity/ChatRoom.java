@@ -36,6 +36,10 @@ public class ChatRoom extends BaseTimeEntity {
     @Column(nullable = false)
     private String isDelete = "N";
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean isVideoCallActive = false;
+
     @OneToMany(mappedBy = "chatRoom", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ChatParticipant> chatParticipantList = new ArrayList<>();

@@ -2,10 +2,7 @@ package com.Dolmeng_E.chat_db.domain.entity;
 
 import com.example.modulecommon.domain.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +32,11 @@ public class ChatRoom extends BaseTimeEntity {
     @Builder.Default
     @Column(nullable = false)
     private String isDelete = "N";
+
+    @Builder.Default
+    @Column(nullable = false)
+    @Setter
+    private Boolean isVideoCallActive = false;
 
     @OneToMany(mappedBy = "chatRoom", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

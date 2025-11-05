@@ -55,6 +55,12 @@ public class ChatService {
         // 채팅방 조회
         ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(() -> new EntityNotFoundException("없는 채팅방입니다."));
 
+        if(chatMessageDto.getMessageType() == MessageType.VIDEO_CALL_START) {
+            chatRoom.setIsVideoCallActive(true);
+        } else if(chatMessageDto.getMessageType() == MessageType.VIDEO_CALL_END) {
+            chatRoom.setIsVideoCallActive(false);
+        }
+
         // 보낸사람 조회
         UserInfoResDto senderInfo = userFeignClient.fetchUserInfoById(chatMessageDto.getSenderId());
 
