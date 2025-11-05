@@ -1,6 +1,7 @@
 package com.Dolmeng_E.search.domain.search.service;
 
 import com.Dolmeng_E.search.domain.search.dto.TaskEventDto;
+import com.Dolmeng_E.search.domain.search.entity.StoneDocument;
 import com.Dolmeng_E.search.domain.search.entity.TaskDocument;
 import com.Dolmeng_E.search.domain.search.repository.StoneDocumentRepository;
 import com.Dolmeng_E.search.domain.search.repository.TaskDocumentRepository;
@@ -40,6 +41,7 @@ public class TaskEventConsumer {
                     // 생성
                     String key = "user:"+eventPayload.getManager();
                     Map<String, String> userInfo = hashOperations.entries(key);
+                    StoneDocument stoneDocument = stoneDocumentRepository.findById(eventPayload.getStoneId()).orElseThrow(() -> new RuntimeException("Stone not found"));
                     TaskDocument taskDocument = TaskDocument.builder()
                             .id(eventPayload.getId())
                             .docType("TASK")
@@ -50,9 +52,10 @@ public class TaskEventConsumer {
                             .creatorName(userInfo.get("name"))
                             .profileImageUrl(userInfo.get("profileImageUrl"))
                             .rootId(eventPayload.getStoneId())
-                            .rootType("PROJECT")
+                            .rootType("STONE")
                             .isDone(Boolean.valueOf(eventPayload.getStatus()))
                             .workspaceId(eventPayload.getWorkspaceId())
+                            .projectId(stoneDocument.getRootId())
                             .build();
                     taskDocumentRepository.save(taskDocument); // ES에 저장 또는 업데이트
                     System.out.println("ES 색인(C/U) 성공: " + taskDocument.getId());

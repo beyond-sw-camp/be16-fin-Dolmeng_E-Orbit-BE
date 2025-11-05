@@ -30,6 +30,7 @@ public class DocumentSearchResDto {
     private String parentId;
     private String fileUrl;
     private Long size;
+    private String projectId;
 
     @Data
     @NoArgsConstructor

@@ -77,4 +77,7 @@ public class TaskDocument {
 
     @Field(type = FieldType.Keyword, index = false)
     private String rootType;
+
+    @Field(type = FieldType.Keyword, index = false)
+    private String projectId;
 }
