@@ -16,4 +16,5 @@ public class MyStoneResDto {
     private BigDecimal milestone;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private String projectId;
 }

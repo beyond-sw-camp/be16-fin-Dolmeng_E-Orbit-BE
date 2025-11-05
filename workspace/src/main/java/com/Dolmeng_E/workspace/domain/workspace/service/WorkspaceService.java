@@ -1148,6 +1148,7 @@ public class WorkspaceService {
                         .milestone(stone.getMilestone() != null ? stone.getMilestone() : BigDecimal.ZERO)
                         .startTime(stone.getStartTime())
                         .endTime(stone.getEndTime())
+                        .projectId(stone.getProject().getId())
                         .build())
                 .toList();
     }
