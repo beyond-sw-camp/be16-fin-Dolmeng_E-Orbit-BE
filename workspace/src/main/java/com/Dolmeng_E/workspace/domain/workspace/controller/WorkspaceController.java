@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 
@@ -481,7 +482,7 @@ public class WorkspaceController {
 
     // 접근 가능한 유저 목록 가져오기
     @GetMapping("/{rootId}/{rootType}/getViewableUserIds")
-    public List<String> getViewableUserIds(@PathVariable String rootId, @PathVariable String rootType) {
+    public Set<String> getViewableUserIds(@PathVariable String rootId, @PathVariable String rootType) {
         return workspaceService.getViewableUserIds(rootId, rootType);
     }
 

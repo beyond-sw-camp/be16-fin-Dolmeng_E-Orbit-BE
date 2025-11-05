@@ -1,4 +1,4 @@
-package com.Dolmeng_E.drive.domain.drive.dto;
+package com.Dolmeng_E.workspace.domain.stone.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,14 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DocumentKafkaUpdateDto {
+public class StoneKafkaUpdateDto {
     private String eventType;
     private EventPayload eventPayload;
 
@@ -23,12 +22,10 @@ public class DocumentKafkaUpdateDto {
     @Builder
     public static class EventPayload{
         private String id;
-        private String searchTitle;
-        private String searchContent;
-        private Set<String> viewableUserIds;
-        private String parentId;
-        private String rootType;
-        private String rootId;
-        private List<DocumentKafkaSaveDto.DocumentLineDto> documentLines;
+        private String name;
+        private String description;
+        private LocalDateTime endDate;
+        private String status;
+        private String manager;
     }
 }

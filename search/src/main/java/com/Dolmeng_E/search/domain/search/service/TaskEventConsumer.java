@@ -1,6 +1,7 @@
 package com.Dolmeng_E.search.domain.search.service;
 
 import com.Dolmeng_E.search.domain.search.dto.TaskEventDto;
+import com.Dolmeng_E.search.domain.search.entity.DocumentDocument;
 import com.Dolmeng_E.search.domain.search.entity.StoneDocument;
 import com.Dolmeng_E.search.domain.search.entity.TaskDocument;
 import com.Dolmeng_E.search.domain.search.repository.StoneDocumentRepository;
@@ -12,6 +13,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 public class TaskEventConsumer {
@@ -62,6 +64,26 @@ public class TaskEventConsumer {
                     ack.acknowledge();
                     break;
                 case "TASK_UPDATED":
+                    Optional<TaskDocument> optionalTaskDocument = taskDocumentRepository.findById(eventPayload.getId());
+                    if (optionalTaskDocument.isPresent()) {
+                        TaskDocument taskToUpdate = optionalTaskDocument.get();
+                        if(eventPayload.getName()!=null){
+                            taskToUpdate.setSearchTitle(eventPayload.getName());
+                        }
+                        if(eventPayload.getManager()!=null){
+                            taskToUpdate.setCreatedBy(eventPayload.getManager());
+                        }
+                        if(eventPayload.getEndDate()!=null){
+                            taskToUpdate.setDateTime(eventPayload.getEndDate().toLocalDate());
+                        }
+                        if(eventPayload.getStatus()!=null){
+                            taskToUpdate.setIsDone(Boolean.valueOf(eventPayload.getStatus()));
+                        }
+                        taskDocumentRepository.save(taskToUpdate);
+                        System.out.println("ES 업데이트(U) 성공: " + taskToUpdate.getId());
+                    } else {
+                        System.err.println("ES 업데이트(U) 실패: 원본 문서를 찾을 수 없음 - ID: " + eventPayload.getId());
+                    }
                     ack.acknowledge();
                     break;
                 default:

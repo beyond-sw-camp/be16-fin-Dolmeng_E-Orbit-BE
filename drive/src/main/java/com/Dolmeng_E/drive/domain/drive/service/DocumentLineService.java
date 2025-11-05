@@ -1,6 +1,8 @@
 package com.Dolmeng_E.drive.domain.drive.service;
 
 import com.Dolmeng_E.drive.common.dto.EditorBatchMessageDto;
+import com.Dolmeng_E.drive.domain.drive.dto.DocumentKafkaSaveDto;
+import com.Dolmeng_E.drive.domain.drive.dto.DocumentKafkaUpdateDto;
 import com.Dolmeng_E.drive.domain.drive.dto.DocumentLineResDto;
 import com.Dolmeng_E.drive.domain.drive.dto.OnlineUserResDto;
 import com.Dolmeng_E.drive.domain.drive.entity.Document;
@@ -15,6 +17,7 @@ import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +33,16 @@ public class DocumentLineService {
     private final SetOperations<String, String> setOperations;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RedisTemplate<String, String> redisTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate, @Qualifier("userInventory")RedisTemplate<String, String> userRedisTemplate) {
+    public DocumentLineService(DocumentLineRepository documentLineRepository, DocumentRepository documentRepository, RedisTemplate<String, String> redisTemplate, @Qualifier("userInventory")RedisTemplate<String, String> userRedisTemplate, KafkaTemplate<String, String> kafkaTemplate) {
         this.documentLineRepository = documentLineRepository;
         this.documentRepository = documentRepository;
         this.hashOperations = redisTemplate.opsForHash();
         this.setOperations = redisTemplate.opsForSet();
         this.redisTemplate = redisTemplate;
         this.userHashOperations = userRedisTemplate.opsForHash();
+        this.kafkaTemplate = kafkaTemplate;
     }
 
 
@@ -100,6 +105,32 @@ public class DocumentLineService {
         DocumentLine documentLine = documentLineRepository.findByLineId(lineId)
                 .orElseThrow(()->new EntityNotFoundException("해당 라인이 존재하지 않습니다." + lineId));
         documentLine.updateContent(content);
+
+        // kafka 메시지 발행
+        List<DocumentKafkaSaveDto.DocumentLineDto> documentLineDtos = new ArrayList<>();
+        documentLineDtos.add(DocumentKafkaSaveDto.DocumentLineDto.builder()
+                .id(documentLine.getId())
+                .content(content)
+                .type("UPDATE")
+                .build());
+        DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                .eventType("DOCUMENT_UPDATED")
+                .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                        .id(documentLine.getDocument().getId())
+                        .documentLines(documentLineDtos)
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("document-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
     public void createDocumentLine(String lineId, String prevId, String content, String documentId){
@@ -120,7 +151,33 @@ public class DocumentLineService {
                 .build();
 
         // 2. Repository를 통해 데이터베이스에 저장합니다.
-        documentLineRepository.save(newDocumentLine);
+        documentLineRepository.saveAndFlush(newDocumentLine);
+
+        // kafka 메시지 발행
+        List<DocumentKafkaSaveDto.DocumentLineDto> documentLineDtos = new ArrayList<>();
+        documentLineDtos.add(DocumentKafkaSaveDto.DocumentLineDto.builder()
+                .id(newDocumentLine.getId())
+                .content(content)
+                .type("CREATE")
+                .build());
+        DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                .eventType("DOCUMENT_UPDATED")
+                .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                        .id(newDocumentLine.getDocument().getId())
+                        .documentLines(documentLineDtos)
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("document-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
     public void deleteDocumentLine(String lineId){
@@ -130,6 +187,31 @@ public class DocumentLineService {
         documentLine.ifPresent(line -> line.updatePrevId(reqDocumentLine.getPrevId()));
         // 현재 라인 삭제
         documentLineRepository.delete(documentLineRepository.findByLineId(lineId).orElseThrow(()->new EntityNotFoundException("해당 라인이 존재하지 않습니다.")));
+
+        // kafka 메시지 발행
+        List<DocumentKafkaSaveDto.DocumentLineDto> documentLineDtos = new ArrayList<>();
+        documentLineDtos.add(DocumentKafkaSaveDto.DocumentLineDto.builder()
+                .id(reqDocumentLine.getId())
+                .type("DELETE")
+                .build());
+        DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
+                .eventType("DOCUMENT_UPDATED")
+                .eventPayload(DocumentKafkaUpdateDto.EventPayload.builder()
+                        .id(reqDocumentLine.getDocument().getId())
+                        .documentLines(documentLineDtos)
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(documentKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("document-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
     public void batchUpdateDocumentLine(EditorBatchMessageDto messages){

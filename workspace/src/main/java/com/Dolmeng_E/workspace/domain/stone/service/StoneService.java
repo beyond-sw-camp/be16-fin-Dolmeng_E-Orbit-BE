@@ -19,6 +19,7 @@ import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneStatus;
 import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
+import com.Dolmeng_E.workspace.domain.task.dto.TaskKafkaUpdateDto;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
@@ -673,6 +674,29 @@ public class StoneService {
         // 8. 수정된 스톤 저장
         stoneRepository.save(stone);
         milestoneCalculator.updateStoneAndParents(stone);
+
+        // kafka 메시지 발행
+        StoneKafkaUpdateDto stoneKafkaUpdateDto = StoneKafkaUpdateDto.builder()
+                .eventType("STONE_UPDATED")
+                .eventPayload(StoneKafkaUpdateDto.EventPayload.builder()
+                        .id(stone.getId())
+                        .name(stone.getStoneName())
+                        .description(stone.getStoneDescribe())
+                        .endDate(stone.getEndTime())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(stoneKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("stone-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
+
         return stone.getId();
     }
 
@@ -720,6 +744,26 @@ public class StoneService {
                     .workspaceParticipant(newManager)
                     .build();
             projectParticipantRepository.save(newProjectParticipant);
+        }
+
+        // kafka 메시지 발행
+        StoneKafkaUpdateDto stoneKafkaUpdateDto = StoneKafkaUpdateDto.builder()
+                .eventType("STONE_UPDATED")
+                .eventPayload(StoneKafkaUpdateDto.EventPayload.builder()
+                        .id(stone.getId())
+                        .manager(stone.getStoneManager().getUserId().toString())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(stoneKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("stone-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
         }
 
         // 8. 변경된 스톤 저장
@@ -872,6 +916,26 @@ public class StoneService {
                 .projectId(project.getId())
                 .workspaceId(workspace.getId())
                 .build();
+
+        // kafka 메시지 발행
+        StoneKafkaUpdateDto stoneKafkaUpdateDto = StoneKafkaUpdateDto.builder()
+                .eventType("STONE_UPDATED")
+                .eventPayload(StoneKafkaUpdateDto.EventPayload.builder()
+                        .id(stone.getId())
+                        .status(stone.getStatus().toString())
+                        .build())
+                .build();
+        try {
+            // 3. DTO를 JSON 문자열로 변환
+            String message = objectMapper.writeValueAsString(stoneKafkaUpdateDto);
+
+            // 4. Kafka 토픽으로 이벤트 발행
+            kafkaTemplate.send("stone-topic", message);
+
+        } catch (JsonProcessingException e) {
+            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
 

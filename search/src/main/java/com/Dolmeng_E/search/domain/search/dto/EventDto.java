@@ -1,5 +1,6 @@
 package com.Dolmeng_E.search.domain.search.dto;
 
+import com.Dolmeng_E.search.domain.search.entity.DocumentLine;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,6 +35,16 @@ public class EventDto {
         private String fileUrl;
         private Long size;
         private String workspaceId;
+        List<DocumentLineDto> docLines;
+    }
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DocumentLineDto{
+        private Long id;
+        private String content;
+        private String type;
     }
 }
 

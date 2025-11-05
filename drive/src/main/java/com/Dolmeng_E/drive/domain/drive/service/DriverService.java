@@ -7,10 +7,7 @@ import com.Dolmeng_E.drive.common.dto.SubProjectResDto;
 import com.Dolmeng_E.drive.common.dto.WorkspaceOrProjectManagerCheckDto;
 import com.Dolmeng_E.drive.common.service.S3Uploader;
 import com.Dolmeng_E.drive.domain.drive.dto.*;
-import com.Dolmeng_E.drive.domain.drive.entity.Document;
-import com.Dolmeng_E.drive.domain.drive.entity.File;
-import com.Dolmeng_E.drive.domain.drive.entity.Folder;
-import com.Dolmeng_E.drive.domain.drive.entity.RootType;
+import com.Dolmeng_E.drive.domain.drive.entity.*;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentLineRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.DocumentRepository;
 import com.Dolmeng_E.drive.domain.drive.repository.FileRepository;
@@ -373,6 +370,8 @@ public class DriverService {
             document.setRootId(elementMoveDto.getRootId());
             document.setRootType(RootType.valueOf(elementMoveDto.getRootType()));
 
+            Set<String> participants = workspaceServiceClient.getViewableUserIds(elementMoveDto.getRootId(), elementMoveDto.getRootType());
+
             // kafka 메시지 발행
             DocumentKafkaUpdateDto documentKafkaUpdateDto = DocumentKafkaUpdateDto.builder()
                     .eventType("DOCUMENT_UPDATED")
@@ -381,6 +380,7 @@ public class DriverService {
                             .parentId(elementMoveDto.getFolderId() != null ? elementMoveDto.getFolderId() : null)
                             .rootId(document.getRootId())
                             .rootType(document.getRootType().toString())
+                            .viewableUserIds(participants)
                             .build())
                     .build();
             try {
@@ -465,7 +465,7 @@ public class DriverService {
             // kafka 메시지 발행
             Set<String> viewableUserIds = new HashSet<>();
             viewableUserIds.add(savedFile.getCreatedBy());
-            List<String> participants = workspaceServiceClient.getViewableUserIds(savedFile.getRootId(), savedFile.getRootType().toString());
+            Set<String> participants = workspaceServiceClient.getViewableUserIds(savedFile.getRootId(), savedFile.getRootType().toString());
             viewableUserIds.addAll(participants);
             DocumentKafkaSaveDto documentKafkaSaveDto = DocumentKafkaSaveDto.builder()
                     .eventType("FILE_CREATED")
@@ -573,8 +573,16 @@ public class DriverService {
         // kafka 메시지 발행
         Set<String> viewableUserIds = new HashSet<>();
         viewableUserIds.add(savedDocument.getCreatedBy());
-        List<String> participants = workspaceServiceClient.getViewableUserIds(savedDocument.getRootId(), savedDocument.getRootType().toString());
+        Set<String> participants = workspaceServiceClient.getViewableUserIds(savedDocument.getRootId(), savedDocument.getRootType().toString());
         viewableUserIds.addAll(participants);
+        List<DocumentKafkaSaveDto.DocumentLineDto> documentLineDtos = new ArrayList<>();
+        List<DocumentLine> documentLines = documentLineRepository.findAllDocumentLinesByDocumentId(document.getId());
+        for(DocumentLine documentLine : documentLines){
+            documentLineDtos.add(DocumentKafkaSaveDto.DocumentLineDto.builder()
+                    .id(documentLine.getId())
+                    .content(documentLine.getContent())
+                    .build());
+        }
         DocumentKafkaSaveDto documentKafkaSaveDto = DocumentKafkaSaveDto.builder()
                 .eventType("DOCUMENT_CREATED")
                 .eventPayload(DocumentKafkaSaveDto.EventPayload.builder()
@@ -587,6 +595,7 @@ public class DriverService {
                         .viewableUserIds(viewableUserIds)
                         .parentId(savedDocument.getFolder() != null ? savedDocument.getFolder().getId() : null)
                         .workspaceId(workspaceId)
+                        .documentLines(documentLineDtos)
                         .build())
                 .build();
         try {
@@ -915,6 +924,30 @@ public class DriverService {
         }catch (FeignException e){
             throw new IllegalArgumentException("삭제에 실패했습니다. 잠시후 다시 시도해주세요.");
         }
+    }
 
+    // 프로젝트 ID로 파일/문서 개수 + 파일 용량 조회
+    public ElementCountAndSizeResDto getElementCountAndSize(String projectId){
+        int fileCount = 0;
+        int documentCount = 0;
+        Long totalSize = 0L;
+        // 프로젝트 문서, 파일
+        fileCount+=fileRepository.countByRootIdAndIsDeleteFalse(projectId);
+        documentCount+=documentRepository.countByRootIdAndIsDeleteFalse(projectId);
+        totalSize+=fileRepository.sumSizeByRootId(projectId);
+        // 스톤 문서, 파일
+        StoneTaskResDto stoneTaskResDto = workspaceServiceClient.getSubStonesAndTasks(projectId);
+        List<StoneTaskResDto.StoneInfo> stoneInfos = stoneTaskResDto.getStones();
+        for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+            fileCount+=fileRepository.countByRootIdAndIsDeleteFalse(stoneInfo.getStoneId());
+            documentCount+=documentRepository.countByRootIdAndIsDeleteFalse(stoneInfo.getStoneId());
+            totalSize+=fileRepository.sumSizeByRootId(stoneInfo.getStoneId());
+        }
+
+        return ElementCountAndSizeResDto.builder()
+                .fileCount(fileCount)
+                .documentCount(documentCount)
+                .totalSize(totalSize)
+                .build();
     }
 }
