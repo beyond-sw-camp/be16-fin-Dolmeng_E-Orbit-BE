@@ -30,7 +30,8 @@ public interface SharedCalendarRepository extends JpaRepository<SharedCalendar, 
     @Query("SELECT c FROM SharedCalendar c " +
             "WHERE c.userId.id = :userId " +
             "AND c.workspaceId = :workspaceId " +
-            "AND c.calendarType = :calendarType")
+            "AND c.calendarType = :calendarType " +
+            "AND c.isShared = true")
     List<SharedCalendar> findSharedCalendarsByUserIdAndWorkspaceIdAndCalendarType(
             @Param("userId") UUID userId,
             @Param("workspaceId") String workspaceId,
