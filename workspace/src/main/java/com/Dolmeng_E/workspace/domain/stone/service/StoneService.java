@@ -21,7 +21,6 @@ import com.Dolmeng_E.workspace.domain.stone.repository.ChildStoneListRepository;
 import com.Dolmeng_E.workspace.domain.stone.repository.StoneRepository;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
-import com.Dolmeng_E.workspace.domain.workspace.dto.DriveKafkaReqDto;
 import com.Dolmeng_E.workspace.domain.workspace.entity.Workspace;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
@@ -210,27 +209,17 @@ public class StoneService {
                     }).toList();
             stoneParticipantRepository.saveAll(participantEntities);
 
-
-
             // 스톤 참여자에게 알림 발송
-
             List<UUID> participantList = participantEntities.stream().map(stone->stone.getWorkspaceParticipant()
                     .getUserId()).toList();
             // 테스트 코드
             List<UUID> userIdList = new ArrayList<>(participantList);
-            // 알림받을 인원들 list에 담고
-            //  userIdList.add(task.getTaskManager().getUserId());
 
-            // 객체 생성
             NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
-                    // 워크스페이스명 수동으로 넣어줘야 해요
                     .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 추가")
                     .content(childStone.getStoneName() + " 스톤 참여자에 추가되었습니다! 🎉")
                     .userIdList(userIdList)
-                    // 위에서 추가한 알림 타입 String으로 주입
                     .type("STONE_MESSAGE")
-                    // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
-                    // 즉시알림이라면 null (채팅같은)
                     .sendAt(null)
                     .projectId(project.getId())
                     .workspaceId(workspace.getId())
@@ -242,7 +231,6 @@ public class StoneService {
         project.incrementStoneCount();
         projectRepository.save(project);
         milestoneCalculator.updateStoneAndParents(parentStone);
-
 
         // 13. 채팅방 생성 및 초대 (chatCreation이 true인 경우)
         if (Boolean.TRUE.equals(childStone.getChatCreation())) {
@@ -289,8 +277,8 @@ public class StoneService {
             viewableUserIds.add(pp.getWorkspaceParticipant().getUserId().toString());
         }
         viewableUserIds.add(workspaceParticipantRepository.findByWorkspaceIdAndWorkspaceRole(workspace.getId(), WorkspaceRole.ADMIN).getUserId().toString());
-        List<StoneKafkaSaveDto.EventPayload.ParticipantInfo> participantInfos = new ArrayList<>();
         List<StoneParticipant> stoneParticipants = stoneParticipantRepository.findAllByStone(childStone);
+        List<StoneKafkaSaveDto.EventPayload.ParticipantInfo> participantInfos = new ArrayList<>();
         for(StoneParticipant sp : stoneParticipants) {
             participantInfos.add(StoneKafkaSaveDto.EventPayload.ParticipantInfo.builder()
                     .id(sp.getWorkspaceParticipant().getUserId().toString())
@@ -313,14 +301,9 @@ public class StoneService {
                         .build())
                 .build();
         try {
-            // 3. DTO를 JSON 문자열로 변환
             String message = objectMapper.writeValueAsString(stoneKafkaSaveDto);
-
-            // 4. Kafka 토픽으로 이벤트 발행
             kafkaTemplate.send("stone-topic", message);
-
         } catch (JsonProcessingException e) {
-            // 예외 처리 (심각한 경우 트랜잭션 롤백 고려)
             throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
         }
 
@@ -328,8 +311,7 @@ public class StoneService {
     }
 
 
-
-// 스톤 참여자 추가 (전체 갱신 방식)
+    // 스톤 참여자 추가 (전체 갱신 방식)
     public void joinStoneParticipant(String userId, StoneParticipantListDto dto) {
 
         // 1. 스톤 조회
@@ -356,7 +338,21 @@ public class StoneService {
         // 5. 추가할 대상이 없으면 기존 참여자 모두 삭제
         if (dto.getStoneParticipantList() == null || dto.getStoneParticipantList().isEmpty()) {
             List<StoneParticipant> existingParticipants = stoneParticipantRepository.findAllByStone(stone);
+
+            List<WorkspaceParticipant> toCheck = existingParticipants.stream()
+                    .map(StoneParticipant::getWorkspaceParticipant)
+                    .toList();
+
             stoneParticipantRepository.deleteAll(existingParticipants);
+
+            for (WorkspaceParticipant wp : toCheck) {
+                boolean stillInOtherStones = stoneParticipantRepository
+                        .existsByStone_ProjectAndWorkspaceParticipant(project, wp);
+                if (!stillInOtherStones) {
+                    projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, wp)
+                            .ifPresent(projectParticipantRepository::delete);
+                }
+            }
             return;
         }
 
@@ -379,21 +375,17 @@ public class StoneService {
                     .filter(sp -> deleteTargetIds.contains(sp.getWorkspaceParticipant().getUserId()))
                     .toList();
 
-            // 스톤 참여자 삭제
+            List<WorkspaceParticipant> deletedWps = toDelete.stream()
+                    .map(StoneParticipant::getWorkspaceParticipant)
+                    .toList();
+
             stoneParticipantRepository.deleteAll(toDelete);
 
-            // 프로젝트 참여자에서도 제외 (다른 스톤에 참여 중이 아닌 경우에만)
-            for (UUID deletedUserId : deleteTargetIds) {
-                WorkspaceParticipant wp = workspaceParticipantRepository
-                        .findByWorkspaceIdAndUserId(workspace.getId(), deletedUserId)
-                        .orElse(null);
-
-                if (wp != null) {
-                    boolean stillInOtherStones = stoneParticipantRepository
-                            .existsByWorkspaceParticipantAndStone_Project(wp, project);
-                    if (!stillInOtherStones) {
-                        projectParticipantRepository.deleteByProjectAndWorkspaceParticipant(project, wp);
-                    }
+            for (WorkspaceParticipant wp : deletedWps) {
+                boolean stillInOtherStones = stoneParticipantRepository
+                        .existsByStone_ProjectAndWorkspaceParticipant(project, wp);
+                if (!stillInOtherStones) {
+                    projectParticipantRepository.deleteByProjectAndWorkspaceParticipant(project, wp);
                 }
             }
         }
@@ -433,8 +425,6 @@ public class StoneService {
             }
         }
 
-
-
         if (!newParticipants.isEmpty()) {
             stoneParticipantRepository.saveAll(newParticipants);
         }
@@ -445,24 +435,14 @@ public class StoneService {
                 .distinct()
                 .toList();
 
-        // 스톤 참여자에게 알림 발송
-
-        // 테스트 코드
-
+        // 스톤 참여자에게 알림 발송 (테스트 코드 예시)
         List<UUID> userIdList = new ArrayList<>(participantIdList);
-        // 알림받을 인원들 list에 담고
-        // userIdList.add(task.getTaskManager().getUserId());
 
-        // 객체 생성
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
-                // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "스톤 참여자 등록")
                 .content(stone.getStoneName() +  " 스톤 참여자로 등록되었습니다! 🎉")
                 .userIdList(userIdList)
-                // 위에서 추가한 알림 타입 String으로 주입
                 .type("STONE_MESSAGE")
-                // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
-                // 즉시알림이라면 null (채팅같은)
                 .sendAt(null)
                 .stoneId(stone.getId())
                 .projectId(project.getId())
@@ -488,9 +468,7 @@ public class StoneService {
     }
 
 
-
-
-// 스톤 참여자 리스트 삭제
+    // 스톤 참여자 리스트 삭제 (선택 삭제)
     public void deleteStoneParticipantList(String userId, StoneParticipantListDto dto) {
 
         // 1. 스톤 조회
@@ -513,13 +491,14 @@ public class StoneService {
             }
         }
 
-        // 5. 스톤 참여자 삭제 (UUID 기반으로 변경) // 추가
+        // 5. 스톤 참여자 삭제 (UUID 기반)
         if (dto.getStoneParticipantList() != null && !dto.getStoneParticipantList().isEmpty()) {
             List<StoneParticipant> toDeleteStoneParticipants = new ArrayList<>();
+            List<WorkspaceParticipant> deletedWps = new ArrayList<>();
 
-            for (UUID userUuid : dto.getStoneParticipantList()) { // String → UUID 변경 // 추가
+            for (UUID userUuid : dto.getStoneParticipantList()) {
                 WorkspaceParticipant wp = workspaceParticipantRepository
-                        .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), userUuid) // 추가
+                        .findByWorkspaceIdAndUserId(project.getWorkspace().getId(), userUuid)
                         .orElseThrow(() -> new EntityNotFoundException("참여자 정보를 찾을 수 없습니다."));
 
                 StoneParticipant stoneParticipant = stoneParticipantRepository
@@ -527,22 +506,24 @@ public class StoneService {
                         .orElseThrow(() -> new EntityNotFoundException("스톤 참여자 정보를 찾을 수 없습니다."));
 
                 toDeleteStoneParticipants.add(stoneParticipant);
-
-                ProjectParticipant projectParticipant = projectParticipantRepository
-                        .findByProjectAndWorkspaceParticipant(project, wp)
-                        .orElse(null);
-
-                if (projectParticipant != null) {
-                    projectParticipantRepository.delete(projectParticipant);
-                }
+                deletedWps.add(wp);
             }
 
             stoneParticipantRepository.deleteAll(toDeleteStoneParticipants);
+
+            for (WorkspaceParticipant wp : deletedWps) {
+                boolean stillInOtherStones = stoneParticipantRepository
+                        .existsByStone_ProjectAndWorkspaceParticipant(project, wp);
+                if (!stillInOtherStones) {
+                    projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, wp)
+                            .ifPresent(projectParticipantRepository::delete);
+                }
+            }
         }
     }
 
 
-// 스톤 참여자 전체 삭제
+    // 스톤 참여자 전체 삭제 (해당 스톤만)
     public void deleteAllStoneParticipants(String userId, String stoneId) {
 
         // 1. 스톤 조회
@@ -565,22 +546,29 @@ public class StoneService {
             }
         }
 
-        // 5. 스톤 참여자 전체 삭제
+        // 5. 스톤 참여자 전체 삭제 준비
         List<StoneParticipant> participants = stoneParticipantRepository.findAllByStone(stone);
         if (!participants.isEmpty()) {
-            stoneParticipantRepository.deleteAll(participants);
-        }
+            List<WorkspaceParticipant> deletedWps = participants.stream()
+                    .map(StoneParticipant::getWorkspaceParticipant)
+                    .toList();
 
-        // 프로젝트 참여자 일괄 삭제
-        List<ProjectParticipant> projectParticipants =
-                projectParticipantRepository.findAllByProject(project);
-        if (!projectParticipants.isEmpty()) {
-            projectParticipantRepository.deleteAll(projectParticipants);
+            stoneParticipantRepository.deleteAll(participants);
+
+            for (WorkspaceParticipant wp : deletedWps) {
+                boolean stillExists = stoneParticipantRepository
+                        .existsByStone_ProjectAndWorkspaceParticipant(project, wp);
+
+                if (!stillExists) {
+                    projectParticipantRepository.findByProjectAndWorkspaceParticipant(project, wp)
+                            .ifPresent(projectParticipantRepository::delete);
+                }
+            }
         }
     }
 
 
-// 스톤 보임/안보임 설정(프로젝트 캘린더 조회용 API)
+    // 스톤 보임/안보임 설정(프로젝트 캘린더 조회용 API)
     public void settingStone(String userId, StoneSettingDto dto) {
 
         // 1. 스톤 조회
@@ -777,7 +765,6 @@ public class StoneService {
         }
 
         // 7. 프로젝트 마일스톤 반영
-        // 완료된 스톤이었다면 완료 카운트 감소
         if (stone.getStatus() == StoneStatus.COMPLETED) {
             project.decrementCompletedCount();
         }
@@ -803,11 +790,7 @@ public class StoneService {
         // 10. 프로젝트 참여자 조건부 삭제
         for (StoneParticipant sp : stoneParticipants) {
             WorkspaceParticipant wp = sp.getWorkspaceParticipant();
-
-            // 해당 참여자가 이 프로젝트의 다른 스톤에도 속해 있는지 확인
             boolean stillExists = stoneParticipantRepository.existsByStone_ProjectAndWorkspaceParticipant(project, wp);
-
-            // 다른 스톤에도 없으면 프로젝트 참여자에서도 제거
             if (!stillExists) {
                 ProjectParticipant projectParticipant = projectParticipantRepository
                         .findByProjectAndWorkspaceParticipant(project, wp)
@@ -871,35 +854,25 @@ public class StoneService {
         LocalDateTime __now = now();
         stone.setStoneCompletedDay(__now);
 
-        // 상위스톤 담당자에게 알림 발송
-
-        // 테스트 코드
-
+        // 상위스톤 담당자에게 알림 발송 (예시)
         List<UUID> userIdList = new ArrayList<>();
-        // 알림받을 인원들 list에 담고
         if (stone.getParentStoneId() != null) {
             Stone topStone = stoneRepository.findById(stone.getParentStoneId())
                     .orElseThrow(() -> new EntityNotFoundException("상위 스톤이 없습니다."));
             userIdList.add(topStone.getStoneManager().getUserId());
         }
 
-        // 객체 생성
         NotificationCreateReqDto notificationCreateReqDto = NotificationCreateReqDto.builder()
-                // 워크스페이스명 수동으로 넣어줘야 해요
                 .title("[" + workspace.getWorkspaceName() + "]" + "하위스톤 완료")
                 .content(stone.getStoneName() + " 스톤이 완료되었습니다! 🎉")
                 .userIdList(userIdList)
-                // 위에서 추가한 알림 타입 String으로 주입
                 .type("STONE_MESSAGE")
-                // 예약 알림이라면 원하는 날짜 지정 (예. 만료기한날짜 -1일 등)
-                // 즉시알림이라면 null (채팅같은)
                 .sendAt(null)
                 .stoneId(stone.getId())
                 .projectId(project.getId())
                 .workspaceId(workspace.getId())
                 .build();
     }
-
 
 
     // 프로젝트 별 나의 마일스톤 조회(isDelete = true 제외, stoneStatus Completed 제외)
@@ -927,9 +900,7 @@ public class StoneService {
         List<StoneParticipant> activeStoneParticipants =
                 stoneParticipantRepository.findAllActiveWithStoneByWorkspaceParticipant(participant);
 
-
         // 3. DTO 변환
-        // 리턴용 리스트 생성
         List<ProjectMilestoneResDto> result = new ArrayList<>();
 
         for (Project project : uniqueProjects) {
@@ -1108,6 +1079,4 @@ public class StoneService {
                 .map(SubTaskResDto::new)
                 .toList();
     }
-
-
 }
