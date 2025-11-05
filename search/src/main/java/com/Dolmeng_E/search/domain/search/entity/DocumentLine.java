@@ -15,6 +15,6 @@ public class DocumentLine {
     @Field(type = FieldType.Keyword, index = false)
     private Long id;
 
-    @Field(type = FieldType.Text, analyzer = "html_strip_nori_analyzer")
+    @Field(type = FieldType.Text, analyzer = "nori")
     private String content;
 }

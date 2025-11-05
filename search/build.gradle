@@ -47,6 +47,8 @@ dependencies {
 	implementation "com.example:module-common:1.1.5"
 
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+	implementation 'org.jsoup:jsoup:1.17.2' // 최신 버전을 확인해 보세요
 }
 
 repositories {

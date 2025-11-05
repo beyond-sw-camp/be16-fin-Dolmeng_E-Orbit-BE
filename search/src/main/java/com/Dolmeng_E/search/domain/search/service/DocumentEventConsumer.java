@@ -6,6 +6,7 @@ import com.Dolmeng_E.search.domain.search.entity.DocumentLine;
 import com.Dolmeng_E.search.domain.search.repository.DocumentDocumentRepository;
 import com.Dolmeng_E.search.domain.search.repository.FileDocumentRepository; // 불필요시 제거
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -13,24 +14,22 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.List; // [수정] ArrayList, Regex 관련 import 제거
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-// [제거] java.util.regex.Matcher;
-// [제거] java.util.regex.Pattern;
 
 @Component
 public class DocumentEventConsumer {
     private final ObjectMapper objectMapper;
     private final HashOperations<String, String, String> hashOperations;
     private final DocumentDocumentRepository documentDocumentRepository;
+    private final HtmlParsingService htmlParsingService;
 
-    // [제거] private static final Pattern P_TAG_PATTERN = ...
-
-    public DocumentEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository, FileDocumentRepository fileDocumentRepository) {
+    public DocumentEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository, FileDocumentRepository fileDocumentRepository, HtmlParsingService htmlParsingService) {
         this.objectMapper = objectMapper;
         this.hashOperations = redisTemplate.opsForHash();
         this.documentDocumentRepository = documentDocumentRepository;
+        this.htmlParsingService = htmlParsingService;
     }
 
     @KafkaListener(topics = "document-topic", groupId = "search-consumer-group")
@@ -45,14 +44,6 @@ public class DocumentEventConsumer {
                     String key = "user:"+eventPayload.getCreatedBy();
                     Map<String, String> userInfo = hashOperations.entries(key);
                     List<DocumentLine> documentLines = new ArrayList<>();
-//                    List<EventDto.DocumentLineDto> lines = new ArrayList<>();
-//                    lines = eventPayload.getDocLines();
-//                    for(EventDto.DocumentLineDto documentLineDto : lines) {
-//                        documentLines.add(DocumentLine.builder()
-//                                .id(documentLineDto.getId())
-//                                .content(documentLineDto.getContent())
-//                                .build());
-//                    }
 
                     DocumentDocument document = DocumentDocument.builder()
                             .id(eventPayload.getId())
@@ -91,14 +82,14 @@ public class DocumentEventConsumer {
                                 if(documentLineDto.getType().equals("CREATE")){
                                     documentLineToUpdate.add(DocumentLine.builder()
                                             .id(documentLineDto.getId())
-                                            .content(documentLineDto.getContent())
+                                            .content(htmlParsingService.extractText(documentLineDto.getContent()))
                                             .build());
                                 // 수정
                                 }else if(documentLineDto.getType().equals("UPDATE")){
                                     Optional<DocumentLine> found = documentLineToUpdate.stream()
                                             .filter(documentLine -> documentLine.getId().equals(documentLineDto.getId()))
                                             .findFirst();
-                                    found.ifPresent(documentLine -> documentLine.setContent(documentLineDto.getContent()));
+                                    found.ifPresent(documentLine -> documentLine.setContent(htmlParsingService.extractText(documentLineDto.getContent())));
                                 }else if(documentLineDto.getType().equals("DELETE")){
                                     Long targetId = documentLineDto.getId();
                                     documentLineToUpdate.removeIf(documentLine -> documentLine.getId().equals(targetId));

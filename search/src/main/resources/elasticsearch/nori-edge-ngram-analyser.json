@@ -29,18 +29,6 @@
         "filter": [
           "lowercase"
         ]
-      },
-
-      "default_nori_analyzer": {
-        "type": "custom",
-        "tokenizer": "nori_tokenizer_custom",
-        "filter": [ "lowercase" ]
-      },
-      "html_strip_nori_analyzer": {
-        "type": "custom",
-        "char_filter": [ "html_strip" ],
-        "tokenizer": "nori_tokenizer_custom",
-        "filter": [ "lowercase" ]
       }
     }
   }
