@@ -466,6 +466,50 @@ public class StoneService {
             // chat-service에 채팅방 초대 요청
             chatFeign.inviteChatParticipants(chatInviteReqDto);
         }
+
+        // 삭제 대상
+        Set<UUID> deleteIds = existingUserIds.stream()
+                .filter(id -> !newUserIds.contains(id))
+                .collect(Collectors.toSet());
+        // kafka 메시지 발행
+        StoneKafkaViewableUpdateDto stoneKafkaViewableUpdateDto = StoneKafkaViewableUpdateDto.builder()
+                .eventType("STONE_PARTICIPANT_UPDATE")
+                .eventPayload(StoneKafkaViewableUpdateDto.EventPayload.builder()
+                        .id(stone.getId())
+                        .type("DELETE")
+                        .userIds(deleteIds)
+                        .projectId(stone.getProject().getId())
+                        .build())
+                .build();
+        try {
+            String message = objectMapper.writeValueAsString(stoneKafkaViewableUpdateDto);
+            kafkaTemplate.send("update-viewable-topic", message);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
+
+
+        // 추가 대상
+        Set<UUID> createIds = newUserIds.stream()
+                .filter(id -> !existingUserIds.contains(id))
+                .collect(Collectors.toSet());
+
+        // kafka 메시지 발행
+        StoneKafkaViewableUpdateDto stoneKafkaViewableUpdateDto1 = StoneKafkaViewableUpdateDto.builder()
+                .eventType("STONE_PARTICIPANT_UPDATE")
+                .eventPayload(StoneKafkaViewableUpdateDto.EventPayload.builder()
+                        .id(stone.getId())
+                        .type("CREATE")
+                        .userIds(createIds)
+                        .projectId(stone.getProject().getId())
+                        .build())
+                .build();
+        try {
+            String message = objectMapper.writeValueAsString(stoneKafkaViewableUpdateDto1);
+            kafkaTemplate.send("update-viewable-topic", message);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
+        }
     }
 
 

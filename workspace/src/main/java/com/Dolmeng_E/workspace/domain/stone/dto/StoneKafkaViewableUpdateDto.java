@@ -1,19 +1,18 @@
-package com.Dolmeng_E.search.domain.search.dto;
+package com.Dolmeng_E.workspace.domain.stone.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UpdateViewableEventDto {
+public class StoneKafkaViewableUpdateDto {
     private String eventType;
     private EventPayload eventPayload;
 
@@ -23,16 +22,12 @@ public class UpdateViewableEventDto {
     @Builder
     public static class EventPayload{
         private String id;
-        private Set<String> viewableUserIds;
+        // 추가인지 삭제 인지
+        private String type;
+        // 스톤인지 워크스페이스인지
         private String rootType;
-        private List<ParticipantInfo> participants;
-
-        @Data
-        @NoArgsConstructor
-        @AllArgsConstructor
-        @Builder
-        public static class ParticipantInfo{
-            private String id;
-        }
+        private String projectId;
+        // ID
+        private Set<UUID> userIds;
     }
 }
