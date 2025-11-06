@@ -1,0 +1,47 @@
+package com.Dolmeng_E.drive.domain.drive.repository;
+
+import com.Dolmeng_E.drive.domain.drive.dto.FolderInfoDto;
+import com.Dolmeng_E.drive.domain.drive.entity.Folder;
+import com.Dolmeng_E.drive.domain.drive.entity.RootType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface FolderRepository extends JpaRepository<Folder, String> {
+    Optional<Folder> findByParentIdAndNameAndIsDeleteIsFalseAndRootId(String parentId, String name, String rootId);
+    Optional<Folder> findByParentIdAndNameAndIsDeleteIsFalse(String parentId, String name);
+    List<Folder> findAllByParentIdAndIsDeleteIsFalse(String parentId);
+    List<Folder> findAllByParentIdIsNullAndRootTypeAndRootIdAndIsDeleteIsFalse(RootType rootType, String rootId);
+    @Query(value = """
+        WITH RECURSIVE Ancestors AS (
+            SELECT id, name, parent_id, is_delete 
+            FROM folder
+            WHERE id = (
+                SELECT parent_id 
+                FROM folder 
+                WHERE id = :id AND is_delete = false
+            )
+            AND is_delete = false 
+            
+            UNION ALL
+            SELECT f.id, f.name, f.parent_id, f.is_delete
+            FROM folder f
+            JOIN Ancestors a ON f.id = a.parent_id
+            WHERE f.is_delete = false 
+        )
+        SELECT id AS folderId, name AS folderName FROM Ancestors;
+    """, nativeQuery = true)
+    List<FolderInfoDto> findAncestors(@Param("id") String id);
+
+    @Modifying(clearAutomatically = true) // (중요) 쿼리 실행 후 1차 캐시(영속성 컨텍스트)를 클리어합니다.
+    @Transactional // (중요) 업데이트/삭제 쿼리는 트랜잭션 내에서 실행되어야 합니다.
+    @Query("UPDATE Folder e SET e.isDelete = true WHERE e.rootType = :rootType AND e.rootId = :rootId")
+    void softDeleteByRootInfo(@Param("rootType") RootType rootType, @Param("rootId") String rootId);
+}

@@ -1,0 +1,54 @@
+server:
+  port: 8080
+
+eureka:
+  client:
+    enabled: false
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - 'https://www.orbit.shop'
+            allowedMethods: '*'
+            allowedHeaders: '*'
+            allowedCredentials: true
+      routes:
+        - id: user-service
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - StripPrefix=1
+          uri: http://user-service
+        - id: chat-service
+          predicates:
+            - Path=/chat-service/**
+          filters:
+            - StripPrefix=1
+          uri: http://chat-service
+        - id: drive-service
+          predicates:
+            - Path=/drive-service/**
+          filters:
+            - StripPrefix=1
+          uri: http://drive-service
+        - id: workspace-service
+          predicates:
+            - Path=/workspace-service/**
+          filters:
+            - StripPrefix=1
+          uri: http://workspace-service
+
+jwt:
+  expirationAt: 10000
+  secretKeyAt: xx
+  expirationRt: 10000
+  secretKeyRt: yy

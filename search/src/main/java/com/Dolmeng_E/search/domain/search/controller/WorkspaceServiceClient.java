@@ -1,0 +1,76 @@
+package com.Dolmeng_E.search.domain.search.controller;
+
+import com.Dolmeng_E.search.domain.search.dto.StoneTaskResDto;
+import com.Dolmeng_E.search.domain.search.dto.SubProjectResDto;
+import com.Dolmeng_E.search.domain.search.dto.SubTaskResDto;
+import com.Dolmeng_E.search.domain.search.dto.WorkspaceOrProjectManagerCheckDto;
+import com.example.modulecommon.dto.CommonSuccessDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@FeignClient(name = "workspace-service")
+public interface WorkspaceServiceClient {
+    // 워크스페이스 담당자 확인
+    @GetMapping("/workspace/{workspaceId}/manager/check")
+    ResponseEntity<CommonSuccessDto> checkWorkspaceManager(
+            @PathVariable("workspaceId") String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
+    // 워크스페이스 참여자 확인
+    @GetMapping("/workspace/workspace/{workspaceId}/members/check")
+    ResponseEntity<CommonSuccessDto> checkWorkspaceMembership(
+            @PathVariable("workspaceId") String workspaceId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
+    // 프로젝트 담당자 확인
+    @GetMapping("/workspace/project/{projectId}/manager/check")
+    ResponseEntity<CommonSuccessDto> checkProjectManagership(
+            @PathVariable("projectId") String projectId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
+    // 프로젝트 참여자 확인
+    @GetMapping("/workspace/workspace/project/{projectId}/members/check")
+    ResponseEntity<CommonSuccessDto> checkProjectMembership(
+            @PathVariable("projectId") String projectId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
+    // 스톤 담당자 확인
+    @GetMapping("/workspace/stone/{stoneId}/manager/check")
+    ResponseEntity<CommonSuccessDto> checkStoneManagership(
+            @PathVariable("stoneId") String stoneId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
+    // 스톤 참여자 확인
+    @GetMapping("/workspace/stone/{stoneId}/members/check")
+    ResponseEntity<CommonSuccessDto> checkStoneMembership(
+            @PathVariable("stoneId") String stoneId,
+            @RequestHeader("X-User-Id") String userId
+    );
+
+    // workspaceId 넘겼을 때 하위 프로젝트 Id, 프로젝트명 가져오는 api
+    @GetMapping("/workspace/project/{workspaceId}/sub-project")
+    List<SubProjectResDto> getSubProjectsByWorkspace(@PathVariable("workspaceId") String workspaceId);
+
+    //projectId 넘겼을 때 하위 스톤 id, 테스크명 가져오는 api
+    @GetMapping("/workspace/stone/{projectId}/sub-stone-task")
+    StoneTaskResDto getSubStonesAndTasks(@PathVariable("projectId") String projectId);
+
+    //stoneId 넘겼을 때 하위 테스크 가져오는 api
+    @GetMapping("/stone/task/{stoneId}/sub-task")
+    List<SubTaskResDto> getSubTasks(@PathVariable("stoneId") String stoneId);
+
+    // stoneId 와 userId 넘겼을 때 웤스 관리자인지 프로젝트관리자인지 확인하는 api
+    @GetMapping("/workspace/work-project/{stoneId}/manager/check")
+    WorkspaceOrProjectManagerCheckDto checkWorkspaceOrProjectManager(
+            @PathVariable("stoneId") String stoneId,
+            @RequestHeader("X-User-Id") String userId
+    );
+}

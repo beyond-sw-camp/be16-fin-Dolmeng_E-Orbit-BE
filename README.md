@@ -8,3 +8,4 @@
 
 [화면설계서 바로가기](https://www.figma.com/design/f8NVDb2aljFlzoDFRRo8bl/Orbit?node-id=0-1&t=MH1vSaJDrlbSOE6I-1)
 
+[API명세서 / 단위테스트 바로가기](https://documenter.getpostman.com/view/48847612/2sB3QQH7CD)
