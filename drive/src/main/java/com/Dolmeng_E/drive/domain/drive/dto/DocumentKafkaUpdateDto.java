@@ -29,6 +29,6 @@ public class DocumentKafkaUpdateDto {
         private String parentId;
         private String rootType;
         private String rootId;
-        private List<DocumentKafkaSaveDto.DocumentLineDto> documentLines;
+        private List<DocumentKafkaSaveDto.DocumentLineDto> docLines;
     }
 }
