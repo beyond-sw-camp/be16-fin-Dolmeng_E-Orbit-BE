@@ -119,7 +119,19 @@ public class ViewableUpdateEventConsumer {
                     ack.acknowledge();
                     break;
                 case "WORKSPACE_PARTICIPANT_UPDATE":
-
+                    Set<String> workspaceParticipantIds = eventPayload.getUserIds().stream()
+                            .map(UUID::toString) // 각 UUID 객체를 .toString()을 호출해 문자열로 변환
+                            .collect(Collectors.toSet());
+                    List<DocumentDocument> workspaceDocumentDocuments = documentDocumentRepository.findAllByRootId(eventPayload.getId());
+                    List<FileDocument> workspaceFileDocuments = fileDocumentRepository.findAllByRootId(eventPayload.getId());
+                    workspaceFileDocuments.forEach(doc -> {
+                        doc.getViewableUserIds().addAll(workspaceParticipantIds);
+                    });
+                    workspaceDocumentDocuments.forEach(doc -> {
+                        doc.getViewableUserIds().addAll(workspaceParticipantIds);
+                    });
+                    documentDocumentRepository.saveAll(workspaceDocumentDocuments);
+                    fileDocumentRepository.saveAll(workspaceFileDocuments);
                     ack.acknowledge();
                     break;
                 default:

@@ -15,6 +15,7 @@ import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepos
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
 import com.Dolmeng_E.workspace.domain.stone.dto.MilestoneResDto;
 import com.Dolmeng_E.workspace.domain.stone.dto.ProjectMilestoneResDto;
+import com.Dolmeng_E.workspace.domain.stone.dto.StoneKafkaViewableUpdateDto;
 import com.Dolmeng_E.workspace.domain.stone.entity.ChildStoneList;
 import com.Dolmeng_E.workspace.domain.stone.entity.Stone;
 import com.Dolmeng_E.workspace.domain.stone.entity.StoneParticipant;
@@ -338,6 +339,24 @@ public class WorkspaceService {
         if (!newParticipants.isEmpty()) {
             workspaceParticipantRepository.saveAll(newParticipants);
             workspaceParticipantRepository.flush();
+        }
+
+        // kafka 메시지 발행
+        Set<UUID> workspaceNewParticipants = newParticipants.stream()
+                .map(WorkspaceParticipant::getUserId)
+                .collect(Collectors.toSet());
+        StoneKafkaViewableUpdateDto stoneKafkaViewableUpdateDto = StoneKafkaViewableUpdateDto.builder()
+                .eventType("WORKSPACE_PARTICIPANT_UPDATE")
+                .eventPayload(StoneKafkaViewableUpdateDto.EventPayload.builder()
+                        .id(workspace.getId())
+                        .userIds(workspaceNewParticipants)
+                        .build())
+                .build();
+        try {
+            String message = objectMapper.writeValueAsString(stoneKafkaViewableUpdateDto);
+            kafkaTemplate.send("update-viewable-topic", message);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Kafka 메시지 직렬화 실패", e);
         }
     }
 
