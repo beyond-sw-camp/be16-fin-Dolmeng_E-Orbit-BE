@@ -39,7 +39,7 @@ import java.util.UUID;
 public class ChatbotMessageService {
     static final String AGENT_URL = "http://localhost:5678/webhook/chatbot-agent";
     static final String AGENT_URL_CHAT = "http://localhost:5678/webhook/chatbot-agent/chat-summary";
-    static final String AGENT_URL_PROJECT = "http://localhost:5678/webhook-test/chatbot-agent/project-analyze";
+    static final String AGENT_URL_PROJECT = "http://localhost:5678/webhook/chatbot-agent/project-analyze";
 
     private final ChatbotMessageRepository chatbotMessageRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
