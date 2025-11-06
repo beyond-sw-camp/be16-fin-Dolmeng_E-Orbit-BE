@@ -9,9 +9,11 @@ import com.Dolmeng_E.workspace.domain.chatbot.dto.*;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessage;
 import com.Dolmeng_E.workspace.domain.chatbot.entity.ChatbotMessageType;
 import com.Dolmeng_E.workspace.domain.chatbot.repository.ChatbotMessageRepository;
+import com.Dolmeng_E.workspace.domain.project.dto.ProjectSnapshotDto;
 import com.Dolmeng_E.workspace.domain.project.entity.Project;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectParticipantRepository;
 import com.Dolmeng_E.workspace.domain.project.repository.ProjectRepository;
+import com.Dolmeng_E.workspace.domain.project.service.ProjectService;
 import com.Dolmeng_E.workspace.domain.task.entity.Task;
 import com.Dolmeng_E.workspace.domain.task.repository.TaskRepository;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
@@ -37,6 +39,7 @@ import java.util.UUID;
 public class ChatbotMessageService {
     static final String AGENT_URL = "http://localhost:5678/webhook/chatbot-agent";
     static final String AGENT_URL_CHAT = "http://localhost:5678/webhook/chatbot-agent/chat-summary";
+    static final String AGENT_URL_PROJECT = "http://localhost:5678/webhook/chatbot-agent/project-analyze";
 
     private final ChatbotMessageRepository chatbotMessageRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;
@@ -47,6 +50,7 @@ public class ChatbotMessageService {
     private final UserFeign userFeign;
     private final ProjectParticipantRepository projectParticipantRepository;
     private final SemanticMemoryService semanticMemoryService;
+    private final ProjectService projectService;
 
     // 사용자가 챗봇에게 메시지 전송
     public N8nResDto sendMessage(String userId, ChatbotMessageUserReqDto reqDto) {
@@ -146,6 +150,18 @@ public class ChatbotMessageService {
         List<ChatbotMessage> chatbotMessageList = chatbotMessageRepository.findByWorkspaceParticipant(participant);
 
         return chatbotMessageList.stream().map(c -> ChatbotMessageListResDto.fromEntity(c)).toList();
+    }
+
+    //
+    public AIProjectAnalysisResDto analyzeProjectDashBoard(String userId, String projectId) {
+        ProjectSnapshotDto projectSnapshotDto = projectService.getProjectLLM(userId, projectId);
+
+        // agent에게 요청 및 응답 받아오기
+        ResponseEntity<AIProjectAnalysisResDto> response =
+                restTemplateClient.post(AGENT_URL_PROJECT, projectSnapshotDto, AIProjectAnalysisResDto.class);
+        AIProjectAnalysisResDto result = response.getBody();
+
+        return result;
     }
 
     // Agent전용

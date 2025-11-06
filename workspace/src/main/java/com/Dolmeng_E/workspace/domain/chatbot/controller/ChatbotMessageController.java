@@ -1,9 +1,6 @@
 package com.Dolmeng_E.workspace.domain.chatbot.controller;
 
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageListResDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotMessageUserReqDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.ChatbotInfoReqDto;
-import com.Dolmeng_E.workspace.domain.chatbot.dto.N8nResDto;
+import com.Dolmeng_E.workspace.domain.chatbot.dto.*;
 import com.Dolmeng_E.workspace.domain.chatbot.service.ChatbotMessageService;
 import com.example.modulecommon.dto.CommonSuccessDto;
 import jakarta.validation.Valid;
@@ -39,6 +36,13 @@ public class ChatbotMessageController {
     public ResponseEntity<?> getUserMessageList(@RequestHeader("X-User-Id") String userId, @PathVariable String workspaceId) {
         List<ChatbotMessageListResDto> chatbotMessageListResDtoList = chatbotMessageService.getUserMessageList(userId, workspaceId);
         return new ResponseEntity<>(new CommonSuccessDto(chatbotMessageListResDtoList, HttpStatus.OK.value(), "챗봇과의 메시지 조회 성공"),  HttpStatus.OK);
+    }
+
+    // 프로젝트 대시보드 분석용
+    @GetMapping("/project/{projectId}/dashboard")
+    public ResponseEntity<?> analyzeProjectDashBoard(@RequestHeader("X-User-Id") String userId, @PathVariable String projectId) {
+        AIProjectAnalysisResDto result = chatbotMessageService.analyzeProjectDashBoard(userId, projectId);
+        return new ResponseEntity<>(new CommonSuccessDto(result, HttpStatus.OK.value(), "프로젝트 대시보드 분석정보 조회 성공"),  HttpStatus.OK);
     }
 
     // Agent전용
