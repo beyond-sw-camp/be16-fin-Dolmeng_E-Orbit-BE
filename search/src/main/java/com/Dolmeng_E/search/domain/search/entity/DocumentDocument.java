@@ -45,9 +45,8 @@ public class DocumentDocument {
     )
     private String searchTitle;
 
-    // 파일 내용
-    @Field(type = FieldType.Text, analyzer = "nori")
-    private String searchContent;
+    @Field(type = FieldType.Nested)
+    private List<DocumentLine> docLines;
 
     // --- 권한/정렬 필드 ---
     // 해당 폴더 권한 + 관리자

@@ -2,6 +2,7 @@ package com.Dolmeng_E.workspace.domain.project.service;
 
 import com.Dolmeng_E.workspace.common.controller.DriveServiceClient;
 import com.Dolmeng_E.workspace.common.controller.SearchServiceClient;
+import com.Dolmeng_E.workspace.common.dto.ElementCountAndSizeResDto;
 import com.Dolmeng_E.workspace.common.dto.UserIdListDto;
 import com.Dolmeng_E.workspace.common.dto.UserInfoResDto;
 import com.Dolmeng_E.workspace.common.service.AccessCheckService;
@@ -30,6 +31,7 @@ import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceParticipant;
 import com.Dolmeng_E.workspace.domain.workspace.entity.WorkspaceRole;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceParticipantRepository;
 import com.Dolmeng_E.workspace.domain.workspace.repository.WorkspaceRepository;
+import com.example.modulecommon.dto.CommonSuccessDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -523,9 +525,10 @@ public class ProjectService {
                 .divide(BigDecimal.valueOf(totalTaskCount), 4, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        // 지연되고 있는 태스크 top3 정보
+        // 지연되고 있는 태스크 리스트
         List<Task> delayed = taskRepository
-                .findTop3ByStone_Project_IdAndIsDoneFalseAndEndTimeBeforeOrderByEndTimeAsc(projectId, now);
+                .findAllByStone_Project_IdAndIsDoneFalseAndEndTimeBeforeOrderByEndTimeAsc(projectId, now);
+
 
         List<ProjectDashboardResDto.LazyTask> lazyTasklist = delayed.stream()
                 .map(t -> ProjectDashboardResDto.LazyTask.builder()
@@ -564,6 +567,14 @@ public class ProjectService {
                                 .build())
                         .toList();
 
+        // 프로젝트 문서 수 + 파일 용량
+        CommonSuccessDto body = driveServiceClient.getElements(projectId).getBody();
+        if (body == null || body.getResult() == null) {
+            throw new IllegalStateException("드라이브 요소 조회 결과가 없습니다.");
+        }
+        ElementCountAndSizeResDto elementCountAndSizeResDto =
+                objectMapper.convertValue(body.getResult(), ElementCountAndSizeResDto.class);
+
 
         return ProjectDashboardResDto.builder()
                 .projectMilestone(project.getMilestone())
@@ -571,13 +582,12 @@ public class ProjectService {
                 .completedStoneCount((int) completedStoneCount)
                 .totalTaskCount((int) totalTaskCount)
                 .completedTaskCount((int) completedTaskCount)
-//                .projectProgress(projectProgress) // 프젝마일스톤과 동일
                 .avgTaskCompletedTime(avgTaskCompletedTime)   // 단위: '일'
                 .taskRisk(taskRisk)
                 .lazyTasklist(lazyTasklist)
                 .completedStoneList(completedStoneList)
                 .completedTaskList(completedTaskList)
-//                .predictCompleteDay(predictCompleteDay)
+                .elementCountAndSizeResDto(elementCountAndSizeResDto) // 추가
                 .build();
     }
 

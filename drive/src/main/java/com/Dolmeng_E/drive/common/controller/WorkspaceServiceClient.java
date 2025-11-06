@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @FeignClient(name = "workspace-service")
 public interface WorkspaceServiceClient {
@@ -76,5 +77,5 @@ public interface WorkspaceServiceClient {
 
     // 파일/문서 접근 초기 접근 권한 유저아이디 목록 불러오는 API
     @GetMapping("/workspace/{rootId}/{rootType}/getViewableUserIds")
-    List<String> getViewableUserIds(@PathVariable String rootId, @PathVariable String rootType);
+    Set<String> getViewableUserIds(@PathVariable String rootId, @PathVariable String rootType);
 }

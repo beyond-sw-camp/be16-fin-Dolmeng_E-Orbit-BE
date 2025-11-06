@@ -22,4 +22,6 @@ public interface DocumentRepository extends JpaRepository<Document, String> {
     @Transactional // (중요) 업데이트/삭제 쿼리는 트랜잭션 내에서 실행되어야 합니다.
     @Query("UPDATE Document e SET e.isDelete = true WHERE e.rootType = :rootType AND e.rootId = :rootId")
     void softDeleteByRootInfo(@Param("rootType") RootType rootType, @Param("rootId") String rootId);
+
+    int countByRootIdAndIsDeleteFalse(String rootId);
 }

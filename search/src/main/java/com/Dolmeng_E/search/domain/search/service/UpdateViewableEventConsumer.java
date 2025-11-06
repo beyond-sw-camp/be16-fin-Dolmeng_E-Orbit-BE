@@ -3,7 +3,6 @@ package com.Dolmeng_E.search.domain.search.service;
 import com.Dolmeng_E.search.domain.search.dto.StoneEventDto;
 import com.Dolmeng_E.search.domain.search.entity.ParticipantInfo;
 import com.Dolmeng_E.search.domain.search.entity.StoneDocument;
-import com.Dolmeng_E.search.domain.search.entity.TaskDocument;
 import com.Dolmeng_E.search.domain.search.repository.StoneDocumentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.HashOperations;
@@ -18,18 +17,18 @@ import java.util.Map;
 import java.util.Optional;
 
 @Component
-public class StoneEventConsumer {
+public class UpdateViewableEventConsumer {
     private final ObjectMapper objectMapper; // JSON 파싱용
     private final HashOperations<String, String, String> hashOperations; // 유저 정보 가져오는 용도
     private final StoneDocumentRepository stoneDocumentRepository;
 
-    public StoneEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, StoneDocumentRepository stoneDocumentRepository) {
+    public UpdateViewableEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, StoneDocumentRepository stoneDocumentRepository) {
         this.objectMapper = objectMapper;
         this.hashOperations = redisTemplate.opsForHash();
         this.stoneDocumentRepository = stoneDocumentRepository;
     }
 
-    @KafkaListener(topics = "stone-topic", groupId = "search-consumer-group")
+    @KafkaListener(topics = "update-viewable-topic", groupId = "search-consumer-group")
     public void handleFile(String eventMessage, Acknowledgment ack) {
         try {
             // 1. Kafka 메시지(JSON)를 DTO로 파싱

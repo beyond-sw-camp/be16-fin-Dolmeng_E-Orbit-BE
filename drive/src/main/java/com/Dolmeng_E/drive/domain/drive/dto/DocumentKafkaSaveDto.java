@@ -34,5 +34,15 @@ public class DocumentKafkaSaveDto {
         private String fileUrl;
         private Long size;
         private String workspaceId;
+        private List<DocumentLineDto> documentLines;
+    }
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DocumentLineDto{
+        private Long id;
+        private String content;
+        private String type;
     }
 }

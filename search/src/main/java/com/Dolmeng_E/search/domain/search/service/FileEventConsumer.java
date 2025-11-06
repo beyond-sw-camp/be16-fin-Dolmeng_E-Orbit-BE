@@ -75,6 +75,9 @@ public class FileEventConsumer {
                         if(eventPayload.getRootType()!=null){
                             documentToUpdate.setRootType(eventPayload.getRootType());
                         }
+                        if (eventPayload.getViewableUserIds()!=null){
+                            documentToUpdate.setViewableUserIds(eventPayload.getViewableUserIds());
+                        }
                         documentToUpdate.setParentId(eventPayload.getParentId());
                         fileDocumentRepository.save(documentToUpdate);
                         System.out.println("ES 업데이트(U) 성공: " + documentToUpdate.getId());

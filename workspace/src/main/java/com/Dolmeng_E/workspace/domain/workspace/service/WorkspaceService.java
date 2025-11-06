@@ -1154,8 +1154,8 @@ public class WorkspaceService {
     }
 
     // 접근 권한 유저ID 리턴
-    public List<String> getViewableUserIds(String rootId, String rootType){
-        List<String> viewableUserIds = new ArrayList<>();
+    public Set<String> getViewableUserIds(String rootId, String rootType){
+        Set<String> viewableUserIds = new HashSet<>();
         // 워크스페이스일 경우
         if(rootType.equals("WORKSPACE")){
             Workspace workspace = workspaceRepository.findById(rootId).orElseThrow(()->new EntityNotFoundException("존재하지 않는 워크스페이스입니다."));
