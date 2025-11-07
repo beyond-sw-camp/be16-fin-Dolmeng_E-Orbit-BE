@@ -96,25 +96,25 @@ jobs:
 
           if [ "$SERVICE_FOLDER" == "api-gateway" ]; then
             ECR_REPO_NAME="orbit/apigateway"
-            K8S_DEPLOYMENT_NAME="api-gateway-deployment"
+            K8S_DEPLOYMENT_NAME="api-gateway-depl"
           elif [ "$SERVICE_FOLDER" == "chat" ]; then
             ECR_REPO_NAME="orbit/chat"
-            K8S_DEPLOYMENT_NAME="chat-service-deployment"
+            K8S_DEPLOYMENT_NAME="chat-service-depl"
           elif [ "$SERVICE_FOLDER" == "chat-db" ]; then
             ECR_REPO_NAME="orbit/chat-db"
-            K8S_DEPLOYMENT_NAME="chat-db-service-deployment"
+            K8S_DEPLOYMENT_NAME="chat-db-service-depl"
           elif [ "$SERVICE_FOLDER" == "drive" ]; then
             ECR_REPO_NAME="orbit/drive"
-            K8S_DEPLOYMENT_NAME="drive-service-deployment"
+            K8S_DEPLOYMENT_NAME="drive-service-depl"
           elif [ "$SERVICE_FOLDER" == "search" ]; then
             ECR_REPO_NAME="orbit/search"
-            K8S_DEPLOYMENT_NAME="search-service-deployment"
+            K8S_DEPLOYMENT_NAME="search-service-depl"
           elif [ "$SERVICE_FOLDER" == "user" ]; then
             ECR_REPO_NAME="orbit/user"
             K8S_DEPLOYMENT_NAME="user-service-deployment"
           elif [ "$SERVICE_FOLDER" == "workspace" ]; then
             ECR_REPO_NAME="orbit/workspace"
-            K8S_DEPLOYMENT_NAME="workspace-service-deployment"
+            K8S_DEPLOYMENT_NAME="workspace-service-depl"
           else
             echo "::error:: Unknown service folder $SERVICE_FOLDER."
             exit 1
