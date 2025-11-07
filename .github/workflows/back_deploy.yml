@@ -2,8 +2,9 @@ name: Monorepo CI/CD - Deploy Changed Services to EKS
 
 # 1. 트리거
 on:
-  push:
-    branches: [ "main" ]
+  pull_request:
+    types: [ closed ]       # PR이 '닫혔을 때'
+    branches: [ "main" ]    # 'main' 브랜치를 대상으로 하는 PR일 때
 
 # 2. 환경 변수
 env:
@@ -22,6 +23,8 @@ jobs:
   # 잡 1: 변경된 모듈(서비스) 감지
   # -------------------------------------------------------------
   detect-changes:
+    # (중요) PR이 '머지(merged)'된 경우에만 실행
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.filter.outputs.changes }}
@@ -30,15 +33,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # (수정) fetch-depth: 0 대신 2로 변경 (push 이벤트 비교용)
-          fetch-depth: 0
+          fetch-depth: 0 # PR 비교를 위해 필요
 
       - name: Detect changed services (using paths-filter)
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          # 'list-files: shell'이 없는 기본값 (GitHub API) 사용
-
           filters: |
             api-gateway:
               - 'api-gateway/**'
@@ -55,18 +55,18 @@ jobs:
             workspace:
               - 'workspace/**'
 
-      # --- ⬇️ (중요) 디버그 스텝 추가 ⬇️ ---
       - name: "Debug: Print filter output"
         run: |
           echo "Filter output (changes): ${{ steps.filter.outputs.changes }}"
           echo "Filter output (json): ${{ toJson(steps.filter.outputs) }}"
-      # --- ⬆️ 디버그 스텝 ⬆️ ---
 
   # -------------------------------------------------------------
   # 잡 2: 변경된 모듈만 병렬로 빌드 및 배포
   # -------------------------------------------------------------
   build-and-deploy:
     needs: detect-changes
+    # detect-changes 잡의 if 조건이 false면 스킵되므로,
+    # outputs.services가 비어있게 되어 이 잡도 자동으로 스킵됩니다.
     if: "needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''"
     runs-on: ubuntu-latest
     strategy:
@@ -74,7 +74,6 @@ jobs:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
 
     steps:
-      # (이하 잡 2의 내용은 이전과 동일합니다)
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -127,6 +126,7 @@ jobs:
       - name: Build, tag, and push Docker image to ECR
         id: build-image
         env:
+          # (중요) PR 머지 시에는 github.sha가 머지 커밋의 SHA를 올바르게 가리킵니다.
           IMAGE_TAG: ${{ github.sha }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SERVICE_FOLDER: ${{ matrix.service }}
