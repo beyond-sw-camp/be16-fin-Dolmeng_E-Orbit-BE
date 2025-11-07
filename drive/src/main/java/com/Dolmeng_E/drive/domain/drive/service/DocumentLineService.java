@@ -49,7 +49,6 @@ public class DocumentLineService {
     // 문서에서 모든 라인 가져오기
     @Transactional(readOnly = true)
     public List<DocumentLineResDto> findAllDocumentLinesByDocumentId(String documentId) {
-
         // 1. 모든 라인을 DB에서 가져옵니다.
         List<DocumentLine> documentLines = documentLineRepository.findAllDocumentLinesByDocumentId(documentId);
         // 2. HashMap 준비 및 루트 노드 찾기 (반복문 한 번으로 통합)
