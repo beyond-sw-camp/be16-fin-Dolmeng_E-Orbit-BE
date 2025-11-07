@@ -26,6 +26,7 @@ import java.util.*;
 @Service
 @Transactional
 public class DocumentLineService {
+
     private final DocumentLineRepository documentLineRepository;
     private final DocumentRepository documentRepository;
     private final HashOperations<String, String, String> hashOperations;
