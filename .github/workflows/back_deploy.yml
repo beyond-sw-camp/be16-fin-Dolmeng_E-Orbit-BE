@@ -47,22 +47,22 @@ jobs:
           # 'search-service'라는 이름으로 'changes' 출력에 포함됩니다.
           filters: |
             search-service:
-              - 'search-service/**'
+              - 'search/**'
             
             drive-service:
-              - 'drive-service/**'
+              - 'drive/**'
             
             workspace-service:
-              - 'workspace-service/**'
+              - 'workspace/**'
             
             user-service:
-              - 'user-service/**'
+              - 'user/**'
             
             chat-service:
-              - 'chat-service/**'
+              - 'chat/**'
             
             chat-db-service:
-              - 'chat-db-service/**'
+              - 'chat-db/**'
             
             api-gateway:
               - 'api-gateway/**'
