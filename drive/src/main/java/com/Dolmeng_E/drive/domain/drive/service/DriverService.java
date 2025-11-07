@@ -797,6 +797,7 @@ public class DriverService {
     }
 
     public String getRootName(String userId, String rootId, String rootType){
+
         if(rootType.equals("WORKSPACE")){
             return workspaceServiceClient.getEntityName(userId, EntityNameReqDto.builder()
                     .workspaceId(rootId).build()).getName();
