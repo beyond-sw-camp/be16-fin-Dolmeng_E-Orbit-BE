@@ -134,8 +134,8 @@ jobs:
         run: |
           echo "Building service from folder: $SERVICE_FOLDER"
           cd $SERVICE_FOLDER
-          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
-          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:latest --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
+          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPO_NAME:latest --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
+          docker push $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
 
       - name: Update Kubeconfig
@@ -153,4 +153,4 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           echo "Deploying ${{ matrix.service }} (K8s: $K8S_DEPLOYMENT_NAME)..."
-          kubectl set image deployment/$K8S_DEPLOYMENT_NAME *=*$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG -n ${{ env.K8S_NAMESPACE }}
+          kubectl set image deployment/$K8S_DEPLOYMENT_NAME *=$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG -n ${{ env.K8S_NAMESPACE }}
