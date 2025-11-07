@@ -1,6 +1,14 @@
-FROM openjdk:17-jdk-alpine as stage1
+FROM eclipse-temurin:17-jdk-jammy as stage1
 
 WORKDIR /app
+
+# GitHub Packages 인증용 ARG (빌드 시 --build-arg 로 전달됨)
+ARG GITHUB_USER
+ARG GITHUB_TOKEN
+
+# 환경 변수로 전달 (Gradle이 System.getenv()로 참조 가능)
+ENV GITHUB_USER=${GITHUB_USER}
+ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 
 COPY gradle gradle
 COPY src src
@@ -13,13 +21,13 @@ RUN ./gradlew bootJar
 
 # 두 번째 스테이지
 # 이미지 경량화를 위해 스테이지 분리
-FROM openjdk:17-jdk-alpine as stage2
+FROM eclipse-temurin:17-jdk-jammy as stage2
 WORKDIR /app
 # stage1의 jar파일을 stage2로 copy
 COPY --from=stage1 /app/build/libs/*.jar app.jar
 
 # 실행 : CMD 또는 ENTRYPOINT를 통해 컨테이너 실행
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
 
 # 도커이미지 생성
 # docker build -t ordersystem:v1.0 .
