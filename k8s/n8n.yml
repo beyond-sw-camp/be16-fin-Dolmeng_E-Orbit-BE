@@ -21,11 +21,11 @@ spec:
           env:
             # --- 기본 설정 ---
             - name: N8N_BASIC_AUTH_ACTIVE
-              value: "true"
-            - name: N8N_BASIC_AUTH_USER
-              value: "admin"
-            - name: N8N_BASIC_AUTH_PASSWORD
-              value: "orbit1234"
+              value: "false"        # 🔥 인증 완전 비활성화
+            - name: N8N_SECURE_COOKIE
+              value: "false"        # 🔥 쿠키 보안 기능 비활성화 (내부 접근 환경이라면 안전)
+            - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+              value: "false"        # 권한 경고 방지
 
             # --- 실행 환경 ---
             - name: N8N_HOST
@@ -34,6 +34,10 @@ spec:
               value: "5678"
             - name: NODE_ENV
               value: "production"
+            - name: N8N_RUNNERS_ENABLED
+              value: "true"         # ⚙️ 향후 deprecated 대비
+            - name: DB_SQLITE_POOL_SIZE
+              value: "5"            # ⚙️ deprecated 경고 제거
 
             # --- OpenAI Credential 연결 ---
             - name: OPENAI_API_KEY_N8N

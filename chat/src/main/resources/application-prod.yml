@@ -55,6 +55,6 @@ jwt:
 
 openvidu:
   # OpenVidu 서버의 HTTP 주소 (Docker 실행 시 설정한 포트 4443 사용)
-  url: http://openvidu.orbitflow.store:4443/ # todo
+  url: https://openvidu.orbitflow.store
   # Docker 실행 시 설정한 비밀 키
   secret: MY_SECRET
