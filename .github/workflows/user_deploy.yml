@@ -61,6 +61,6 @@ jobs:
           # 'api-gateway-depl' 디플로이먼트의
           # 'api-gateway' 컨테이너(가정)의 이미지를
           # 방금 푸시한 새 이미지 태그로 교체합니다.
-          kubectl set image deployment/api-gateway-depl \
-          api-gateway=$REGISTRY/$REPOSITORY:$IMAGE_TAG \
+          kubectl set image deployment/user-depl \
+          user=$REGISTRY/$REPOSITORY:$IMAGE_TAG \
           -n orbit
