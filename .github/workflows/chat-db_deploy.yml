@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout github
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4 # v4로 버전 업그레이드 권장
 
       - name: install kubectl
         uses: azure/setup-kubectl@v3
@@ -21,7 +21,7 @@ jobs:
         id: install
 
       - name: configure aws
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4 # v4로 버전 업그레이드 권장
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -32,13 +32,14 @@ jobs:
 
       - name: Login to ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2 # v2로 버전 업그레이드 권장
 
       - name: build and push docker image to ecr
         env:
           REGISTRY: 897722707137.dkr.ecr.ap-northeast-2.amazonaws.com
           REPOSITORY: orbit/chat-db
-          IMAGE_TAG: latest
+          # github.sha는 현재 커밋의 고유 ID를 제공합니다.
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           cd chat-db
           docker build \
@@ -47,6 +48,16 @@ jobs:
           .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-      - name: eks kubectl apply
+      # 'rollout restart' 대신 'set image'를 사용합니다.
+      - name: deploy to eks cluster
+        env:
+          REGISTRY: 897722707137.dkr.ecr.ap-northeast-2.amazonaws.com
+          REPOSITORY: orbit/chat-db
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          kubectl rollout restart deployment chat-db-depl -n orbit
+          # 'api-gateway-depl' 디플로이먼트의
+          # 'api-gateway' 컨테이너(가정)의 이미지를
+          # 방금 푸시한 새 이미지 태그로 교체합니다.
+          kubectl set image deployment/api-gateway-depl \
+          api-gateway=$REGISTRY/$REPOSITORY:$IMAGE_TAG \
+          -n orbit
