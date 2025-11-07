@@ -99,22 +99,22 @@ jobs:
             K8S_DEPLOYMENT_NAME="api-gateway-depl"
           elif [ "$SERVICE_FOLDER" == "chat" ]; then
             ECR_REPO_NAME="orbit/chat"
-            K8S_DEPLOYMENT_NAME="chat-service-depl"
+            K8S_DEPLOYMENT_NAME="chat-depl"
           elif [ "$SERVICE_FOLDER" == "chat-db" ]; then
             ECR_REPO_NAME="orbit/chat-db"
-            K8S_DEPLOYMENT_NAME="chat-db-service-depl"
+            K8S_DEPLOYMENT_NAME="chat-db-depl"
           elif [ "$SERVICE_FOLDER" == "drive" ]; then
             ECR_REPO_NAME="orbit/drive"
-            K8S_DEPLOYMENT_NAME="drive-service-depl"
+            K8S_DEPLOYMENT_NAME="drive-depl"
           elif [ "$SERVICE_FOLDER" == "search" ]; then
             ECR_REPO_NAME="orbit/search"
-            K8S_DEPLOYMENT_NAME="search-service-depl"
+            K8S_DEPLOYMENT_NAME="search-depl"
           elif [ "$SERVICE_FOLDER" == "user" ]; then
             ECR_REPO_NAME="orbit/user"
-            K8S_DEPLOYMENT_NAME="user-service-deployment"
+            K8S_DEPLOYMENT_NAME="user-depl"
           elif [ "$SERVICE_FOLDER" == "workspace" ]; then
             ECR_REPO_NAME="orbit/workspace"
-            K8S_DEPLOYMENT_NAME="workspace-service-depl"
+            K8S_DEPLOYMENT_NAME="workspace-depl"
           else
             echo "::error:: Unknown service folder $SERVICE_FOLDER."
             exit 1
