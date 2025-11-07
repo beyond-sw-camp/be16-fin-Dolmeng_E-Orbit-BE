@@ -16,7 +16,7 @@ spec:
   tls:
   - hosts:
     - "server.orbitflow.store"
-    secretName: server-orbit-store-tls # Certificate의 secretName
+    secretName: server-orbitflow-store-tls # Certificate의 secretName
   rules:
   - host: server.orbitflow.store  # 설정하려는 도메인 이름.
     http:
