@@ -44,7 +44,7 @@ jobs:
           cd drive
           docker build \
           -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
-          --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=ghp_X2JzRzKXVrVmOX1HC6CHNzQ7fyATGq4WF8U
+          --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=ghp_X2JzRzKXVrVmOX1HC6CHNzQ7fyATGq4WF8U \
           .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
