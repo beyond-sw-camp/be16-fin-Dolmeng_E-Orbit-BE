@@ -26,6 +26,7 @@ public class DocumentEventConsumer {
     private final HtmlParsingService htmlParsingService;
 
 
+
     public DocumentEventConsumer(ObjectMapper objectMapper, RedisTemplate<String, String> redisTemplate, DocumentDocumentRepository documentDocumentRepository, FileDocumentRepository fileDocumentRepository, HtmlParsingService htmlParsingService) {
         this.objectMapper = objectMapper;
         this.hashOperations = redisTemplate.opsForHash();
