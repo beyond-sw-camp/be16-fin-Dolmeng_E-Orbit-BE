@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-deployment
-  namespace: test
+  namespace: orbit
 spec:
   replicas: 1
   selector:
@@ -12,11 +12,11 @@ spec:
     metadata:
       labels:
         app: my-redis
-    spec: 
+    spec:
       containers:
       - name: my-redis
-        image: redis:7.0.5
-        ports: 
+        image: redis
+        ports:
         - containerPort: 6379
 
 ---
@@ -24,7 +24,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-service
-  namespace: test
+  namespace: orbit
 spec:
   type: ClusterIP
   ports:

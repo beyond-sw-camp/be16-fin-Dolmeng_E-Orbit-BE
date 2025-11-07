@@ -451,20 +451,27 @@ public class StoneService {
                 .build();
 
         // 추가 : 채팅방 인원 추가 (채팅방 생성된 스톤만)
-        if (stone.getChatCreation() != null && stone.getChatCreation() && !newParticipants.isEmpty()) {
+        if (Boolean.TRUE.equals(stone.getChatCreation()) && !newParticipants.isEmpty()) {
 
-            ChatInviteReqDto chatInviteReqDto = ChatInviteReqDto.builder()
-                    .workspaceId(workspace.getId())
-                    .projectId(project.getId())
-                    .stoneId(stone.getId())
-                    .userIdList(newParticipants.stream()
-                            .map(sp -> sp.getWorkspaceParticipant().getUserId())
-                            .distinct()
-                            .toList())
-                    .build();
+            UUID managerId = stone.getStoneManager().getUserId();
 
-            // chat-service에 채팅방 초대 요청
-            chatFeign.inviteChatParticipants(chatInviteReqDto);
+            // 초대 대상: 신규 스톤참여자들 중 "매니저 제외"
+            List<UUID> inviteIds = newParticipants.stream()
+                    .map(sp -> sp.getWorkspaceParticipant().getUserId())
+                    .filter(id -> !id.equals(managerId))   // <-- 매니저 필터링
+                    .distinct()
+                    .toList();
+
+            if (!inviteIds.isEmpty()) {
+                ChatInviteReqDto chatInviteReqDto = ChatInviteReqDto.builder()
+                        .workspaceId(workspace.getId())
+                        .projectId(project.getId())
+                        .stoneId(stone.getId())
+                        .userIdList(inviteIds)
+                        .build();
+
+                chatFeign.inviteChatParticipants(chatInviteReqDto);
+            }
         }
 
         // 삭제 대상

@@ -1,0 +1,167 @@
+name: Monorepo CI/CD - Deploy Changed Services to EKS
+
+# 1. 트리거: main 브랜치에 푸시가 발생할 때 실행됩니다.
+on:
+  push:
+    branches: [ "main" ]
+
+# 2. 워크플로우 전체에서 사용할 환경 변수 (ECR/EKS 정보)
+env:
+  AWS_REGION: "ap-northeast-2" # (예: 서울 리전)
+  EKS_CLUSTER_NAME: "orbit"
+  ECR_REGISTRY_URL: "897722707137.dkr.ecr.ap-northeast-2.amazonaws.com"
+  K8S_NAMESPACE: "orbit"
+
+# 3. AWS OIDC 인증을 위한 권한 설정
+#    (GitHub Secrets에 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY를 쓰는 것보다 안전)
+permissions:
+  id-token: write # OIDC 인증 토큰 발급
+  contents: read  # 코드 체크아웃
+
+jobs:
+  # -------------------------------------------------------------
+  # 잡 1: 변경된 모듈(서비스) 감지
+  # -------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # 'services'라는 이름으로 변경된 서비스 목록(JSON 배열)을 출력합니다.
+      # 예: ["search-service", "drive-service"]
+      services: ${{ steps.filter.outputs.changes }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 이전 커밋과 비교하기 위해 전체 히스토리 가져오기
+
+      - name: Detect changed services (using paths-filter)
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # GitHub의 'files' API를 사용하도록 설정 (더 정확함)
+          list-files: 'shell'
+
+          # 'filters' 항목에 모든 마이크로서비스의 경로를 등록합니다.
+          # 여기에 'search-service' 폴더 내 파일이 변경되면,
+          # 'search-service'라는 이름으로 'changes' 출력에 포함됩니다.
+          filters: |
+            search-service:
+              - 'search-service/**'
+            
+            drive-service:
+              - 'drive-service/**'
+            
+            workspace-service:
+              - 'workspace-service/**'
+            
+            user-service:
+              - 'user-service/**'
+            
+            chat-service:
+              - 'chat-service/**'
+            
+            chat-db-service:
+              - 'chat-db-service/**'
+            
+            api-gateway:
+              - 'api-gateway/**'
+
+  # -------------------------------------------------------------
+  # 잡 2: 변경된 모듈만 병렬로 빌드 및 배포
+  # -------------------------------------------------------------
+  build-and-deploy:
+    # 1. 'detect-changes' 잡이 성공해야 실행됩니다.
+    needs: detect-changes
+
+    # 2. (핵심) 'detect-changes'의 'services' 출력(JSON 배열)이 비어있지 않을 때만 실행
+    if: "needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''"
+
+    runs-on: ubuntu-latest
+
+    # 3. (핵심) 'matrix' 전략: 'services' 배열의 각 항목('service' 변수)에 대해 이 잡을 병렬로 실행
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 4. AWS EKS/ECR 인증 (OIDC 사용)
+      #    GitHub Repository Secret에 'AWS_IAM_ROLE_ARN'을 미리 등록해야 합니다.
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # (필수) GitHub Secret에 등록
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 5. ECR 로그인
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+
+      # --- ⬇️ 6. 서비스 폴더명과 ECR 리포지토리명 매핑 ⬇️ ---
+      - name: Set ECR Repository Name
+        id: map-repo
+        run: |
+          SERVICE_FOLDER=${{ matrix.service }}
+          
+          # --- (주목) ---
+          # ⬇️ (수정) 스크린샷에 나온 ECR 리포지토리 이름으로 매핑합니다.
+          
+          if [ "$SERVICE_FOLDER" == "api-gateway" ]; then
+            ECR_REPO_NAME="orbit/apigateway" # ECR 리포지토리 이름
+          
+          elif [ "$SERVICE_FOLDER" == "chat-service" ]; then
+            ECR_REPO_NAME="orbit/chat" # ECR 리포지토리 이름
+          
+          elif [ "$SERVICE_FOLDER" == "drive-service" ]; then
+            ECR_REPO_NAME="orbit/drive" # ECR 리포지토리 이름
+          
+          elif [ "$SERVICE_FOLDER" == "search-service" ]; then
+            ECR_REPO_NAME="orbit/search" # ECR 리포지토리 이름
+          
+          elif [ "$SERVICE_FOLDER" == "user-service" ]; then
+            ECR_REPO_NAME="orbit/user" # ECR 리포지토리 이름
+
+          elif [ "$SERVICE_FOLDER" == "workspace-service" ]; then
+            ECR_REPO_NAME="orbit/workspace" # ECR 리포지토리 이름
+          
+          else
+            echo "::error:: Unknown service folder $SERVICE_FOLDER"
+            exit 1
+          fi
+          # --- --- --- ---
+          
+          echo "service_folder=$SERVICE_FOLDER" >> $GITHUB_OUTPUT
+          echo "ecr_repo=$ECR_REPO_NAME" >> $GITHUB_OUTPUT
+
+      # --- 7. (필수) Docker 이미지 빌드 및 푸시 스텝 ---
+      - name: Build, tag, and push Docker image to ECR
+        id: build-image
+        env:
+          IMAGE_TAG: ${{ github.sha }} # 커밋 해시를 이미지 태그로 사용
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SERVICE_FOLDER: ${{ steps.map-repo.outputs.service_folder }}
+          ECR_REPO_NAME: ${{ steps.map-repo.outputs.ecr_repo }}
+        run: |
+          echo "Building service from folder: $SERVICE_FOLDER"
+          echo "Pushing to ECR repository: $ECR_REGISTRY/$ECR_REPO_NAME"
+          
+          # 1. 변경된 서비스의 폴더로 이동
+          cd $SERVICE_FOLDER
+          
+          # 2. Docker 이미지 빌드 (ECR 리포지토리명과 태그 사용)
+          docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:latest --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{secrets.GH_TOKEN}} .
+          
+          # 3. ECR에 푸시
+          docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
+
+      # 8. EKS에 배포 (kubectl rollout restart)
+      #    (K8s Deployment 이름 규칙을 가정)
+      - name: Deploy to EKS (Rolling Restart)
+        run: |
+          
+          echo "Deploying ${{ matrix.service }}..."
+          kubectl rollout restart deployment/${{ matrix.service }}-deployment -n ${{ env.K8S_NAMESPACE }}
