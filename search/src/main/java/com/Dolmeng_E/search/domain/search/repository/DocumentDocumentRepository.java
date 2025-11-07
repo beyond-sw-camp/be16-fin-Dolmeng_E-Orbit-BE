@@ -8,4 +8,5 @@ import java.util.List;
 public interface DocumentDocumentRepository extends ElasticsearchRepository<DocumentDocument, String> {
     void deleteByRootTypeAndRootId(String rootType, String rootId);
     List<DocumentDocument> findAllByRootId(String rootId);
+
 }

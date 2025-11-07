@@ -21,5 +21,4 @@ public class AgentController {
         return new ResponseEntity(new CommonSuccessDto(unreadMessages, HttpStatus.OK.value(), "읽지 않은 메시지 조회 성공"), HttpStatus.OK);
     }
 
-
 }

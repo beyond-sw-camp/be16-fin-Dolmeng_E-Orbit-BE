@@ -22,7 +22,6 @@ import java.security.Key;
 public class StompHandler implements ChannelInterceptor {
     @Value("${jwt.secretKeyAt}")
     private String secretKeyAt;
-
     private Key secret_at_key;
 
     @PostConstruct

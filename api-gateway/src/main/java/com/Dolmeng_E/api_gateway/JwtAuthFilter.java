@@ -19,6 +19,7 @@ public class JwtAuthFilter implements GlobalFilter {
     @Value("${jwt.secretKeyAt}")
     private String secretKeyAt;
 
+
     private static final List<String> ALLOWED_PATH = List.of(
             "/user/new-user",
             "/user/auth/login",
