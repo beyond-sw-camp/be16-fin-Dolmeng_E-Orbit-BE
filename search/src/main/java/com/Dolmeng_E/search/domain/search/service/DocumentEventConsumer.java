@@ -20,6 +20,7 @@ import java.util.Optional;
 
 @Component
 public class DocumentEventConsumer {
+
     private final ObjectMapper objectMapper;
     private final HashOperations<String, String, String> hashOperations;
     private final DocumentDocumentRepository documentDocumentRepository;
