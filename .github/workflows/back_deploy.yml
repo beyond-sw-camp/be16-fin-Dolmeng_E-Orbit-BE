@@ -1,72 +1,8 @@
-name: Monorepo CI/CD - Deploy Changed Services to EKS
-
-# 1. 트리거
-on:
-  pull_request:
-    types: [ closed ]       # PR이 '닫혔을 때'
-    branches: [ "main" ]    # 'main' 브랜치를 대상으로 하는 PR일 때
-
-# 2. 환경 변수
-env:
-  AWS_REGION: "ap-northeast-2"
-  EKS_CLUSTER_NAME: "orbit"
-  ECR_REGISTRY_URL: "897722707137.dkr.ecr.ap-northeast-2.amazonaws.com"
-  K8S_NAMESPACE: "orbit"
-
-# 3. 권한 설정
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  # -------------------------------------------------------------
-  # 잡 1: 변경된 모듈(서비스) 감지
-  # -------------------------------------------------------------
-  detect-changes:
-    # (중요) PR이 '머지(merged)'된 경우에만 실행
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.filter.outputs.changes }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # PR 비교를 위해 필요
-
-      - name: Detect changed services (using paths-filter)
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            api-gateway:
-              - 'api-gateway/**'
-            chat:
-              - 'chat/**'
-            chat-db: 
-              - 'chat-db/**'
-            drive:
-              - 'drive/**'
-            search:
-              - 'search/**'
-            user:
-              - 'user/**'
-            workspace:
-              - 'workspace/**'
-
-      - name: "Debug: Print filter output"
-        run: |
-          echo "Filter output (changes): ${{ steps.filter.outputs.changes }}"
-          echo "Filter output (json): ${{ toJson(steps.filter.outputs) }}"
-
-  # -------------------------------------------------------------
-  # 잡 2: 변경된 모듈만 병렬로 빌드 및 배포
+# -------------------------------------------------------------
+  # 잡 2: (수정됨) Access Key 방식으로 빌드 및 배포
   # -------------------------------------------------------------
   build-and-deploy:
     needs: detect-changes
-    # detect-changes 잡의 if 조건이 false면 스킵되므로,
-    # outputs.services가 비어있게 되어 이 잡도 자동으로 스킵됩니다.
     if: "needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''"
     runs-on: ubuntu-latest
     strategy:
@@ -77,10 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials (OIDC)
+      # [수정됨] OIDC 대신 IAM User Access Key로 인증
+      - name: Configure AWS Credentials (Access Key)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -135,12 +73,13 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:latest --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
           docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
 
+      # [수정됨] 1. 'get-' 오타 수정 / 2. 'role-to-assume' 삭제
       - name: Update Kubeconfig
-        uses: aws-actions/amazon-eks-kubeconfig@v1
+        uses: aws-actions/amazon-eks-get-kubeconfig@v1
         with:
           cluster-name: ${{ env.EKS_CLUSTER_NAME }}
           region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          # role-to-assume은 Access Key 방식에선 필요 없으므로 삭제합니다.
 
       - name: Deploy to EKS (Set Image)
         env:
