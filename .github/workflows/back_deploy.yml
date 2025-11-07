@@ -135,12 +135,15 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:latest --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
           docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
 
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
       - name: Update Kubeconfig
-        uses: aws-actions/amazon-eks-kubeconfig@v1
-        with:
-          cluster-name: ${{ env.EKS_CLUSTER_NAME }}
-          region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+        run: |
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
       - name: Deploy to EKS (Set Image)
         env:
