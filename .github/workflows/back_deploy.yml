@@ -46,22 +46,22 @@ jobs:
           # 여기에 'search-service' 폴더 내 파일이 변경되면,
           # 'search-service'라는 이름으로 'changes' 출력에 포함됩니다.
           filters: |
-            search-service:
+            search:
               - 'search/**'
             
-            drive-service:
+            drive:
               - 'drive/**'
             
-            workspace-service:
+            workspace:
               - 'workspace/**'
             
-            user-service:
+            user:
               - 'user/**'
             
-            chat-service:
+            chat:
               - 'chat/**'
             
-            chat-db-service:
+            chat-db:
               - 'chat-db/**'
             
             api-gateway:
@@ -113,22 +113,22 @@ jobs:
           if [ "$SERVICE_FOLDER" == "api-gateway" ]; then
             ECR_REPO_NAME="orbit/apigateway" # ECR 리포지토리 이름
           
-          elif [ "$SERVICE_FOLDER" == "chat-service" ]; then
+          elif [ "$SERVICE_FOLDER" == "chat" ]; then
             ECR_REPO_NAME="orbit/chat" # ECR 리포지토리 이름
           
-          elif [ "$SERVICE_FOLDER" == "drive-service" ]; then
+          elif [ "$SERVICE_FOLDER" == "drive" ]; then
             ECR_REPO_NAME="orbit/drive" # ECR 리포지토리 이름
           
-          elif [ "$SERVICE_FOLDER" == "search-service" ]; then
+          elif [ "$SERVICE_FOLDER" == "search" ]; then
             ECR_REPO_NAME="orbit/search" # ECR 리포지토리 이름
           
-          elif [ "$SERVICE_FOLDER" == "user-service" ]; then
+          elif [ "$SERVICE_FOLDER" == "user" ]; then
             ECR_REPO_NAME="orbit/user" # ECR 리포지토리 이름
 
-          elif [ "$SERVICE_FOLDER" == "workspace-service" ]; then
+          elif [ "$SERVICE_FOLDER" == "workspace" ]; then
             ECR_REPO_NAME="orbit/workspace" # ECR 리포지토리 이름
           
-          elif [ "$SERVICE_FOLDER" == "chat-db-service" ]; then
+          elif [ "$SERVICE_FOLDER" == "chat-db" ]; then
             ECR_REPO_NAME="orbit/chat-db" # ECR 리포지토리 이름
           
           else
