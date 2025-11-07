@@ -40,11 +40,14 @@ jobs:
           REPOSITORY: orbit/drive
           # github.sha는 현재 커밋의 고유 ID를 제공합니다.
           IMAGE_TAG: ${{ github.sha }}
+          GITHUB_USER: ${{ secrets.GIT_USER }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           cd drive
           docker build \
           -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
-          --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=ghp_X2JzRzKXVrVmOX1HC6CHNzQ7fyATGq4WF8U \
+          --build-arg GITHUB_USER=$GITHUB_USER \
+          --build-arg GITHUB_TOKEN=$GITHUB_TOKEN \
           .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
