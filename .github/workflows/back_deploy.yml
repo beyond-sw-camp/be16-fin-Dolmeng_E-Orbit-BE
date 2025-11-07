@@ -1,21 +1,21 @@
 name: Monorepo CI/CD - Deploy Changed Services to EKS
 
-# 1. 트리거: main 브랜치에 푸시가 발생할 때 실행됩니다.
+# 1. 트리거
 on:
   push:
     branches: [ "main" ]
 
-# 2. 워크플로우 전체에서 사용할 환경 변수 (ECR/EKS 정보)
+# 2. 환경 변수
 env:
   AWS_REGION: "ap-northeast-2"
   EKS_CLUSTER_NAME: "orbit"
   ECR_REGISTRY_URL: "897722707137.dkr.ecr.ap-northeast-2.amazonaws.com"
   K8S_NAMESPACE: "orbit"
 
-# 3. AWS OIDC 인증을 위한 권한 설정
+# 3. 권한 설정
 permissions:
-  id-token: write # OIDC 인증 토큰 발급
-  contents: read  # 코드 체크아웃
+  id-token: write
+  contents: read
 
 jobs:
   # -------------------------------------------------------------
@@ -30,16 +30,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 이전 커밋과 비교하기 위해 전체 히스토리 가져오기
+          # (수정) fetch-depth: 0 대신 2로 변경 (push 이벤트 비교용)
+          fetch-depth: 2
 
       - name: Detect changed services (using paths-filter)
         id: filter
         uses: dorny/paths-filter@v3
         with:
-          # (수정) 'list-files: shell' 옵션 삭제
-          # 이 옵션을 삭제해야 GitHub API를 사용하여 푸시된 파일을 정확히 감지합니다.
+          # 'list-files: shell'이 없는 기본값 (GitHub API) 사용
 
-          # 'filters:'의 키(Key) 이름을 실제 폴더 이름과 일치시켰습니다.
           filters: |
             api-gateway:
               - 'api-gateway/**'
@@ -56,78 +55,67 @@ jobs:
             workspace:
               - 'workspace/**'
 
+      # --- ⬇️ (중요) 디버그 스텝 추가 ⬇️ ---
+      - name: "Debug: Print filter output"
+        run: |
+          echo "Filter output (changes): ${{ steps.filter.outputs.changes }}"
+          echo "Filter output (json): ${{ toJson(steps.filter.outputs) }}"
+      # --- ⬆️ 디버그 스텝 ⬆️ ---
+
   # -------------------------------------------------------------
   # 잡 2: 변경된 모듈만 병렬로 빌드 및 배포
   # -------------------------------------------------------------
   build-and-deploy:
-    # 1. 'detect-changes' 잡이 성공해야 실행됩니다.
     needs: detect-changes
-
-    # 2. (핵심) 'detect-changes'의 'services' 출력(JSON 배열)이 비어있지 않을 때만 실행
     if: "needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''"
-
     runs-on: ubuntu-latest
-
-    # 3. (핵심) 'matrix' 전략: 'services' 배열의 각 항목('service' 변수)에 대해 이 잡을 병렬로 실행
     strategy:
       matrix:
-        # 'matrix.service'는 'search', 'drive' 같은 실제 폴더명이 됩니다.
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
 
     steps:
+      # (이하 잡 2의 내용은 이전과 동일합니다)
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 4. AWS EKS/ECR 인증 (OIDC 사용)
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # (필수) GitHub Secret에 등록
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 5. ECR 로그인
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
         id: login-ecr
 
-      # --- 6. (수정) 폴더명, ECR 리포지토리명, K8s Deployment명 매핑 ---
       - name: Map Folder to ECR and K8s Names
         id: map-names
         run: |
           SERVICE_FOLDER=${{ matrix.service }}
           ECR_REPO_NAME="" 
-          K8S_DEPLOYMENT_NAME="" # K8s Deployment 이름을 위한 변수
+          K8S_DEPLOYMENT_NAME="" 
 
-          # 'matrix.service' (폴더명)를 기준으로 ECR 이름과 K8s Deployment 이름을 설정합니다.
-          
           if [ "$SERVICE_FOLDER" == "api-gateway" ]; then
             ECR_REPO_NAME="orbit/apigateway"
-            K8S_DEPLOYMENT_NAME="api-gateway-deployment" # (예시) 실제 K8s 이름으로 수정
-          
+            K8S_DEPLOYMENT_NAME="api-gateway-deployment"
           elif [ "$SERVICE_FOLDER" == "chat" ]; then
             ECR_REPO_NAME="orbit/chat"
-            K8S_DEPLOYMENT_NAME="chat-service-deployment" # (예시) 실제 K8s 이름으로 수정
-
+            K8S_DEPLOYMENT_NAME="chat-service-deployment"
           elif [ "$SERVICE_FOLDER" == "chat-db" ]; then
             ECR_REPO_NAME="orbit/chat-db"
-            K8S_DEPLOYMENT_NAME="chat-db-service-deployment" # (예시) 실제 K8s 이름으로 수정
-          
+            K8S_DEPLOYMENT_NAME="chat-db-service-deployment"
           elif [ "$SERVICE_FOLDER" == "drive" ]; then
             ECR_REPO_NAME="orbit/drive"
-            K8S_DEPLOYMENT_NAME="drive-service-deployment" # (예시) 실제 K8s 이름으로 수정
-          
+            K8S_DEPLOYMENT_NAME="drive-service-deployment"
           elif [ "$SERVICE_FOLDER" == "search" ]; then
             ECR_REPO_NAME="orbit/search"
-            K8S_DEPLOYMENT_NAME="search-service-deployment" # (예시) 실제 K8s 이름으로 수정
-          
+            K8S_DEPLOYMENT_NAME="search-service-deployment"
           elif [ "$SERVICE_FOLDER" == "user" ]; then
             ECR_REPO_NAME="orbit/user"
-            K8S_DEPLOYMENT_NAME="user-service-deployment" # (예시) 실제 K8s 이름으로 수정
-
+            K8S_DEPLOYMENT_NAME="user-service-deployment"
           elif [ "$SERVICE_FOLDER" == "workspace" ]; then
             ECR_REPO_NAME="orbit/workspace"
-            K8S_DEPLOYMENT_NAME="workspace-service-deployment" # (예시) 실제 K8s 이름으로 수정
-          
+            K8S_DEPLOYMENT_NAME="workspace-service-deployment"
           else
             echo "::error:: Unknown service folder $SERVICE_FOLDER."
             exit 1
@@ -136,30 +124,21 @@ jobs:
           echo "ecr_repo=$ECR_REPO_NAME" >> $GITHUB_OUTPUT
           echo "k8s_deployment=$K8S_DEPLOYMENT_NAME" >> $GITHUB_OUTPUT
 
-      # --- 7. (수정) Docker 이미지 빌드 및 푸시 (버전 태그 복원) ---
       - name: Build, tag, and push Docker image to ECR
         id: build-image
         env:
-          IMAGE_TAG: ${{ github.sha }} # 커밋 해시를 이미지 태그로 사용 (필수)
+          IMAGE_TAG: ${{ github.sha }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SERVICE_FOLDER: ${{ matrix.service }}
           ECR_REPO_NAME: ${{ steps.map-names.outputs.ecr_repo }}
         run: |
           echo "Building service from folder: $SERVICE_FOLDER"
-          echo "Pushing to ECR repository: $ECR_REGISTRY/$ECR_REPO_NAME"
-          
-          # 1. 변경된 서비스의 폴더로 이동
           cd $SERVICE_FOLDER
-          
-          # 2. (수정) K8s 배포를 위해 버전 태그($IMAGE_TAG)와 'latest' 2개를 빌드
           docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
           docker build -t $ECR_REGISTRY/$ECR_REPO_NAME:latest --build-arg GITHUB_USER=EunDuk2 --build-arg GITHUB_TOKEN=${{ secrets.GH_TOKEN }} .
-          
-          # 3. (수정) ECR에 2개의 태그를 모두 푸시
           docker push $ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPO_NAME:latest
 
-      # 8. EKS(kubectl) 설정
       - name: Update Kubeconfig
         uses: aws-actions/amazon-eks-get-kubeconfig@v1
         with:
@@ -167,7 +146,6 @@ jobs:
           region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
 
-      # --- 9. (수정) EKS에 배포 (가장 확실한 'set image' 방식) ---
       - name: Deploy to EKS (Set Image)
         env:
           K8S_DEPLOYMENT_NAME: ${{ steps.map-names.outputs.k8s_deployment }}
@@ -175,11 +153,5 @@ jobs:
           ECR_REPO_NAME: ${{ steps.map-names.outputs.ecr_repo }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Deploying ${{ matrix.service }}..."
-          echo "Setting image for K8s deployment: $K8S_DEPLOYMENT_NAME"
-          
-          # 'kubectl set image'를 사용하면 EKS가 '$IMAGE_TAG'로 확실하게 업데이트합니다.
-          # (Rollout restart보다 이 방법이 더 확실합니다)
-          # 컨테이너 이름이 deployment 이름과 같다고 가정 (예: 'search-service-deployment'의 컨테이너 'search-service-deployment')
-          # 만약 컨테이너 이름이 다르다면 [컨테이너이름]=*...* 형식으로 수정해야 합니다.
+          echo "Deploying ${{ matrix.service }} (K8s: $K8S_DEPLOYMENT_NAME)..."
           kubectl set image deployment/$K8S_DEPLOYMENT_NAME *=*$ECR_REGISTRY/$ECR_REPO_NAME:$IMAGE_TAG -n ${{ env.K8S_NAMESPACE }}
