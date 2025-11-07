@@ -16,37 +16,55 @@ spring:
     url: jdbc:mariadb://${DB_HOST}:3306/orbit
     username: admin
     password: ${DB_PW}
-  hikari:
-    maximum-pool-size: 1
+
+  kafka:
+    bootstrap-servers: kafka-service:9092
+    consumer:
+      group-id: workspace-group-test-${random.uuid}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PW}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   redis:
     host: redis-service
     port: 6379
+  redis-stack:
+    host: redis-stack-service
+    port: 6379
 
   jpa:
     database: mysql
-    database-platform: org.hibernate.dialect.MariaDBDialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     generate-ddl: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show_sql: true
-
     properties:
       hibernate:
         format-sql: true
 
-resilience4j:
-  circuitbreaker:
-    instances:
-      productServiceCircuit:
-        failureRateThreshold: 40  # 40% 이상의 실패율이면 OPEN 상태로 변경
-        slowCallRateThreshold: 40  # 40% 이상의 요청이 느리면 OPEN 상태로 변경
-        slowCallDurationThreshold: 2s  # 2초 이상 걸리면 느린호출로 간주
-        waitDurationInOpenState: 10s  # OPEN 상태에서 10초 동안 차단 후 HALF-OPEN 상태로 변경
-        permittedNumberOfCallsInHalfOpenState: 2  # HALF-OPEN 상태에서 2개 요청이 모두 성공하면 → CLOSED 상태로 변경
-        slidingWindowSize: 5  # 최근 5개의 요청을 기준으로 실패율 계산
-        slidingWindowType: COUNT_BASED  # 요청 개수를 기준으로 실패율을 계산하도록 설정
-        minimumNumberOfCalls: 4  # 최소 정상적인 요청을 4번 실행된 이후 Circuit Breaker 활성화
-        #        진짜로 잘못 보낸 요청의 경우에는 서킷브레이커의 기준이 되지 않도록 예외클래스 지정
-        ignoreExceptions:
-          - java.lang.IllegalArgumentException  # IllegalArgumentException 무시
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+
+
+# 초대 서비스용 프론트엔드 URL
+app:
+  frontend-url: https://www.orbitflow.store

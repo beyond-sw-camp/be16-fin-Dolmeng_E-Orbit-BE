@@ -37,9 +37,9 @@ import java.util.UUID;
 @Transactional
 @RequiredArgsConstructor
 public class ChatbotMessageService {
-    static final String AGENT_URL = "http://localhost:5678/webhook/chatbot-agent";
-    static final String AGENT_URL_CHAT = "http://localhost:5678/webhook/chatbot-agent/chat-summary";
-    static final String AGENT_URL_PROJECT = "http://localhost:5678/webhook/chatbot-agent/project-analyze";
+    static final String AGENT_URL = "http://n8n-service:5678/webhook/chatbot-agent";
+    static final String AGENT_URL_CHAT = "http://n8n-service:5678/webhook/chatbot-agent/chat-summary";
+    static final String AGENT_URL_PROJECT = "http://n8n-service:5678/webhook/chatbot-agent/project-analyze";
 
     private final ChatbotMessageRepository chatbotMessageRepository;
     private final WorkspaceParticipantRepository workspaceParticipantRepository;

@@ -13,11 +13,14 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       globalcors:
         cors-configurations:
           '[/**]':
             allowedOrigins:
-              - 'https://www.orbit.shop'
+              #              - 'http://localhost:5173'
+              - 'https://www.orbitflow.store'
             allowedMethods: '*'
             allowedHeaders: '*'
             allowedCredentials: true
@@ -49,6 +52,6 @@ spring:
 
 jwt:
   expirationAt: 10000
-  secretKeyAt: xx
+  secretKeyAt: YmV5b25kYWNjZXNzdG9rZW5zZWNyZXRrZXliZXlvbmRhY2Nlc3N0b2tlbnNlY3JldGtleWJleW9uZGFjY2Vzc3Rva2Vuc2VjcmV0a2V5
   expirationRt: 10000
-  secretKeyRt: yy
+  secretKeyRt: YmV5b25kYWNjZXNzdG9rZW5zZWNyZXRrZXliZXlvbmRhY2Nlc3N0b2tlbnNlY3JldGtleWJleW9uZGFjY2Vzc3Rva2Vuc2VjcmV0a2V5

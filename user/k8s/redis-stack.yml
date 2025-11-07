@@ -1,0 +1,87 @@
+##############################################
+# 🚀 Redis Stack Deployment + Service
+##############################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-stack-deployment
+  namespace: orbit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-stack
+  template:
+    metadata:
+      labels:
+        app: redis-stack
+    spec:
+      containers:
+        - name: redis-stack
+          image: redis/redis-stack:latest
+          ports:
+            - containerPort: 6379   # Redis
+            - containerPort: 8001   # RedisInsight UI
+          env:
+            - name: REDIS_ARGS
+              value: "--save 60 1 --appendonly yes"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}  # PVC로 교체 가능
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-stack-service
+  namespace: orbit
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+    - name: redis-insight
+      port: 8001
+      targetPort: 8001
+  selector:
+    app: redis-stack
+
+---
+##############################################
+# 🧠 Redis Index Creation Job (chatmem_idx)
+##############################################
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: redis-index-creator
+  namespace: orbit
+spec:
+  template:
+    spec:
+      containers:
+        - name: redis-cli
+          image: redis/redis-stack:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "⏳ Waiting for Redis Stack to be ready..."
+              until redis-cli -h redis-stack-service ping >/dev/null 2>&1; do
+                echo "Redis not ready yet..."
+                sleep 3
+              done
+              echo "✅ Redis is up. Creating index if not exists..."
+
+              if ! redis-cli -h redis-stack-service FT.INFO chatmem_idx >/dev/null 2>&1; then
+                echo "🚀 Creating index chatmem_idx..."
+                redis-cli -h redis-stack-service FT.CREATE chatmem_idx ON HASH PREFIX 1 chatmem: SCHEMA userId TAG workspaceId TAG role TAG ts NUMERIC SORTABLE text TEXT embedding VECTOR HNSW 6 TYPE FLOAT32 DIM 1536 DISTANCE_METRIC COSINE
+              else
+                echo "ℹ️ Index chatmem_idx already exists."
+              fi
+
+              echo "🎉 Done."
+      restartPolicy: Never
+  backoffLimit: 3

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n-depl
+  namespace: orbit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      containers:
+        - name: n8n
+          image: n8nio/n8n:latest
+          ports:
+            - containerPort: 5678
+          env:
+            # --- 기본 설정 ---
+            - name: N8N_BASIC_AUTH_ACTIVE
+              value: "true"
+            - name: N8N_BASIC_AUTH_USER
+              value: "admin"
+            - name: N8N_BASIC_AUTH_PASSWORD
+              value: "orbit1234"
+
+            # --- 실행 환경 ---
+            - name: N8N_HOST
+              value: "n8n.orbit.svc.cluster.local"
+            - name: N8N_PORT
+              value: "5678"
+            - name: NODE_ENV
+              value: "production"
+
+            # --- OpenAI Credential 연결 ---
+            - name: OPENAI_API_KEY_N8N
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: OPENAI_API_KEY_N8N
+
+          # --- 컨테이너 시작 시 워크플로우 자동 import ---
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "🚀 Importing workflow before startup..."
+              if [ -f /data/init/orbit-workflow.json ]; then
+                n8n import:workflow --input=/data/init/orbit-workflow.json || echo "⚠️ Import failed or already exists"
+              else
+                echo "⚠️ No workflow file found at /data/init/orbit-workflow.json"
+              fi
+              echo "✅ Starting n8n server..."
+              n8n start
+
+          # --- 볼륨에 workflow.json 마운트 ---
+          volumeMounts:
+            - name: n8n-config
+              mountPath: /data/init/ # 초기 워크플로우 불러올 위치
+      volumes:
+        - name: n8n-config
+          configMap:
+            name: n8n-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n-service
+  namespace: orbit
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5678
+      targetPort: 5678
+  selector:
+    app: n8n

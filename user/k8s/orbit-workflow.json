@@ -1,0 +1,1304 @@
+{
+  "name": "Orbit Flow",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {},
+        "openAIApi": "={{ $env.OPENAI_API_KEY_N8N }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-192, 1760],
+      "id": "6eb44b58-4b3a-4fc5-aa45-b0b7cca1f511",
+      "name": "OpenAI Chat Model26"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "사용자의 질문에 대해 친절하게 답변해줘.\n세 문장 안 넘어가게 해줘.\n\n출력 형식:\n답변은 text에 담고, isSave는 무조건 true로 반환해\n{\n   \"text\": \"일정 정리 내용\",\n   \"isSave\": true\n}\n\n입력 텍스트:\n{{ $json.content }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.content }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -192,
+        1616
+      ],
+      "id": "39352912-7e64-4659-9db0-42264e788b73",
+      "name": "Basic LLM Chain26"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const body = item.json.body || {};\n\n  const userId = body.userId || \"\";\n  const userName = body.userName || \"\";\n  const workspaceId = body.workspaceId || \"\";\n  const content = body.content || \"\";\n  const today = body.today || \"\";\n\n  const text = \n`요청: ${content}\nuserId: ${userId}\nuserName: ${userName}\nworkspaceId: ${workspaceId}\ntoday: ${today}\ntimezone: Asia/Seoul\nlocale: ko-KR`.trim();\n\n  // ✅ 오직 text 문자열만 반환하도록 보장\n  results.push({ json: { text } });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        496
+      ],
+      "id": "0b397627-b4ff-476f-8132-2f4e8e7f2997",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot-agent",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1360,
+        496
+      ],
+      "id": "0ccebce6-84bf-4af8-9e37-ef836f20a0f7",
+      "name": "ChatbotAgent7",
+      "webhookId": "539f6a63-48f3-4cc9-8f15-f7f00a63e81e"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "79e7942a-d927-4d16-a545-ae2a654dcedd",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "=PROJECT_SUMMARY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ff37046d-8ce1-401f-bdd8-dd5078937fb5",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "TASK_LIST",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "86d879fe-a1c7-4fed-80ac-f8af22aedc7d",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "UNREAD_CHAT_SUMMARY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "10a547bd-8df4-4663-9886-bd54923d61f6",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "=HISTORY_REQUEST",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fa4f43a9-8655-47fe-b766-efc9db5755b1",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "REGISTER_SCHEDULE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c6c76b4e-52d3-4e10-807e-13e3ceb50fcc",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "JUST_CHAT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -544,
+        448
+      ],
+      "id": "182d3ef3-31be-4321-8930-7f12505c0d7a",
+      "name": "Switch6"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        240
+      ],
+      "id": "0820b708-f34f-4020-96db-45abfadd1f7b",
+      "name": "OpenAI Chat Model27",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 프로젝트 관리 시스템의 어시스턴트야.\n입력으로 들어오는 텍스트는 하나의 프로젝트 상세 정보야.\n이 내용을 사용자가 한눈에 보기 좋게 요약·정리해서 출력해줘.\n\n출력 규칙:\n1. 이모티콘을 적절히 사용해서 섹션별로 보기 쉽게 구분해줘.\n2. 핵심 정보(프로젝트명, 목표, 설명, 진행도, 마감일, 상태)를 중심으로 간결하게 정리.\n3. 표현은 자연스럽게, 문장보다는 요약 중심으로.\n4. 불필요한 설명은 넣지 말고, 깔끔한 리포트 형태로 구성.\n\n예시 출력 형식:\n\n📌 프로젝트명: Orbit  \n🎯 목표: 권한 시스템 안정화 및 구조 개선  \n📝 설명: AccessGroup/AccessDetail 기반의 검증 로직을 리팩터링하고, 자동 스톤 생성 기능을 추가  \n📈 진행도: 35%  \n⏰ 마감일: 2025-11-15 18:00  \n🚀 상태: 진행 중 (PROGRESS)\n\n---\n🧩 요약 한 줄  \n권한 관리 구조를 고도화하고, 자동화를 통해 워크스페이스 효율성을 높이는 중이에요 💪\n\n---\n\n⚠️ 예외 처리 규칙:\n입력 데이터에 `error` 필드가 포함되어 있다면,  \n`error.statusMessage` 내용을 사용자에게 직접 전달하듯 간단하고 공손하게 안내해줘.  \n불필요한 기술 정보(스택, 코드 등)는 포함하지 마.  \n예:  \n- statusMessage가 “없는 프로젝트입니다.” → ❗ 해당 프로젝트를 찾을 수 없어요.  \n- statusMessage가 “권한이 없습니다.” → 🔒 접근 권한이 없어요.  \n\n즉, 오류 발생 시 statusMessage만 자연스럽게 변환하여 사용자에게 안내하는 메시지를 출력하고,  \n정상적인 프로젝트 정보 요약은 생략해.\n\n---\n\n형식:\n요약한거는 text에 담고, 예외가 아니라면 isSave는 true로 반환해줘.\n예)\n{\n   \"text\": \"요약내용\",\n   \"isSave\": true\n}\n예외 발생 시:\n{\n   \"text\": \"예외메시지\",\n   \"isSave\": false\n}\n\n입력 텍스트:\n성공 시: {{ $json.result }}\n예외 시: {{ $json.error.message }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.result }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        192,
+        96
+      ],
+      "id": "ba1b8530-4d05-4325-8176-717ed425e822",
+      "name": "Basic LLM Chain27"
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8080/workspace-service/chatbot/project-info",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workspaceId",
+              "value": "={{ $json.entities.workspaceId }}"
+            },
+            {
+              "name": "userId",
+              "value": "={{ $json.entities.userId }}"
+            },
+            {
+              "name": "projectName",
+              "value": "={{ $json.entities.projectName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -160,
+        96
+      ],
+      "id": "6545ff07-c857-4acd-9e0b-7b0abe84f359",
+      "name": "HTTP Request12",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "주의:\ncontent는 무슨 일이 있어도 가공하지말고, 그대로 전달 해.\n\n너는 '일정관리 시스템' 도메인의 의도 분석기야.\n사용자 요청을 분석해서 아래 JSON 형식으로만 출력해.\n설명 문장 없이, JSON만 반환해.\n\n{{ $json.text }} 안의 today(현재 날짜), timezone, locale키값을 기준으로 활용해.\n\"오늘\", \"내일\", \"모레\" 등의 날짜 표현은 반드시 이 날짜와 타임존을 기준으로 계산해.\n예: 오늘이 2025-10-16이면, \"내일\"은 2025-10-17, \"모레\"는 2025-10-18.\n\n가능한 intent:\n- PROJECT_SUMMARY (프로젝트 요약)\n  예시: \"프로젝트명 정리해줘\", \"프로젝트 요약 보여줘\"\n  → 이 인텐트일 때는 무조건 출력값에 \"projectName\": \"프로젝트명\" 속성을 포함해야돼. 프로젝트 이름이 추론 가능하면 그걸로 넣고, 없거나, 최근 프로젝트 요약해달라거나 하면 \"current\"로 넣어줘.\n- TASK_LIST (내 할 일 목록)\n  예시: \"나 오늘 할 일 뭐야?\", \"내일 일정 알려줘\", \"해야 할 일 보여줘\"\n  → 날짜 관련 표현(오늘, 내일, 모레 등)은 반드시 endTime 필드에 ISO 8601 형식(예: 2025-10-17T00:00:00)으로 변환해 넣어.\n  → 날짜 표현이 전혀 없으면 endTime을 2125-01-01T00:00:00으로 설정해. (즉, 100년 뒤)\n- UNREAD_CHAT_SUMMARY (안 읽은 채팅 요약)\n  예시: \"내가 안 읽은 채팅 요약해줘\", \"나 채팅 뭐왔어?\", \"내 채팅 읽어주라\" 등\n\n- HISTORY_REQUEST (이전 대화 내용에 대한 추가 질문)  \n  예시: \"거기서 설명 좀 더 자세히 말해줘\", \"그 프로젝트 다시 말해줘\", \"방금 그 내용에서 일정 알려줘\"  \n  → 만약 현재 요청이 직전 혹은 과거 대화(`history`) 내용에 대한 후속 질문, 수정 요청, 또는 대명사(그거, 거기, 방금 등)로 과거 응답을 참조하는 경우라면 이 인텐트를 선택해.\n\n- REGISTER_SCHEDULE (개인 일정 등록)\n  예시: \"나 일정 등록할래\", \"나 다음주 월요일에 일정 등록해줘\", \"나 다음주 월요일에 치과 3시에 가야돼\", \"나 11.09부터 11.11까지 휴가야\", \"나 11.09에 치과 일정있어. todo로 해주고 즐겨찾기 켜주고, 공유일정에는 등록 안할거야.\"\n  이 경우에는 input으로 받은 today값을 무조건 포함해서 전달해줘야 돼. 일정이나 약속, 개인 todo등을 추가 혹은 등록해달라고 하거나, 그런 뉘앙스로 말한 경우에는 이 인텐트를 선택해.\n\n- JUST_CHAT (위 4가지에 해당하지 않으면 일반 대화)\n\n출력 형식(예시):\n{\n  \"intent\": \"TASK_LIST\",\n  \"entities\": {\n    \"projectName\": \"기아자동차1\",\n    \"workspaceId\": \"ws_1\",\n    \"userId\": \"d74137b2-f48b-4296-89d2-bbd0ea67108d\",\n    \"userName\": \"hong1\",\n    \"today\": \"2025-10-15T00:00:00\",\n    \"endTime\": \"2025-10-17T00:00:00\"\n  },\n  \"confidence\": 0.95,\n  \"content\": \"내일 할 일 뭐야?\"\n}\n\n주의:\ncontent는 무슨 일이 있어도 가공하지말고, 그대로 전달 해.\n\nendTime 규칙:\n1. 반드시 키 이름은 \"endTime\"으로 써.\n2. endTime은 ISO 형식(\"YYYY-MM-DDTHH:mm:ss\")으로.\n3. 날짜 계산은 {{ $json.today }}와 {{ $json.timezone }}을 기준으로.\n4. 날짜 표현이 없으면 endTime은 2125-01-01T00:00:00으로 설정 (그냥 조건없이 할 일 알려달라고 할 때도 포함).\n5. 설명 없이 JSON만 반환해.\n\n주의:\ncontent는 무슨 일이 있어도 가공하지말고, 그대로 전달 해.\n\n다음은 사용자 입력과 컨텍스트야:\n{{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.text }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -928,
+        496
+      ],
+      "id": "09bb4a6b-7d82-4382-bb0d-23e819827f41",
+      "name": "Basic LLM Chain28"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -928,
+        688
+      ],
+      "id": "ac58669f-3e5c-4b9d-967a-3290bd0a2674",
+      "name": "OpenAI Chat Model28",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8080/workspace-service/chatbot/task-list",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workspaceId",
+              "value": "={{ $json.entities.workspaceId }}"
+            },
+            {
+              "name": "userId",
+              "value": "={{ $json.entities.userId }}"
+            },
+            {
+              "name": "endTime",
+              "value": "={{ $json.entities.endTime }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -176,
+        384
+      ],
+      "id": "904cabcc-dfc4-4f41-9702-0a267b3e18ca",
+      "name": "HTTP Request13",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 일정 요약 도우미야.\n아래에 여러 종류의 일정 문자열(Task, 개인일정, Todo)이 함께 주어질 거야.\n\n각 항목은 다음과 같은 형태로 구성되어 있어:\nTask: “작업명, 만료기한: yyyy-MM-ddTHH:mm:ss”\n개인일정: “제목, 시작시간: yyyy-MM-ddTHH:mm, 종료시간: yyyy-MM-ddTHH:mm”\nTodo: “작업명, 만료기한: yyyy-MM-ddTHH:mm:ss”\n\n출력 규칙:\nTask, 개인일정, Todo를 각각 따로 묶어서 출력해.\n각 섹션은 아래 순서로 나열해.\n🧱 Task목록\n🗓 개인일정목록\n✅ Todo목록\n각 목록 내부에서는 날짜 오름차순으로 정렬해.\n\nTask는\n→ 📅 yyyy-MM-dd (요일)\n→ HH:mm ⏰ 작업명 형태로 표시해.\n개인일정은\n→ 📅 yyyy-MM-dd (요일)\n→ 🕒 시작시간 ~ 종료시간 : 일정 제목 형태로 표시해.\nTodo는\n→ 📅 yyyy-MM-dd (요일)\n→ ⏰ 작업명 형태로 표시해.\nTask나 Todo가 비어 있으면\n→ \"요청하신 날짜까지 할 일이 없습니다!\"\n라고 써줘.\n\n💡✅⏰📅🎯🗓 같은 이모티콘을 활용해서 보기 좋게 만들어줘.\n\nTask, 개인일정, Todo 중 하나라도 있으면 isSave는 true로 반환해.\n오류(statusMessage)가 포함된 경우에는\n그 메시지만 사용자에게 자연스럽게 전달해.\nisSave는 false로 하고 기술적인 내용은 포함하지 마.\n\n예외 처리 예시:\nstatusMessage가 \"없는 프로젝트입니다.\" → ❗ 해당 프로젝트를 찾을 수 없어요.\nstatusMessage가 \"권한이 없습니다.\" → 🔒 접근 권한이 없어요.\n\n출력 형식:\n성공 시\n{\n\"text\": \"정리된 일정표 Markdown\",\n\"isSave\": true\n}\n\n예외 시\n{\n\"text\": \"예외 메시지\",\n\"isSave\": false\n}\n\n입력 형식:\n성공 시: {{ $json.result }}\n예외 시: {{ $json.error.message }}\n\n출력 예시:\n입력:\nTask목록:\n로그인 개발, 만료기한: 2025-11-11T15:00:00\nJWT테스트, 만료기한: 2025-11-12T16:00:00\n개인일정목록:\n팀 회의, 시작시간: 2025-11-03T10:00, 종료시간: 2025-11-03T11:00\n코드 리뷰, 시작시간: 2025-11-05T14:00, 종료시간: 2025-11-06T15:00\nTodo목록:\n약먹기, 만료기한: 2025-11-21T23:59:59\n\n출력:\n🧱 Task목록\n📅 2025-11-11 (화)\n15:00 ⏰ 로그인 개발\n\n📅 2025-11-12 (수)\n16:00 💡 JWT테스트\n\n🗓 개인일정목록\n📅 2025-11-03 (월) 10:00 ~\n2025-11-03 (월) 11:00\n📝 팀 회의\n\n📅 2025-11-05 (수) 14:00 ~\n2025-11-06 (목) 15:00\n💻 코드 리뷰\n\n✅ Todo목록\n📅 2025-11-21 (금)\n💊 약먹기",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.result }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        176,
+        384
+      ],
+      "id": "fd2d666e-2a5c-4dd4-90dc-8bc9cf372450",
+      "name": "Basic LLM Chain29"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        176,
+        528
+      ],
+      "id": "81fca2cb-22b2-4f06-9a27-2383bf088245",
+      "name": "OpenAI Chat Model29",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8080/chat-service/chatbot/unread-messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workspaceId",
+              "value": "={{ $json.entities.workspaceId }}"
+            },
+            {
+              "name": "userId",
+              "value": "={{ $json.entities.userId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        688
+      ],
+      "id": "6cfaddd7-01af-48a8-bcfc-b967c05d5f2f",
+      "name": "HTTP Request14",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 '읽지 않은 채팅 요약 도우미'야\n입력으로 들어오는 텍스트에는 여러 개의 채팅방과 그 안의 대화 내용이 포함되어 있어.  \n이 데이터를 채팅방별로 요약하되, 아래 규칙을 엄격히 따라줘.\n\n---\n\n🎯 출력 규칙\n\n1. 채팅방 단위로 구분해서 출력해.  \n   형식:\n   [이모티콘 + 채팅방 이름]\n\t\t(요약 내용)\n2. 요약 방식\n- 사람별 발화 내용을 구분해서 요약하되, 자연스럽게 이어지는 문장으로 정리.\n- 예:  \n  > 은성이 오늘 뭐 하냐고 묻자, 매승은 무한성(귀칼)을 볼 예정이라고 말했고,  \n  > 유정은 거기에 끼고 싶다고 했다.\n- 이름이 여러 번 반복되면 적절히 묶어서 요약해도 좋아.\n\n3. 채팅방 이모티콘 규칙\n- 이름이나 성격에 따라 적절한 이모티콘을 자동으로 붙여줘.  \n  예시:\n    - “개발팀” → 💻  \n    - “기획팀” → 🧩  \n    - “디자인팀” → 🎨  \n    - “영업팀” → 💼  \n    - “마케팅” → 📈  \n    - 그 외는 알아서 사용\n\n4. 예외 처리\n- 전체 입력이 `\"채팅방이 없습니다.\"` 라면 →  \n  👉 “읽지 않은 채팅방이 없습니다. 😊” 라고만 출력해.\n- 특정 채팅방이 `\"채팅방 이름: X\\nX: 읽지 않은 채팅이 없습니다.\"` 인 경우 →  \n  👉 해당 채팅방은 출력에서 제외 (즉, 아예 요약하지 마).\n- 즉, 채팅이 1개라도 있는 채팅방만 요약해.\n\n5. 출력은 Markdown 없이 일반 텍스트 형식으로.\n\n---\n\n### 🧾 출력 예시\n\n입력:\n채팅방 이름: 개발팀\n은성 : 오늘 뭐하냐?\n매승 : 나 귀칼 볼듯 무한성\n은성 : 그거 개 존잼탱임\n유정: 나도껴줘\n채팅방 이름: 기획팀\nhong1 : 나 아까 피자스쿨 먹었는데 존마탱이었슴\nhong1 : 제일 맛있었던 메뉴는 고구마 피자\nhong1 : ㄹㅇ 인생 고구마였는데 너 먹어봄?\n\n출력:\n💻 [개발팀]\n은성이 오늘 뭐하냐고 묻자, 매승은 귀칼 무한성을 볼 예정이라고 했고,\n은성은 재밌다고 답하며, 유정은 함께하고 싶다고 했다.\n\n🧩 [기획팀]\nhong1이 피자스쿨 고구마 피자를 극찬하며 인생 메뉴라고 말했다.\n\n\n⚠️ 예외 처리 규칙(오류):\n입력 데이터에 `error` 필드가 포함되어 있다면,  \n`error.statusMessage` 내용을 사용자에게 직접 전달하듯 간단하고 공손하게 안내해줘.  \n불필요한 기술 정보(스택, 코드 등)는 포함하지 마.  \n예:  \n- statusMessage가 “없는 프로젝트입니다.” → ❗ 해당 프로젝트를 찾을 수 없어요.  \n- statusMessage가 “권한이 없습니다.” → 🔒 접근 권한이 없어요.  \n\n즉, 오류 발생 시 statusMessage만 자연스럽게 변환하여 사용자에게 안내하는 메시지를 출력하고,  \n정상적인 task 정리는 생략해.\n\n---\n\n입력 텍스트:\n성공 시: {{ $json.result }}\n예외 시: {{ $json.error.message }}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.result }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        160,
+        688
+      ],
+      "id": "323b567f-8870-4234-b00b-5e8d27b8b032",
+      "name": "Basic LLM Chain30"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        832
+      ],
+      "id": "1d24635c-33c7-4f04-84f2-6a837e92dd66",
+      "name": "OpenAI Chat Model30",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://host.docker.internal:8080/workspace-service/chatbot/history",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "workspaceId",
+              "value": "={{ $json.entities.workspaceId }}"
+            },
+            {
+              "name": "userId",
+              "value": "={{ $json.entities.userId }}"
+            },
+            {
+              "name": "content",
+              "value": "={{ $json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        1008
+      ],
+      "id": "52001213-b0cb-477c-bdd4-1360b4f71eb7",
+      "name": "HTTP Request15",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 '프로젝트 관리 및 일정 요약 시스템'의 대화 어시스턴트야.\n아래 입력에는 사용자의 최신 요청과 최근 대화 히스토리가 함께 제공돼.\n\n역할:\n최신 요청(사용자 요청:)은 이번에 사용자가 한 말이야.\nHistory:에는 그동안의 봇과 사용자 대화가 들어 있어.\n너의 목표는 이전 대화의 맥락을 이해해서,\n사용자의 요청이 무엇을 의미하는지 파악하고 자연스럽고 구체적인 답변을 만들어주는 거야.\n\n처리 규칙:\n맥락 파악\n사용자의 요청이 모호하거나 \"그거\", \"방금\", \"이해 못했어\" 등의 표현을 포함하면\n반드시 History 내용을 참고해서 사용자가 가리키는 내용을 찾아야 해.\n\n예를 들어, 직전 봇의 메시지가 프로젝트 요약이었다면,\n\"쉽게 다시 말해줘\" → 그 프로젝트 요약을 더 이해하기 쉽게 다시 풀어서 설명해야 해.\n\n답변 구성\n내용은 자연스럽고 이해하기 쉽게, 핵심만 요약해서 전달해.\n어려운 기술 용어나 긴 문장은 피하고, 핵심 요약 + 예시 중심으로 말해.\n\n필요하다면 이모티콘(📌, 💡, ✅, 🧩, ⚙️, 📅 등)을 섞어서 보기 좋게 구성해.\n불필요한 서론이나 \"안녕하세요\" 같은 인사말은 생략해.\n\n형식\n결과는 순수 텍스트 형태로만 반환해.\nMarkdown 코드블록(markdown)이나 JSON 같은 포맷은 절대 사용하지 마.\n설명 문장이나 부가 정보 없이, 사용자에게 전달할 최종 메시지만 출력해.\n\n에러 처리\n입력에 error 필드가 포함되어 있다면,\nerror.statusMessage 내용을 사용자에게 공손하게 안내하는 문장으로 변환해.\n예: \"없는 프로젝트입니다.\" → ❗ 해당 프로젝트를 찾을 수 없어요.\n예: \"권한이 없습니다.\" → 🔒 접근 권한이 없어요.\n기술 정보(스택, 코드)는 포함하지 마.\n오류가 있을 때는 히스토리 요약이나 다른 설명은 생략해.\n\n출력 예시:\n입력:\n사용자 요청: 방금 너가 말한거 이해못했어. 쉽게 다시 말해줘\nHistory:\nBOT: 📌 프로젝트명: 기아자동차\n🎯 목표: 워크스페이스 구조 개선 및 권한 시스템 안정화\n📝 설명: AccessGroup과 AccessDetail 기반 권한 검증 로직 개선, 스톤 자동 생성 기능 추가\n📈 진행도: 0%\n⏰ 마감일: 2025-11-15 18:00\n🚀 상태: 진행 중 (PROGRESS)\nUSER: 기아자동차 프로젝트 요약해줘\n\n출력:\n📘 쉽게 정리하면요,\n기아자동차 프로젝트는 ‘워크스페이스 권한 관리 구조’를 더 체계적으로 만드는 작업이에요.\n지금은 초기 단계고, 자동으로 스톤을 생성하거나 권한 검사를 단순화하는 기능을 추가 중이에요. ⚙️\n\n입력 데이터:\n성공 시: {{ $json.result }}\n예외 시: {{ $json.error.message }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.result }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        160,
+        1008
+      ],
+      "id": "c929f10e-78b6-4923-87d8-4da43efd62db",
+      "name": "Basic LLM Chain31"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        1152
+      ],
+      "id": "9b889e8f-3a4f-4d91-a08f-56da02bf8029",
+      "name": "OpenAI Chat Model31",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot-agent/chat-summary",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1376,
+        912
+      ],
+      "id": "5dfbf804-24d4-4e83-bc2c-787a06e8dbc8",
+      "name": "ChatbotAgent8",
+      "webhookId": "539f6a63-48f3-4cc9-8f15-f7f00a63e81e"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 '읽지 않은 채팅 요약 도우미'야\n입력으로 들어오는 텍스트에는 여러 개의 채팅방과 그 안의 대화 내용이 포함되어 있어.  \n이 데이터를 채팅방별로 요약하되, 아래 규칙을 엄격히 따라줘.\n\n---\n\n🎯 출력 규칙\n1. 요약 방식\n- 사람별 발화 내용을 구분해서 요약하되, 자연스럽게 이어지는 문장으로 정리.\n- 예:  \n  > 은성이 오늘 뭐 하냐고 묻자, 매승은 무한성(귀칼)을 볼 예정이라고 말했고,  \n  > 유정은 거기에 끼고 싶다고 했다.\n- 이름이 여러 번 반복되면 적절히 묶어서 요약해도 좋아.\n2. 채팅마다 어떤 사람이 보낸지 정확히 확인하고, 한 사람일 경우, 여러 사람이 대화한 것처럼 요약하지 않도록 주의해줘.\n\n\n---\n\n### 🧾 출력 예시\n\n입력:\n은성 : 오늘 뭐하냐?\n매승 : 나 귀칼 볼듯 무한성\n은성 : 그거 개 존잼탱임\n유정: 나도껴줘\n\n출력:\n은성이 오늘 뭐하냐고 묻자, 매승은 귀칼 무한성을 볼 예정이라고 했고,\n은성은 재밌다고 답하며, 유정은 함께하고 싶다고 했다.\n\n\n⚠️ 예외 처리 규칙(오류):\n입력 데이터에 `error` 필드가 포함되어 있다면,  \n`error.statusMessage` 내용을 사용자에게 직접 전달하듯 간단하고 공손하게 안내해줘.  \n불필요한 기술 정보(스택, 코드 등)는 포함하지 마.  \n예:  \n- statusMessage가 “없는 프로젝트입니다.” → ❗ 해당 프로젝트를 찾을 수 없어요.  \n- statusMessage가 “권한이 없습니다.” → 🔒 접근 권한이 없어요.  \n\n즉, 오류 발생 시 statusMessage만 자연스럽게 변환하여 사용자에게 안내하는 메시지를 출력하고,  \n정상적인 task 정리는 생략해.\n\n---\n\n입력 텍스트:\n성공 시: {{ $json.text }}\n예외 시: {{ $json.error.message }}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.text }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -912,
+        912
+      ],
+      "id": "c0c99269-7af5-4bae-8155-c236a82c13ab",
+      "name": "Basic LLM Chain32"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -912,
+        1120
+      ],
+      "id": "e4a03da8-7d59-4f58-8946-61e84ab40bfd",
+      "name": "OpenAI Chat Model32",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const body = item.json.body || {};\n  const content = body.content || \"\";\n\n  const text = \n`${content}`;\n\n  // ✅ 오직 text 문자열만 반환하도록 보장\n  results.push({ json: { text } });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        912
+      ],
+      "id": "420a4dbe-609f-406f-9797-da2cb5542b08",
+      "name": "Code in JavaScript10"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 일정 등록 도우미야.\n입력으로 사용자의 자연어 요청이 들어올 거야.\n이 요청에서 일정 등록을 위한 요소를 최대한 추출해야 해.\n추론 가능한 값만 채우고, 없는 값은 null로 반환해.\n설명 문장 없이 JSON만 반환해야 해.\n\n입력 데이터:\n{{ $json.content }}는 사용자의 자연어 요청\n오늘 날짜는 {{ $json.entities.today }} 이며, 이를 기준으로 “오늘”, “내일”, “다음주 월요일” 등 상대적 날짜 표현을 계산해.\n계산된 날짜는 ISO 8601 형식(YYYY-MM-DDTHH:mm:ss)으로 반환해야 해.\n\n추출할 요소 목록:\ncalendarName : 일정 내용 또는 제목\nstartedAt, endedAt : 일정 시작/종료 날짜 또는 기간\n만약 하루 일정이면 startedAt과 endedAt을 같은 날짜로 설정\n시간 정보가 있으면 포함\ncalendarType : TODO, SCHEDULE 중 하나 (없으면 null)\nbookmark : true 또는 false (없으면 null)\nisShared : true 또는 false (없으면 null)\nrepeatType : NONE, DAILY, WEEKLY, MONTHLY, YEARLY 중 하나\n\n추출 규칙:\n\n사용자가 날짜를 구체적으로 말하지 않았다면 startedAt과 endedAt은 아래 규칙으로 넣어줘.\n개인 일정: 시작일 기본값은 현재 시각, 종료일 기본값은 +1시간\nToDo: 날짜 기본값은 오늘 날짜\n\n상대적 표현(오늘, 내일, 이번 주 금요일 등)은 {{ $json.entities.today }} 기준으로 계산해.\n\n시간 정보가 있으면 포함해 (예: 3시에 → 15:00:00).\n\ncalendarType은 TODO라는 말이 있으면 TODO로, 별 말 없거나 “일정”, “회의”, “약속” 등 일정 관련 표현이 있으면 SCHEDULE로 해줘.\n\nbookmark는 “즐겨찾기”라는 말이 있으면 true로 해줘.\n(만약 “매일 무언갈 하겠다”처럼 반복 표현이 있으면 무조건 calendarType: TODO + bookmark: true로 해줘.)\n\nisShared는 “공유하겠다”, “팀원과”, “같이” 같은 표현이 있으면 true, 별 말 없으면 false로 해줘.\n\nrepeatType은 다음 기준으로 정해줘. 기준이 없을 때는 너가 알아서 판단해서 반환해줘.\n“매일”, “하루에 한 번”, “매 아침” → DAILY\n“매주”, “매주 월요일”, “주마다” → WEEKLY\n“매월”, “매달”, “한 달에 한 번” → MONTHLY\n“매년”, “해마다”, “생일”, “기념일” → YEARLY\n\n사용자의 요청이 “일정 등록할래”, “일정 추가해줘” 등 단순한 의도라면 일정명과 날짜는 null로 둬.\n\ntext 필드에는 추출된 내용만 활용해서 “알겠습니다. ~일정 등록을 위해 도와드리겠습니다☺️” 형태의 문장을 만들어.\n일정명이 있으면 이름을 포함하고, 날짜가 있으면 자연스럽게 표현 (“10월 18일 치과 일정 등록을 도와드릴게요”).\n아무 정보도 없으면 “일정 등록을 위해 도와드리겠습니다☺️”만 출력.\n\n기간이나 시간이 있으면 무조건 SCHEDULE,\n간단한 일(예: 약먹기, 체크리스트 등)은 TODO로.\n\nTODO인데 시간이 포함된 경우, 시간은 calendarName에 포함되게 해줘. (예: “9시 약먹기”)\n\n출력 형식 (반드시 동일하게 따라야 함):\n{\n\"text\": \"알겠습니다. 11월 9일 치과 일정 등록을 위해 도와드리겠습니다☺️\",\n\"calendarName\": \"치과\",\n\"startedAt\": \"2025-11-09T15:00:00\",\n\"endedAt\": \"2025-11-09T15:00:00\",\n\"calendarType\": \"TODO\",\n\"bookmark\": true,\n\"isShared\": false,\n\"repeatType\": \"NONE\"\n}\n\n예시 1\n입력: \"나 다음주 월요일에 치과 3시에 가야돼\"\n출력:\n{\n\"text\": \"알겠습니다. 다음주 월요일 3시 치과 일정 등록을 위해 도와드리겠습니다☺️\",\n\"calendarName\": \"치과\",\n\"startedAt\": \"2025-10-21T15:00:00\",\n\"endedAt\": \"2025-10-21T15:00:00\",\n\"calendarType\": \"SCHEDULE\",\n\"bookmark\": false,\n\"isShared\": false,\n\"repeatType\": \"NONE\"\n}\n\n예시 2\n입력: \"나 일정 등록할래\"\n출력:\n{\n\"text\": \"알겠습니다. 일정 등록을 위해 도와드리겠습니다☺️\",\n\"calendarName\": \"등록하실 일정을 입력하세요!\",\n\"startedAt\": \"오늘날짜\",\n\"endedAt\": \"오늘날짜 + 1시간\",\n\"calendarType\": \"SCHEDULE\",\n\"bookmark\": false,\n\"isShared\": false,\n\"repeatType\": \"NONE\"\n}\n\n예시 3\n입력: \"매일 아침 9시에 약먹어야 되는거 todo 등록해줘\"\n출력:\n{\n\"text\": \"알겠습니다. 일정 등록을 위해 도와드리겠습니다☺️\",\n\"calendarName\": \"오전 9시 약먹기\",\n\"startedAt\": \"오늘날짜\",\n\"endedAt\": \"오늘날짜 + 1시간\",\n\"calendarType\": \"TODO\",\n\"bookmark\": true,\n\"isShared\": false,\n\"repeatType\": \"DAILY\"\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.entities.content }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.entities.today }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.content }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -192,
+        1312
+      ],
+      "id": "d3acf8b4-b7b6-4db4-ab4d-d6f6216bb355",
+      "name": "Basic LLM Chain33"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        1456
+      ],
+      "id": "56b8cf4f-ceb3-477a-a05b-9f3cece26a55",
+      "name": "OpenAI Chat Model33",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // text 필드 안의 문자열을 꺼내기\n  const rawText = item.json.text;\n\n  //  JSON 문자열을 객체로 변환\n  const parsed = JSON.parse(rawText);\n\n  // 변환된 JSON 객체를 반환\n  return { json: parsed };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1312
+      ],
+      "id": "6d0da2dc-35b1-4ff1-9e0d-c612d82cdb4a",
+      "name": "Code in JavaScript11"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // text 필드 안의 문자열을 꺼내기\n  const rawText = item.json.text;\n\n  //  JSON 문자열을 객체로 변환\n  const parsed = JSON.parse(rawText);\n\n  // 변환된 JSON 객체를 반환\n  return { json: parsed };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        96
+      ],
+      "id": "c6975d47-773a-426e-8574-0451279a6e57",
+      "name": "Code in JavaScript12"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // text 필드 안의 문자열을 꺼내기\n  const rawText = item.json.text;\n\n  //  JSON 문자열을 객체로 변환\n  const parsed = JSON.parse(rawText);\n\n  // 변환된 JSON 객체를 반환\n  return { json: parsed };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        384
+      ],
+      "id": "b777c8b5-c735-4783-a887-9144e2818f4b",
+      "name": "Code in JavaScript13"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // text 필드 안의 문자열을 꺼내기\n  const rawText = item.json.text;\n\n  //  JSON 문자열을 객체로 변환\n  const parsed = JSON.parse(rawText);\n\n  // 변환된 JSON 객체를 반환\n  return { json: parsed };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        1616
+      ],
+      "id": "1382bf58-25b2-4cb4-af06-6105cb2af37c",
+      "name": "Code in JavaScript16"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot-agent/project-analyze",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1392,
+        1392
+      ],
+      "id": "012c9df7-bf5a-413d-a421-9ae1b2271eae",
+      "name": "ChatbotAgent",
+      "webhookId": "539f6a63-48f3-4cc9-8f15-f7f00a63e81e"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "너는 프로젝트 데이터 분석가이자 일정 예측 전문가야.  \n아래 JSON 데이터는 한 프로젝트의 진행 상태를 요약한 것이야.  \n데이터를 바탕으로 다음 세 가지 항목을 **JSON 형식으로** 반환해줘.  \n⚠️ 단, 코드 블록(````json` 등)이나 불필요한 설명 없이 **순수 JSON 텍스트만** 반환해야 해.\n\n---\n\n### 🎯 분석 목표\n\n1️⃣ **analysisReport (텍스트형)**  \n- 아래 예시 형식처럼 자연스럽고 상세한 프로젝트 리포트를 작성해줘.  \n- 실제 예시는 다음과 같아 👇  \n\"📊 프로젝트 분석 리포트\n진행률: 25% (4개 태스크 중 1개 완료)\n평균 작업 속도: 0.4일/태스크\n최근 속도 변화: 변동 없음 (데이터 없음)\n예상 완료일: 2025-11-06 (평균 작업 속도 기준 예측)\n일정 평가: 예정일(2025-12-05) 대비 약 1개월 - 빠름\n주요 리스크: 지연 및 재오픈 태스크 없음, 팀원 모두 활동 중이며 작업 분포 균등\n종합 평가: 프로젝트는 현재 매우 안정적인 상태입니다. 평균 작업 속도가 빠르며, 모든 팀원이 적극적으로 참여하고 있어 예정된 마감일보다 훨씬 앞서 완료될 가능성이 높습니다. 다만, 남은 태스크 3개의 복잡도 변화나 추가 리스크 발생에는 지속적인 모니터링이 필요합니다. 향후에도 현재와 같은 작업 집중도 유지와 일일 진척 체크를 권장합니다.\"\n\n2️⃣ **predictedCompletionTrend (라인 그래프용)**  \n- 예측 완료일 신뢰도 추세를 날짜별로 생성해줘.  \n- 날짜(`YYYY-MM-DD`)별 confidence(0~1)를 5~8개 정도 포함해.  \n- 평균 작업 속도, 남은 태스크 수 등을 고려해 신뢰도가 점진적으로 상승하는 형태로 구성해야 해.\n\n3️⃣ **riskFactors (리스크 분석용)**  \n- 리스크 요인을 3~5개 추출하고, 각 항목에 대해 위험도(`riskLevel`: 0~1)를 부여해줘.  \n- 리스크 요인은 실제 데이터에서 유추 가능한 값만 포함해.  \n  - delayedTasks > 0 → \"지연 태스크 증가\"  \n  - reopenedTasks > 0 → \"재오픈 태스크 다수\"  \n  - workloadDeviation > 0.3 → \"작업 불균형\"  \n  - recentCompletionRate 감소 → \"처리속도 둔화\"\n\n---\n\n### ⚙️ 출력 형식 (JSON으로만 반환)\n\n아래 형식처럼 반환해.  \n⚠️ 절대 ```json 또는 설명을 붙이지 마라.  \nJSON만 단독으로 출력해야 한다.\n\n{\n  \"analysisReport\": \"📊 프로젝트 분석 리포트 ...\",\n  \"predictedCompletionTrend\": [\n    { \"date\": \"2025-11-05\", \"confidence\": 0.56 },\n    { \"date\": \"2025-11-12\", \"confidence\": 0.63 },\n    { \"date\": \"2025-11-19\", \"confidence\": 0.71 },\n    { \"date\": \"2025-11-26\", \"confidence\": 0.79 },\n    { \"date\": \"2025-12-03\", \"confidence\": 0.84 },\n    { \"date\": \"2025-12-10\", \"confidence\": 0.90 }\n  ],\n  \"riskFactors\": [\n    { \"factor\": \"지연 태스크 증가\", \"riskLevel\": 0.7 },\n    { \"factor\": \"평균 처리속도 저하\", \"riskLevel\": 0.55 }\n  ]\n}\n\n---\n\n데이터:\n{{ $json.result }}\n\n---\n\n입력 텍스트:\n성공 시 → {{ $json.text }}\n예외 시 → {{ $json.error.message }}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.text }}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "={{ $json.error.message }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -928,
+        1392
+      ],
+      "id": "1442204e-0d87-4095-899d-c2fdbc5d40f4",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -928,
+        1600
+      ],
+      "id": "d2373a23-47ca-405e-bd80-0668842ccc08",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "r0ak0npkQLwTkh7e",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const json = item.json || {};\n  const body = json.body || {};\n\n  // 여러 구조 중 존재하는 곳 찾기\n  const possibleRoots = [\n    body.result,\n    body[0]?.result,\n    json.result,\n    json[0]?.result,\n    body,\n    json,\n  ];\n\n  let result = possibleRoots.find(r => r && r.project) || {};\n\n  const project = result.project || {};\n  const progress = result.progress || {};\n  const team = result.team || {};\n  const context = result.context || {};\n\n  // currentDate 배열 변환\n  let currentDate = project.currentDate;\n  if (Array.isArray(currentDate)) {\n    const [y, m, d, h, min, s] = currentDate;\n    currentDate = new Date(y, m - 1, d, h, min, s).toISOString();\n  }\n\n  const normalizedData = {\n    project: {\n      name: project.name || \"Unknown Project\",\n      startDate: project.startDate || null,\n      dueDate: project.dueDate || null,\n      currentDate: currentDate || new Date().toISOString(),\n    },\n    progress: {\n      totalTasks: progress.totalTasks ?? 0,\n      completedTasks: progress.completedTasks ?? 0,\n      remainingTasks: progress.remainingTasks ?? 0,\n      averageTaskCompletionTimeDays: progress.averageTaskCompletionTimeDays ?? 0,\n      recentCompletionRate: {\n        last7Days: progress.recentCompletionRate?.last7Days ?? 0,\n        last30Days: progress.recentCompletionRate?.last30Days ?? 0,\n      },\n      delayedTasks: progress.delayedTasks ?? 0,\n      reopenedTasks: progress.reopenedTasks ?? 0,\n    },\n    team: {\n      totalMembers: team.totalMembers ?? 0,\n      activeMembers: team.activeMembers ?? 0,\n      averageTasksPerMember: team.averageTasksPerMember ?? 0,\n      workloadDeviation: team.workloadDeviation ?? 0,\n    },\n    context: {\n      weekendsExcluded: context.weekendsExcluded ?? true,\n      holidays: context.holidays ?? null,\n      velocityChange: context.velocityChange ?? null,\n    },\n  };\n\n  // webhookUrl, executionMode 탐색\n  const webhookUrl =\n    body.webhookUrl ||\n    body[0]?.webhookUrl ||\n    json.webhookUrl ||\n    json[0]?.webhookUrl ||\n    null;\n\n  const executionMode =\n    body.executionMode ||\n    body[0]?.executionMode ||\n    json.executionMode ||\n    json[0]?.executionMode ||\n    null;\n\n  const text = `\n프로젝트 데이터 분석 요청입니다.\n\n${JSON.stringify(normalizedData, null, 2)}\n\nwebhookUrl: ${webhookUrl}\nexecutionMode: ${executionMode || \"default\"}\n`;\n\n  results.push({ json: { text, normalizedData } });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1168,
+        1392
+      ],
+      "id": "ec0d0796-ebaf-4466-bebe-a836b9ef1b12",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // text 필드 안의 문자열을 꺼내기\n  const rawText = item.json.text;\n\n  //  JSON 문자열을 객체로 변환\n  const parsed = JSON.parse(rawText);\n\n  // 변환된 JSON 객체를 반환\n  return { json: parsed };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        1392
+      ],
+      "id": "cdc24c03-9861-48d6-9d75-3ae4d9a81ac4",
+      "name": "Code in JavaScript14"
+    }
+  ],
+  "connections": {
+    "OpenAI Chat Model26": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain26",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain26": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain28",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ChatbotAgent7": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request14",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request15",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain33",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain26",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model27": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain27",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain27": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request12": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain27",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain27",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain28": {
+      "main": [
+        [
+          {
+            "node": "Switch6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model28": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain28",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request13": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain29",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain29",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain29": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model29": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain29",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request14": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain30",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain30",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model30": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain30",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request15": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain31",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain31",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model31": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain31",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ChatbotAgent8": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model32": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain32",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript10": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain32",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain33": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model33": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain33",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ChatbotAgent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "HTTP Request15": [
+      {
+        "result": "사용자 요청: 아까 10-23날 뭐해야 한다고 했었지?\n\nHistory: \nBOT: 📅 2025-10-23 (목)  \n18:00 📄 기획 문서 마무리하기\n\n📅 2025-10-26 (일)  \n18:00 ⚙️ 백엔드 개발 끝내기\n\n📅 2025-10-27 (월)  \n18:00 🧪 백엔드 코드 테스트\nUSER: 나 할일 뭐잇어?\nBOT: 📌 프로젝트명: 기아자동차  \n🎯 목표: 워크스페이스 구조 개선 및 권한 시스템 안정화  \n📝 설명: AccessGroup과 AccessDetail 기반 권한 검증 로직 개선, 스톤 자동 생성 기능 추가  \n📈 진행도: 0%  \n⏰ 마감일: 2025-11-15 18:00  \n🚀 상태: 진행 중 (PROGRESS)\n\n---\n🧩 요약 한 줄  \n권한 관리 체계와 워크스페이스 기능을 한층 강화하는 작업을 막 시작했어요 🚗✨\n\n---\nUSER: 기아자동차 프로젝트 요약해줘\nBOT: 심심할 때는 좋아하는 음악을 듣거나 짧은 산책을 해보는 건 어떨까요? 새로운 취미를 시작해보는 것도 좋은 방법이랍니다. 함께 즐거운 이야기 나누면서 시간을 보내요!\nUSER: 심심해\nBOT: 📌 프로젝트명: 기아자동차  \n🎯 목표: 워크스페이스 구조 개선 및 권한 시스템 안정화  \n📝 설명: AccessGroup, AccessDetail 기반 권한 검증 로직 개선과 스톤 자동 생성 기능 추가  \n📈 진행도: 0%  \n⏰ 마감일: 2025-11-15 18:00  \n🚀 상태: 진행 중 (PROGRESS)\n\n---  \n🧩 요약 한 줄  \n권한 검증 체계 고도화와 자동화 기능 도입으로 워크스페이스 효율을 높이고 있어요 💪\nUSER: 기아자동차 프로젝트 요약해줘\n",
+        "statusCode": 200,
+        "statusMessage": "chatbot message 목록 조회 성공"
+      }
+    ],
+    "Basic LLM Chain": [
+      {
+        "text": "{\n  \"analysisReport\": \"📊 프로젝트 분석 리포트\\n진행률: 약 65.6% (128개 태스크 중 84개 완료)\\n평균 작업 속도: 1.8일/태스크\\n최근 속도 변화: 약간 증가 추세\\n예상 완료일: 2025-11-29 (평균 작업 속도 기준 예측)\\n일정 평가: 예정일(2025-12-05) 대비 약 6일 여유 있음\\n주요 리스크: 지연 태스크 5개, 재오픈 태스크 3개 존재, 작업 분포는 비교적 균등 (편차 0.27), 팀원 9명 활발히 활동 중\\n종합 평가: 프로젝트는 전체적으로 안정적인 진행 상황을 보이고 있습니다. 진행률과 평균 작업 속도, 최근 속도 증가 추세를 고려할 때, 예정된 마감일보다 약간 빠른 완료가 기대됩니다. 다만 지연 및 재오픈 태스크가 일부 있어 이들에 대한 집중 관리가 필요하며, 작업 분포도 비교적 균등하지만 편차가 존재해 특정 팀원의 작업 과부하 가능성도 염두에 둬야 합니다. 향후 이슈 관리를 통해 일정 준수를 이어가야 하겠습니다.\",\n  \"predictedCompletionTrend\": [\n    { \"date\": \"2025-11-05\", \"confidence\": 0.55 },\n    { \"date\": \"2025-11-12\", \"confidence\": 0.65 },\n    { \"date\": \"2025-11-19\", \"confidence\": 0.72 },\n    { \"date\": \"2025-11-26\", \"confidence\": 0.80 },\n    { \"date\": \"2025-12-03\", \"confidence\": 0.88 },\n    { \"date\": \"2025-12-05\", \"confidence\": 0.90 }\n  ],\n  \"riskFactors\": [\n    { \"factor\": \"지연 태스크 증가\", \"riskLevel\": 0.7 },\n    { \"factor\": \"재오픈 태스크 다수\", \"riskLevel\": 0.5 }\n  ]\n}"
+      }
+    ],
+    "Code in JavaScript": [
+      {
+        "text": "\n프로젝트 데이터 분석 요청입니다.\n\n{\n  \"project\": {\n    \"name\": \"스마트 방위 통합 플랫폼\",\n    \"startDate\": \"2025-10-03T09:00:00\",\n    \"dueDate\": \"2025-12-05T18:00:00\",\n    \"currentDate\": \"2025-11-05T19:36:19.987Z\"\n  },\n  \"progress\": {\n    \"totalTasks\": 128,\n    \"completedTasks\": 84,\n    \"remainingTasks\": 44,\n    \"averageTaskCompletionTimeDays\": 1.8,\n    \"recentCompletionRate\": {\n      \"last7Days\": 14,\n      \"last30Days\": 52\n    },\n    \"delayedTasks\": 5,\n    \"reopenedTasks\": 3\n  },\n  \"team\": {\n    \"totalMembers\": 11,\n    \"activeMembers\": 9,\n    \"averageTasksPerMember\": 14.2,\n    \"workloadDeviation\": 0.27\n  },\n  \"context\": {\n    \"weekendsExcluded\": true,\n    \"holidays\": [\n      \"2025-10-09\",\n      \"2025-12-25\"\n    ],\n    \"velocityChange\": \"slightly increasing\"\n  }\n}\n\nwebhookUrl: null\nexecutionMode: default\n",
+        "normalizedData": {
+          "project": {
+            "name": "스마트 방위 통합 플랫폼",
+            "startDate": "2025-10-03T09:00:00",
+            "dueDate": "2025-12-05T18:00:00",
+            "currentDate": "2025-11-05T19:36:19.987Z"
+          },
+          "progress": {
+            "totalTasks": 128,
+            "completedTasks": 84,
+            "remainingTasks": 44,
+            "averageTaskCompletionTimeDays": 1.8,
+            "recentCompletionRate": {
+              "last7Days": 14,
+              "last30Days": 52
+            },
+            "delayedTasks": 5,
+            "reopenedTasks": 3
+          },
+          "team": {
+            "totalMembers": 11,
+            "activeMembers": 9,
+            "averageTasksPerMember": 14.2,
+            "workloadDeviation": 0.27
+          },
+          "context": {
+            "weekendsExcluded": true,
+            "holidays": [
+              "2025-10-09",
+              "2025-12-25"
+            ],
+            "velocityChange": "slightly increasing"
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f6612d333669a2ec7aae468bfb6e6b7096d4dc3df0081e34092b4c38a46ef42a"
+  }
+}

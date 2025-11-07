@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: drive-depl
-  namespace: test
+  name: workspace-depl
+  namespace: orbit
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: chat
+      app: workspace
   template:
     metadata:
       labels:
-        app: chat
+        app: workspace
     spec: 
       containers:
-      - name: chat-container
-        image: 346903264902.dkr.ecr.ap-northeast-2.amazonaws.com/youngkwan/member:latest
+      - name: workspace-container
+        image: 897722707137.dkr.ecr.ap-northeast-2.amazonaws.com/orbit/workspace:latest
         ports: 
         - containerPort: 8080
         resources:
@@ -32,13 +32,28 @@ spec:
         - name: DB_HOST
           valueFrom:
             secretKeyRef:
-              name: ordersystem-secrets
+              name: orbit-secrets
               key: DB_HOST
         - name: DB_PW
           valueFrom:
             secretKeyRef:
-              name: ordersystem-secrets
+              name: orbit-secrets
               key: DB_PW
+        - name: MAIL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: orbit-secrets
+              key: MAIL_USERNAME
+        - name: MAIL_PW
+          valueFrom:
+            secretKeyRef:
+              name: orbit-secrets
+              key: MAIL_PW
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: orbit-secrets
+              key: OPENAI_API_KEY
         # 컨테이너 상태 확인을 통해 롤링업데이트 최적화 
         readinessProbe:
           httpGet:
@@ -54,12 +69,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: member-service
-  namespace: youngkwan
+  name: workspace-service
+  namespace: orbit
 spec:
   type: ClusterIP
   ports:
   - port: 80
     targetPort: 8080
   selector:
-    app: member
+    app: workspace

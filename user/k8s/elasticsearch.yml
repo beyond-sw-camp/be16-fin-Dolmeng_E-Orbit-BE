@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-deployment
+  namespace: orbit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-elasticsearch
+  template:
+    metadata:
+      labels:
+        app: my-elasticsearch
+    spec:
+      containers:
+        - name: my-elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.18.6
+          ports:
+            - containerPort: 9200
+            - containerPort: 9300
+          env:
+            - name: xpack.security.enabled
+              value: "false"
+            - name: discovery.type
+              value: "single-node"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "1"
+              memory: "2.5Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  namespace: orbit
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9200
+      targetPort: 9200
+      name: http
+    - port: 9300
+      targetPort: 9300
+      name: transport
+  selector:
+    app: my-elasticsearch
