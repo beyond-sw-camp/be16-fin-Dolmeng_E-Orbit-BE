@@ -6,6 +6,8 @@ eureka:
     enabled: false
 
 spring:
+  codec:
+    max-in-memory-size: 200MB
   config:
     activate:
       on-profile: prod
@@ -13,6 +15,8 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      httpclient:
+        response-timeout: 300s
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       globalcors:
