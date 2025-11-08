@@ -158,12 +158,12 @@ public class DriverService {
     
     // 폴더 하위 요소들 조회
     public List<FolderContentsDto> getFolderContents(String folderId, String userId){
-        Map<String, String> userInfo = hashOperations.entries("user:"+userId);
         Folder folder = folderRepository.findById(folderId).orElseThrow(()->new EntityNotFoundException("해당 폴더가 존재하지 않습니다."));
         List<Folder> folders = folderRepository.findAllByParentIdAndIsDeleteIsFalse(folderId);
         List<FolderContentsDto> folderContentsDtos = new ArrayList<>();
         // 하위 폴더 불러오기
         for(Folder childfolder : folders){
+            Map<String, String> userInfo = hashOperations.entries("user:"+childfolder.getCreatedBy());
             List<FolderInfoDto> ancestors = folderRepository.findAncestors(childfolder.getId());
             folderContentsDtos.add(FolderContentsDto.builder()
                             .createBy(childfolder.getCreatedBy())
@@ -180,6 +180,7 @@ public class DriverService {
         }
         // 파일 불러오기
         for(File file : folder.getFiles()){
+            Map<String, String> userInfo = hashOperations.entries("user:"+file.getCreatedBy());
             if(file.getIsDelete().equals(true)) continue;
             folderContentsDtos.add(FolderContentsDto.builder()
                     .size(file.getSize())
@@ -197,6 +198,7 @@ public class DriverService {
         }
         // 문서 불러오기
         for(Document document : folder.getDocuments()){
+            Map<String, String> userInfo = hashOperations.entries("user:"+document.getCreatedBy());
             if(document.getIsDelete().equals(true)) continue;
             folderContentsDtos.add(FolderContentsDto.builder()
                     .createBy(document.getCreatedBy())

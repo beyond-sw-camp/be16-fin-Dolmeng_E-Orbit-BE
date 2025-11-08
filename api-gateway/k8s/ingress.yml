@@ -11,6 +11,7 @@ metadata:
   # 여기서 "nginx"로 지정한 것은 이 Ingress가 NGINX 기반 Ingress Controller에 의해 처리된다는 의미
     kubernetes.io/ingress.class: nginx
     # nginx.ingress.kubernetes.io/rewrite-target: /$1 #첫번쨰 prefix제거
+    nginx.ingress.kubernetes.io/proxy-body-size: "200m"
     
 spec:
   tls:
