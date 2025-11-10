@@ -17,5 +17,5 @@ public class TaskModifyDto {
     private String taskName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private UUID NewManagerUserId;
+    private UUID newManagerUserId;
 }
