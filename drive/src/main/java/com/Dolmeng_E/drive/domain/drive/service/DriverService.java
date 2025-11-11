@@ -245,10 +245,10 @@ public class DriverService {
             try {
                 StoneTaskResDto stoneTaskResDto = workspaceServiceClient.getSubStonesAndTasks(rootId);
                 List<StoneTaskResDto.StoneInfo> stones = stoneTaskResDto.getStones();
-                for(StoneTaskResDto.StoneInfo stone : stones){
+                for(int i=1; i<stones.size(); i++){
                     rootContentsDtos.add(RootContentsDto.builder()
-                            .id(stone.getStoneId())
-                            .name(stone.getStoneName())
+                            .id(stones.get(i).getStoneId())
+                            .name(stones.get(i).getStoneName())
                             .type("STONE")
                             .build());
                 }
@@ -747,11 +747,11 @@ public class DriverService {
                     throw new IllegalArgumentException("권한이 없습니다.");
                 }
                 List<StoneTaskResDto.StoneInfo> stoneInfos = workspaceServiceClient.getSubStonesAndTasks(rootId).getStones();
-                for(StoneTaskResDto.StoneInfo stoneInfo : stoneInfos){
+                for(int i=1; i<stoneInfos.size(); i++){
                     folderResDtos.add(FolderResDto.builder()
                             .rootType("STONE")
-                            .rootId(stoneInfo.getStoneId())
-                            .rootName(stoneInfo.getStoneName())
+                            .rootId(stoneInfos.get(i).getStoneId())
+                            .rootName(stoneInfos.get(i).getStoneName())
                             .build());
                 }
 
