@@ -1,30 +1,4 @@
 
-![header](https://capsule-render.vercel.app/api?type=venom&color=auto&height=300&section=header&text=CalIT&fontSize=50&desc=📆Optimize%20Your%20Workspace%20Scrum%20Management&descAlignY=60)
-
-# 👀 팀원 구성
-
-<br>
-
-|                    **👑차윤슬**                      |                  **박성준**                   |                 **최승은**                  |                     **강혜정**                     |             **지연희**              |
-|:------------------------------------------------:|:------------------------------------------:|:----------------------------------------:|:-----------------------------------------------:|:--------------------------------:|
-| <img src="https://github.com/user-attachments/assets/8d255376-5ae9-4685-8f11-cd4b18a4bb55" width="128px"/> | <img src="https://github.com/user-attachments/assets/f49055cf-2b4d-41ac-bb7d-98b47d257c4b" width="128px"/> | <img src="https://github.com/user-attachments/assets/21e6cee5-c2f0-4c94-9a0a-938053c5342b" width="128px"/> | <img src="https://github.com/user-attachments/assets/813020ee-ef97-4f44-becd-38ef55a778b1" width="128px"/> | <img src="https://github.com/user-attachments/assets/cefb90f7-237b-4613-b6e2-89e1c40c00f3" width="128px"/> |
-| [@yunseul-dev](https://github.com/yunseul-dev) | [@seongxun](https://github.com/seongxun) | [@xeunnie](https://github.com/xeunnie) | [ @hyejeung](https://github.com/hyejeung) | [@Aqulog](https://github.com/Aqulog) |
-
-
-
-# ⚒️ 기술 스택
-
-
-
-### 백엔드
-<img src="https://img.shields.io/badge/SpringBoot-181717?style=flat&logo=SpringBoot&logoColor=6DB33F&color=white" alt=""> <img src="https://img.shields.io/badge/Spring_Security-181717?style=flat&logo=SpringSecurity&logoColor=6DB33F&color=white" alt=""> <img src="https://img.shields.io/badge/JSON_Web_Tokens-181717?style=flat&logo=JSONWebTokens&logoColor=000000&color=white" alt=""> <img src="https://img.shields.io/badge/Spring-181717?style=flat&logo=Spring&logoColor=6DB33F&color=white" alt=""> <img src="https://img.shields.io/badge/Spring_Batch-181717?style=flat&logo=Spring&logoColor=6DB33F&color=white" alt=""> <img src="https://img.shields.io/badge/Apache_Kafka-181717?style=flat&logo=ApacheKafka&logoColor=231F20&color=white" alt=""> <img src="https://img.shields.io/badge/n8n-181717?style=flat&logo=n8n&logoColor=0F74E2&color=white" alt=""> <img src="https://img.shields.io/badge/Redis-181717?style=flat&logo=Redis&logoColor=DC382D&color=white" alt="">
-### 데이터베이스
-<img src="https://img.shields.io/badge/MariaDB-181717?style=flat&logo=MariaDB&logoColor=003545&color=white" alt=""> <img src="https://img.shields.io/badge/PostgreSQL-181717?style=flat&logo=PostgreSQL&logoColor=336791&color=white" alt=""> 
-
-
----
-
-
 
 # 🎯 소프트웨어 아키텍처
 <details>
