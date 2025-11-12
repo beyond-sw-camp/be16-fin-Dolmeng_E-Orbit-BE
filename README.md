@@ -610,7 +610,7 @@
 
 ## 🔍 Backend상세
 
-🔗 [Backend 더 자세한 설명](https://github.com/beyond-sw-camp/be16-fin-Dolmeng_E-Orbit-BE/README-be.md)
+🔗 [Backend 더 자세한 설명](https://github.com/beyond-sw-camp/be16-fin-Dolmeng_E-Orbit-BE/blob/develop/README-be.md)
 
 <br />
 
