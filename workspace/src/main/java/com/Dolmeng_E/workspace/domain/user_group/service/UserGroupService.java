@@ -194,16 +194,7 @@ public class UserGroupService {
 
         Workspace workspace = userGroup.getWorkspace();
 
-        // 2️. 관리자 혹은 사용자 그룹 권한 있는지 확인
-        UserInfoResDto adminInfo = userFeign.fetchUserInfoById(userId);
-        WorkspaceParticipant requester = workspaceParticipantRepository
-                .findByWorkspaceIdAndUserId(workspace.getId(), adminInfo.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException("요청자는 워크스페이스 참가자가 아닙니다."));
 
-        if (!requester.getWorkspaceRole().equals(WorkspaceRole.ADMIN)) {
-            // 관리자 아니면 권한 검증 (내부에서 예외 발생 시 catch 없이 자동 전파)
-            throw new IllegalArgumentException("관리자 권한이 필요합니다.");
-        }
 
         // 3. 그룹 내 매핑된 사용자 목록 (페이징)
         Page<UserGroupMapping> mappings = userGroupMappingRepository.findByUserGroup(userGroup, pageable);
