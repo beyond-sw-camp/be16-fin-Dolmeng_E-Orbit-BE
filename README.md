@@ -36,7 +36,7 @@
 <div align="center">
 <img width="200" height="76" alt="스크린샷 2025-11-12 오전 9 26 06" src="https://github.com/user-attachments/assets/45d23073-8c7d-4666-a480-d3906f1a687b" />
 
-  [📢 Orbit 발표자료 링크](https://www.canva.com/design/DAG4NaBfaR4/Lf-l1N13jIC3GpZDcCXmLg/edit?utm_content=DAG4NaBfaR4&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+  [📢 Orbit 발표자료 링크](https://www.canva.com/design/DAG4NaBfaR4/UsBnWrrg8tfeKBiI4FJu9g/view?utm_content=DAG4NaBfaR4&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=he4aab767d6)
 </div>
 
 <br/>
