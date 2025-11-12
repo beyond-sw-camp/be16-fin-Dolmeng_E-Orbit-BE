@@ -1,76 +1,43 @@
-# Orbit(오르빗)
+# 🪐 Orbit(오르빗)
 
-> 모든 일정/협업을 하나로! 캘린더·간트·마일스톤·칸반·채팅·문서를 **실시간으로 연동**하는 애자일 기반 통합 프로젝트 플랫폼
+> 💫 모든 일정/협업을 하나로! 캘린더·간트·마일스톤·칸반·채팅·문서를 **실시간으로 연동**하는 애자일 기반 통합 프로젝트 플랫폼
 > <p align="center">
 </p>
 <img width="2400" height="800" alt="image" src="https://github.com/user-attachments/assets/045e5ea7-5171-485d-880d-3e9c2110e06a" />
 
+<br/>
+
 ## 👀 팀원 구성
 <table>
-  <tr>
-    <!-- 1행: 사진(클릭 가능) + 이름 -->
-    <td align="center">
-      <a href="https://github.com/EunDuk2" target="_blank">
-        <img src="https://avatars.githubusercontent.com/u/124436476?v=4" width="100px;" alt="조은성"/>
-      </a><br />
-      <b>조은성</b>
-    </td>
-        <td align="center">
-      <a href="https://github.com/YoungKwanK" target="_blank">
-        <img src="https://avatars.githubusercontent.com/u/154659797?v=4" width="100px;" alt="김영관"/>
-      </a><br />
-      <b>김영관</b>
-    </td>
-    <td align="center">
-      <a href="https://github.com/jominhyeong97" target="_blank">
-        <img src="https://avatars.githubusercontent.com/u/206010512?v=4" width="100px;" alt="조민형"/>
-      </a><br />
-      <b>조민형</b>
-    </td>
-    <td align="center">
-      <a href="https://github.com/ifunhy" target="_blank">
-        <img src="https://avatars.githubusercontent.com/u/194198612?v=4" width="100px;" alt="김현지"/>
-      </a><br />
-      <b>김현지</b>
-    </td>
-    <td align="center">
-      <a href="https://github.com/rm2001kr" target="_blank">
-        <img src="https://avatars.githubusercontent.com/u/207882668?v=4" width="100px;" alt="김강산"/>
-      </a><br />
-      <b>김강산</b>
-    </td>
+	<tr>
+    <td><img width="300" alt="은성" src="https://avatars.githubusercontent.com/u/124436476?v=4"> </td>
+    <td><img width="300" alt="영관" src="https://avatars.githubusercontent.com/u/154659797?v=4"></td>
+    <td><img width="300" alt="민형" src="https://avatars.githubusercontent.com/u/206010512?v=4"></td>
+    <td><img width="300" alt="현지" src="https://avatars.githubusercontent.com/u/194198612?v=4"></td>
+    <td><img width="300" alt="강산" src="https://avatars.githubusercontent.com/u/207882668?v=4"></td>
+	</tr>
+		<tr>
+    <th><a href="https://github.com/EunDuk2"> 조은성 </a></th>
+    <th><a href="https://github.com/YoungKwanK"> 김영관</a> </th>
+    <th><a href="https://github.com/jominhyeong97"> 조민형</a> </th>
+    <th><a href="https://github.com/ifunhy"> 김현지</a> </th>
+    <th><a href="https://github.com/rm2001kr"> 김강산</a> </th>
   </tr>
-  <tr>
-    <!-- 2행: GitHub 배지 -->
-    <td align="center">
-      <a href="https://github.com/EunDuk2" target="_blank">
-        <img src="https://img.shields.io/badge/GitHub_Profile-181717?style=flat-square&logo=github&logoColor=white"/>
-      </a>
-    </td>
-        <td align="center">
-      <a href="https://github.com/YoungKwanK" target="_blank">
-        <img src="https://img.shields.io/badge/GitHub_Profile-181717?style=flat-square&logo=github&logoColor=white"/>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/jominhyeong97" target="_blank">
-        <img src="https://img.shields.io/badge/GitHub_Profile-181717?style=flat-square&logo=github&logoColor=white"/>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/ifunhy" target="_blank">
-        <img src="https://img.shields.io/badge/GitHub_Profile-181717?style=flat-square&logo=github&logoColor=white"/>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/rm2001kr" target="_blank">
-        <img src="https://img.shields.io/badge/GitHub_Profile-181717?style=flat-square&logo=github&logoColor=white"/>
-      </a>
-    </td>
-  </tr>
+  <th> 팀장,BE,FE </th>
+  <th> BE,FE </th>
+  <th> BE,FE </th>
+  <th> BE,FE </th>
+  <th> BE,FE </th>
 </table>
 
 <br/>
+
+## 💻 발표자료
+<div align="center">
+<img width="200" height="76" alt="스크린샷 2025-11-12 오전 9 26 06" src="https://github.com/user-attachments/assets/45d23073-8c7d-4666-a480-d3906f1a687b" />
+
+  [📢 Orbit 발표자료 링크](https://www.canva.com/design/DAG4NaBfaR4/Lf-l1N13jIC3GpZDcCXmLg/edit?utm_content=DAG4NaBfaR4&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
+</div>
 
 ## 📖 배경 및 필요성
 현대 협업 환경은 Jira, Slack, Notion 등 기능별 SaaS 사용이 보편화되면서 **정보가 파편화**되고 잦은 **컨텍스트 전환**이 발생하는 문제를 겪고 있습니다. 또한, 기존 툴의 복잡한 UI는 사용자의 피로도를 가중시킵니다.
@@ -98,8 +65,8 @@
 - 진행률/리드타임 등 생산성 지표 시각화
 
 ### 4) 💬 실시간 채팅·피드백
-- 워크스페이스/프로젝트 **전용 채팅방 자동 개설(옵션)**
-- 멘션·명령어·파일 공유, 메시지 내 날짜 → **캘린더 일정 등록**
+- 프로젝트/스톤 **전용 채팅방 자동 개설(옵션)**
+- 화상회의 기능 제공 → **실시간 화상 통화 가능**
 
 ### 5) 📁 통합 문서 관리
 - 워크스페이스/프로젝트/스톤별 문서 및 파일 관리 시스템
@@ -124,8 +91,8 @@
 - 권한 기반 검색 필터링 (사용자별 접근 권한에 따른 결과 제한)
 
 ### 8) 🤖 AI 어시스턴트
-- 사전 회의 주제 기반 자료 추천
-- 회의록/채팅 요약, 태스크 추출
+- 사용자 친화적 챗봇(프로젝트 요약, 일정 등록, 일정 브리핑 등)
+- 프로젝트 데이터 분석 → **대시보드 인사이트 정보 제공**
 
 <br/>
 
@@ -647,5 +614,5 @@
 | 김영관 | 이번 프로젝트에서 문서함, 통합 검색, 실시간 문서 편집이라는 세 가지 핵심 도메인을 개발했습니다.<br>문서함: 처음엔 단순 `parentId` 구조로 계층형 폴더를 설계했지만, 조상 경로 조회 시 발생하는 재귀 쿼리와 N+1 능 이슈에 직면했습니다. <br>이는 MariaDB의 `WITH RECURSIVE`를 도입해 단일 네이티브 쿼리로 해결하며 견고한 데이터 뼈대를 완성할 수 있었습니다.<br>통합 검색: Elasticsearch의 기본 `analyzer`는 한글 검색에 한계가 명확했습니다. <br>`Nori` 플러그인을 도입해 형태소 분석을 적용하고 나서야 비로소 제대로 된 검색이 가능했습니다. <br>이 과정에서 '정확도' 중심의 검색과 '성능' 중심의 자동완성은 쿼리 접근 방식과 데이터 모델링 자체가 달라야 함을 깨달았습니다.<br>실시간 편집은 가장 어려웠던 부분이었습니다.문서 전체 내용을 STOMP로 전송하니, 메시지 크기 한계로 인한 메모리 이슈와 편집 내용이 덮어써지는 동시성 문제가 발생했고 한 글자가 수정될 때마다 전송할 시 "안녕하세요" 5글자에 DB 트랜잭션 5개가 몰리는 등, DB 과부하라는 새로운 문제에 직면했습니다. <br> '라인(Line) 단위'로 변경 사항을 식별하고, 여러 수정을 '배치(Batch) 업데이트'로 묶어 처리하도록 구현했습니다.<br> 이로써 STOMP 메시지 크기와 DB 트랜잭션 횟수를 동시에 최적화하여 성능과 동시성을 확보했습니다. |
 | 조민형 |  |
 | 김현지 |  |
-| 김강산 |  |
+| 김강산 | 이번 프로젝트에서는 채팅 기능에 화상 회의를 연동하여 서비스 파편화 문제를 해결했습니다. 첫 번째로 많은 시간을 들인 부분은 ‘영상이 화면을 꽉 채우지 않는 문제였습니다. 비디오에 여백이 생기고 전체 화면에서도 빈 공간이 보였는데, 이는 비디오 자체의 크기 설정과 이를 감싸는 박스의 비율·overflow 처리 방식이 맞지 않아 발생한 상황이었습니다. 이를 해결하기 위해 비디오가 화면을 꽉 채우면서도 비율이 깨지지 않도록 크기 설정을 조정하고, 전체화면일 때 우선 적용되는 스타일 을 추가했습니다. 또한, 비디오를 감싸는 부모 컨테이너의overflow 처리와 모서리 스타일을 정리하여 어떤 화면 크기에서도 영상이 빈 공간 없이 자연스럽게 꽉 차도록 구현했습니다. 두 번째 문제는 새로고침 시 내 화면이 중복되거나 닉네임이 *Unknown* 으로 표시되는 현상이었습니다. 이는 세션이 완전히 종료되기 전에 재접속이 이루어져 이벤트 처리 순서가 꼬인 것이 원인이었습니다. 이를 해결하기 위해 스트림 생성 이벤트를 임시로 모아두었다가 세션 연결이 완료된 뒤 한 번에 처리하도록 변경하고, 자기 자신의 스트림은 구독 대상에서 제외했습니다. 또한 닉네임 정보는 재요청 후 캐시에 저장하고, 세션 정리 과정은 비동기 처리로 안정화했습니다. 그 결과, 새로고침 시 발생하던 중복 화면과 *Unknown* 표시 문제를 해결할 수 있었습니다. |
 
